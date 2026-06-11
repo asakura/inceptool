@@ -22,8 +22,8 @@ impl Driver for ClaudeDriver {
         let raw_value: &'a serde_json::value::RawValue = serde_json::from_str(raw_json)?;
 
         let event = match meta.hook_event_name.as_ref() {
-            "PreToolUse" => HookInputEvent::BeforeTool(serde_json::from_str(raw_json)?),
-            "PostToolUse" => HookInputEvent::AfterTool(serde_json::from_str(raw_json)?),
+            "PreToolUse" => HookInputEvent::PreToolUse(serde_json::from_str(raw_json)?),
+            "PostToolUse" => HookInputEvent::PostToolUse(serde_json::from_str(raw_json)?),
             "UserPromptSubmit" => HookInputEvent::UserPromptSubmit(serde_json::from_str(raw_json)?),
             "SessionStart" => HookInputEvent::SessionStart(serde_json::from_str(raw_json)?),
             "SessionEnd" => HookInputEvent::SessionEnd(serde_json::from_str(raw_json)?),
@@ -33,10 +33,16 @@ impl Driver for ClaudeDriver {
                 HookInputEvent::InstructionsLoaded(serde_json::from_str(raw_json)?)
             }
             "Setup" => HookInputEvent::Setup(serde_json::from_str(raw_json)?),
-            "UserPromptExpansion" => HookInputEvent::UserPromptExpansion(serde_json::from_str(raw_json)?),
+            "UserPromptExpansion" => {
+                HookInputEvent::UserPromptExpansion(serde_json::from_str(raw_json)?)
+            }
             "MessageDisplay" => HookInputEvent::MessageDisplay(serde_json::from_str(raw_json)?),
-            "PermissionRequest" => HookInputEvent::PermissionRequest(serde_json::from_str(raw_json)?),
-            "PostToolUseFailure" => HookInputEvent::PostToolUseFailure(serde_json::from_str(raw_json)?),
+            "PermissionRequest" => {
+                HookInputEvent::PermissionRequest(serde_json::from_str(raw_json)?)
+            }
+            "PostToolUseFailure" => {
+                HookInputEvent::PostToolUseFailure(serde_json::from_str(raw_json)?)
+            }
             "PostToolBatch" => HookInputEvent::PostToolBatch(serde_json::from_str(raw_json)?),
             "PermissionDenied" => HookInputEvent::PermissionDenied(serde_json::from_str(raw_json)?),
             "SubagentStart" => HookInputEvent::SubagentStart(serde_json::from_str(raw_json)?),
@@ -47,10 +53,12 @@ impl Driver for ClaudeDriver {
             "StopFailure" => HookInputEvent::StopFailure(serde_json::from_str(raw_json)?),
             "TeammateIdle" => HookInputEvent::TeammateIdle(serde_json::from_str(raw_json)?),
             "ConfigChange" => HookInputEvent::ConfigChange(serde_json::from_str(raw_json)?),
-            "PreCompact" => HookInputEvent::PreCompress(serde_json::from_str(raw_json)?),
+            "PreCompact" => HookInputEvent::PreCompact(serde_json::from_str(raw_json)?),
             "PostCompact" => HookInputEvent::PostCompact(serde_json::from_str(raw_json)?),
             "Elicitation" => HookInputEvent::Elicitation(serde_json::from_str(raw_json)?),
-            "ElicitationResult" => HookInputEvent::ElicitationResult(serde_json::from_str(raw_json)?),
+            "ElicitationResult" => {
+                HookInputEvent::ElicitationResult(serde_json::from_str(raw_json)?)
+            }
             "Notification" => HookInputEvent::Notification(serde_json::from_str(raw_json)?),
             "WorktreeCreate" => HookInputEvent::WorktreeCreate(serde_json::from_str(raw_json)?),
             "WorktreeRemove" => HookInputEvent::WorktreeRemove(serde_json::from_str(raw_json)?),
@@ -69,6 +77,10 @@ impl Driver for ClaudeDriver {
                 timestamp: None, // Claude Code does not provide a timestamp
                 driver: "Claude".into(),
                 driver_meta: Some(types::RawJson(raw_value)),
+                permission_mode: meta.permission_mode,
+                effort: meta.effort,
+                agent_id: meta.agent_id,
+                agent_type: meta.agent_type,
             },
             event,
         })
@@ -103,7 +115,7 @@ impl Driver for ClaudeDriver {
 mod tests {
     use super::*;
 
-    use inceptool_protocol::BeforeToolOutput;
+    use inceptool_protocol::PreToolUseOutput;
 
     use rstest::rstest;
 
@@ -121,37 +133,47 @@ mod tests {
 
     #[rstest]
     #[case::pre_tool_use(r#"{"session_id": "1", "hook_event_name": "PreToolUse", "tool_name": "test", "tool_input": {}}"#)]
-    #[case::post_tool_use(r#"{"session_id": "1", "hook_event_name": "PostToolUse", "tool_name": "test", "tool_input": {}, "tool_response": "test"}"#)]
+    #[case::post_tool_use(r#"{"session_id": "1", "hook_event_name": "PostToolUse", "tool_name": "test", "tool_input": {}, "tool_output": "test"}"#)]
+    #[case::post_tool_use_tool_response_alias(r#"{"session_id": "1", "hook_event_name": "PostToolUse", "tool_name": "test", "tool_input": {}, "tool_response": "test"}"#)]
     #[case::user_prompt_submit(
         r#"{"session_id": "1", "hook_event_name": "UserPromptSubmit", "prompt": "test"}"#
     )]
     #[case::session_start(r#"{"session_id": "1", "hook_event_name": "SessionStart"}"#)]
-    #[case::session_end(r#"{"session_id": "1", "hook_event_name": "SessionEnd", "reason": "test"}"#)]
-    #[case::cwd_changed(r#"{"session_id": "1", "hook_event_name": "CwdChanged", "new_cwd": "test", "previous_cwd": "old"}"#)]
+    #[case::session_end(
+        r#"{"session_id": "1", "hook_event_name": "SessionEnd", "reason": "test"}"#
+    )]
+    #[case::cwd_changed(r#"{"session_id": "1", "hook_event_name": "CwdChanged", "new_cwd": "test", "old_cwd": "old"}"#)]
+    #[case::cwd_changed_previous_cwd_alias(r#"{"session_id": "1", "hook_event_name": "CwdChanged", "new_cwd": "test", "previous_cwd": "old"}"#)]
     #[case::file_changed(r#"{"session_id": "1", "hook_event_name": "FileChanged", "file_path": "test", "content": "test"}"#)]
     #[case::instructions_loaded(r#"{"session_id": "1", "hook_event_name": "InstructionsLoaded", "instructions": "test", "file_path": "test", "memory_type": "project", "load_reason": "startup"}"#)]
-    #[case::setup(r#"{"session_id": "1", "hook_event_name": "Setup"}"#)]
-    #[case::user_prompt_expansion(r#"{"session_id": "1", "hook_event_name": "UserPromptExpansion"}"#)]
-    #[case::message_display(r#"{"session_id": "1", "hook_event_name": "MessageDisplay"}"#)]
-    #[case::permission_request(r#"{"session_id": "1", "hook_event_name": "PermissionRequest"}"#)]
-    #[case::post_tool_use_failure(r#"{"session_id": "1", "hook_event_name": "PostToolUseFailure"}"#)]
-    #[case::post_tool_batch(r#"{"session_id": "1", "hook_event_name": "PostToolBatch"}"#)]
-    #[case::permission_denied(r#"{"session_id": "1", "hook_event_name": "PermissionDenied"}"#)]
-    #[case::subagent_start(r#"{"session_id": "1", "hook_event_name": "SubagentStart"}"#)]
-    #[case::subagent_stop(r#"{"session_id": "1", "hook_event_name": "SubagentStop"}"#)]
-    #[case::task_created(r#"{"session_id": "1", "hook_event_name": "TaskCreated"}"#)]
-    #[case::task_completed(r#"{"session_id": "1", "hook_event_name": "TaskCompleted"}"#)]
-    #[case::stop(r#"{"session_id": "1", "hook_event_name": "Stop"}"#)]
-    #[case::stop_failure(r#"{"session_id": "1", "hook_event_name": "StopFailure"}"#)]
-    #[case::teammate_idle(r#"{"session_id": "1", "hook_event_name": "TeammateIdle"}"#)]
-    #[case::config_change(r#"{"session_id": "1", "hook_event_name": "ConfigChange"}"#)]
-    #[case::pre_compact(r#"{"session_id": "1", "hook_event_name": "PreCompact", "trigger": "limit"}"#)]
-    #[case::post_compact(r#"{"session_id": "1", "hook_event_name": "PostCompact"}"#)]
-    #[case::elicitation(r#"{"session_id": "1", "hook_event_name": "Elicitation"}"#)]
-    #[case::elicitation_result(r#"{"session_id": "1", "hook_event_name": "ElicitationResult"}"#)]
-    #[case::notification(r#"{"session_id": "1", "hook_event_name": "Notification", "message": "msg"}"#)]
-    #[case::worktree_create(r#"{"session_id": "1", "hook_event_name": "WorktreeCreate", "name": "wt"}"#)]
-    #[case::worktree_remove(r#"{"session_id": "1", "hook_event_name": "WorktreeRemove", "worktree_path": "wt"}"#)]
+    #[case::setup(r#"{"session_id": "1", "hook_event_name": "Setup", "trigger": "init"}"#)]
+    #[case::user_prompt_expansion(r#"{"session_id": "1", "hook_event_name": "UserPromptExpansion", "command_name": "/review", "prompt": "Review this PR"}"#)]
+    #[case::message_display(r#"{"session_id": "1", "hook_event_name": "MessageDisplay", "lines": ["line one", "line two"]}"#)]
+    #[case::permission_request(r#"{"session_id": "1", "hook_event_name": "PermissionRequest", "tool_name": "Bash", "tool_input": {"command": "ls"}, "permission_rule_name": "Bash(ls:*)"}"#)]
+    #[case::post_tool_use_failure(r#"{"session_id": "1", "hook_event_name": "PostToolUseFailure", "tool_name": "Bash", "tool_input": {"command": "false"}, "tool_error": "exit status 1"}"#)]
+    #[case::post_tool_batch(r#"{"session_id": "1", "hook_event_name": "PostToolBatch", "tool_calls": [{"tool_name": "Bash"}]}"#)]
+    #[case::permission_denied(r#"{"session_id": "1", "hook_event_name": "PermissionDenied", "tool_name": "Bash", "tool_input": {"command": "curl evil.com"}, "reason": "network access denied"}"#)]
+    #[case::subagent_start(r#"{"session_id": "1", "hook_event_name": "SubagentStart", "agent_type": "Explore", "prompt": "Find usages of foo"}"#)]
+    #[case::subagent_stop(r#"{"session_id": "1", "hook_event_name": "SubagentStop", "agent_type": "Explore", "result": "Found 3 usages"}"#)]
+    #[case::task_created(r#"{"session_id": "1", "hook_event_name": "TaskCreated", "task": {"id": "task-1", "title": "Write tests"}}"#)]
+    #[case::task_completed(r#"{"session_id": "1", "hook_event_name": "TaskCompleted", "task": {"id": "task-1", "status": "done"}}"#)]
+    #[case::stop(r#"{"session_id": "1", "hook_event_name": "Stop", "message": "All done"}"#)]
+    #[case::stop_failure(r#"{"session_id": "1", "hook_event_name": "StopFailure", "error_type": "rate_limit", "error_message": "Too many requests"}"#)]
+    #[case::teammate_idle(r#"{"session_id": "1", "hook_event_name": "TeammateIdle", "result": "Implemented feature X"}"#)]
+    #[case::config_change(r#"{"session_id": "1", "hook_event_name": "ConfigChange", "config_source": "project_settings", "changed_file": "/repo/.claude/settings.json"}"#)]
+    #[case::pre_compact(
+        r#"{"session_id": "1", "hook_event_name": "PreCompact", "trigger": "limit"}"#
+    )]
+    #[case::post_compact(r#"{"session_id": "1", "hook_event_name": "PostCompact", "trigger": "auto", "summary": "Compacted 50 messages"}"#)]
+    #[case::elicitation(r#"{"session_id": "1", "hook_event_name": "Elicitation", "server_name": "filesystem", "request": {"prompt": "Confirm overwrite?"}}"#)]
+    #[case::elicitation_result(r#"{"session_id": "1", "hook_event_name": "ElicitationResult", "result": {"accepted": true}}"#)]
+    #[case::notification(
+        r#"{"session_id": "1", "hook_event_name": "Notification", "message": "msg"}"#
+    )]
+    #[case::worktree_create(r#"{"session_id": "1", "hook_event_name": "WorktreeCreate", "subagent_name": "explorer", "worktree_id": "wt-1", "git_root": "/repo", "parent_path": "/repo/.worktrees/main"}"#)]
+    #[case::worktree_remove(
+        r#"{"session_id": "1", "hook_event_name": "WorktreeRemove", "worktree_path": "wt"}"#
+    )]
     fn test_parse_valid_events(#[case] payload: &str) -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let conn = inceptool_protocol::from_wire(&driver, payload)?;
@@ -178,7 +200,7 @@ mod tests {
     #[rstest]
     fn test_format_output_decision_block() -> Result<(), TestError> {
         let driver = ClaudeDriver;
-        let output = HookOutputEvent::BeforeTool(BeforeToolOutput {
+        let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Block),
             ..Default::default()
         });
@@ -197,7 +219,7 @@ mod tests {
     #[rstest]
     fn test_format_output_halt() -> Result<(), TestError> {
         let driver = ClaudeDriver;
-        let output = HookOutputEvent::BeforeTool(BeforeToolOutput {
+        let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             halt: Some(true),
             ..Default::default()
         });
@@ -214,7 +236,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_before_tool() -> Result<(), TestError> {
+    fn test_format_output_hook_specific_pre_tool_use() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let mut input_map = serde_json::Map::new();
 
@@ -222,7 +244,7 @@ mod tests {
 
         let updated_input = serde_json::Value::Object(input_map);
 
-        let output = HookOutputEvent::BeforeTool(BeforeToolOutput {
+        let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Allow),
             reason: Some("Allowed reason".to_string()),
             updated_input: Some(updated_input),
@@ -265,9 +287,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_after_tool() -> Result<(), TestError> {
+    fn test_format_output_hook_specific_post_tool_use() -> Result<(), TestError> {
         let driver = ClaudeDriver;
-        let output = HookOutputEvent::AfterTool(inceptool_protocol::AfterToolOutput {
+        let output = HookOutputEvent::PostToolUse(inceptool_protocol::PostToolUseOutput {
             additional_context: Some("ctx".to_string()),
             ..Default::default()
         });
@@ -290,6 +312,373 @@ mod tests {
                 .get("additionalContext")
                 .ok_or(TestError::MissingKey("additionalContext"))?,
             "ctx"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_pre_tool_use_additional_context() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
+            additional_context: Some("extra context".to_string()),
+            ..Default::default()
+        });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "PreToolUse", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("additionalContext")
+                .ok_or(TestError::MissingKey("additionalContext"))?,
+            "extra context"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_post_tool_use_updated_tool_output() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::PostToolUse(inceptool_protocol::PostToolUseOutput {
+            updated_tool_output: Some(serde_json::json!({"stdout": "ok"})),
+            ..Default::default()
+        });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "PostToolUse", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("updatedToolOutput")
+                .and_then(|v| v.get("stdout"))
+                .ok_or(TestError::MissingKey("updatedToolOutput.stdout"))?,
+            "ok"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_session_start() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::SessionStart(inceptool_protocol::SessionStartOutput {
+            additional_context: Some("ctx".to_string()),
+            initial_user_message: Some("hello".to_string()),
+            session_title: Some("My Session".to_string()),
+            watch_paths: Some(vec!["/repo/src".to_string()]),
+            reload_skills: Some(true),
+            ..Default::default()
+        });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "SessionStart", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("hookEventName")
+                .ok_or(TestError::MissingKey("hookEventName"))?,
+            "SessionStart"
+        );
+        assert_eq!(
+            hook_specific
+                .get("initialUserMessage")
+                .ok_or(TestError::MissingKey("initialUserMessage"))?,
+            "hello"
+        );
+        assert_eq!(
+            hook_specific
+                .get("sessionTitle")
+                .ok_or(TestError::MissingKey("sessionTitle"))?,
+            "My Session"
+        );
+        assert_eq!(
+            hook_specific
+                .get("watchPaths")
+                .and_then(|v| v.get(0))
+                .ok_or(TestError::MissingKey("watchPaths[0]"))?,
+            "/repo/src"
+        );
+        assert_eq!(
+            hook_specific
+                .get("reloadSkills")
+                .ok_or(TestError::MissingKey("reloadSkills"))?,
+            true
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_setup() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::Setup(inceptool_protocol::SetupOutput {
+            additional_context: Some("setup ctx".to_string()),
+        });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "Setup", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("hookEventName")
+                .ok_or(TestError::MissingKey("hookEventName"))?,
+            "Setup"
+        );
+        assert_eq!(
+            hook_specific
+                .get("additionalContext")
+                .ok_or(TestError::MissingKey("additionalContext"))?,
+            "setup ctx"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_permission_request_with_behavior() -> Result<(), TestError>
+    {
+        let driver = ClaudeDriver;
+        let output =
+            HookOutputEvent::PermissionRequest(inceptool_protocol::PermissionRequestOutput {
+                behavior: Some(inceptool_protocol::PermissionBehavior::Allow),
+                ..Default::default()
+            });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "PermissionRequest", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("decision")
+                .and_then(|v| v.get("behavior"))
+                .ok_or(TestError::MissingKey("decision.behavior"))?,
+            "allow"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_permission_request_omits_decision_when_behavior_none()
+    -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::PermissionRequest(
+            inceptool_protocol::PermissionRequestOutput::default(),
+        );
+
+        let formatted = inceptool_protocol::to_wire(&driver, "PermissionRequest", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert!(hook_specific.get("decision").is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_worktree_create() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::WorktreeCreate(inceptool_protocol::WorktreeCreateOutput {
+            worktree_path: Some("/repo/.worktrees/feature".to_string()),
+        });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "WorktreeCreate", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("worktreePath")
+                .ok_or(TestError::MissingKey("worktreePath"))?,
+            "/repo/.worktrees/feature"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_stop() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::Stop(inceptool_protocol::StopOutput {
+            additional_context: Some("keep going".to_string()),
+            ..Default::default()
+        });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "Stop", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("additionalContext")
+                .ok_or(TestError::MissingKey("additionalContext"))?,
+            "keep going"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_user_prompt_expansion() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output =
+            HookOutputEvent::UserPromptExpansion(inceptool_protocol::UserPromptExpansionOutput {
+                additional_context: Some("expanded".to_string()),
+                ..Default::default()
+            });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "UserPromptExpansion", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("additionalContext")
+                .ok_or(TestError::MissingKey("additionalContext"))?,
+            "expanded"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_subagent_start() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::SubagentStart(inceptool_protocol::SubagentStartOutput {
+            additional_context: Some("subagent ctx".to_string()),
+        });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "SubagentStart", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("additionalContext")
+                .ok_or(TestError::MissingKey("additionalContext"))?,
+            "subagent ctx"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_subagent_stop() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::SubagentStop(inceptool_protocol::SubagentStopOutput {
+            additional_context: Some("subagent done".to_string()),
+            ..Default::default()
+        });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "SubagentStop", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("additionalContext")
+                .ok_or(TestError::MissingKey("additionalContext"))?,
+            "subagent done"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_permission_denied() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output =
+            HookOutputEvent::PermissionDenied(inceptool_protocol::PermissionDeniedOutput {
+                additional_context: Some("denied ctx".to_string()),
+            });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "PermissionDenied", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("additionalContext")
+                .ok_or(TestError::MissingKey("additionalContext"))?,
+            "denied ctx"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_message_display() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::MessageDisplay(inceptool_protocol::MessageDisplayOutput {
+            replacement_text: Some("replaced".to_string()),
+        });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "MessageDisplay", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("replacementText")
+                .ok_or(TestError::MissingKey("replacementText"))?,
+            "replaced"
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_format_output_hook_specific_elicitation() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        let output = HookOutputEvent::Elicitation(inceptool_protocol::ElicitationOutput {
+            response: Some(serde_json::json!({"accepted": true})),
+        });
+
+        let formatted = inceptool_protocol::to_wire(&driver, "Elicitation", &output)?;
+        let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
+        let hook_specific = parsed
+            .get("hookSpecificOutput")
+            .ok_or(TestError::MissingKey("hookSpecificOutput"))?;
+
+        assert_eq!(
+            hook_specific
+                .get("response")
+                .and_then(|v| v.get("accepted"))
+                .ok_or(TestError::MissingKey("response.accepted"))?,
+            true
         );
 
         Ok(())
