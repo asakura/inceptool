@@ -64,6 +64,115 @@ pub enum Decision {
     Block,
 }
 
+/// The permission mode active for the current session.
+///
+/// # Examples
+///
+/// ```
+/// # use inceptool_protocol::error::ProtocolError;
+/// # fn main() -> Result<(), ProtocolError> {
+/// use inceptool_protocol::PermissionMode;
+///
+/// let mode: PermissionMode = serde_json::from_str(r#""bypassPermissions""#)?;
+/// assert_eq!(mode, PermissionMode::BypassPermissions);
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum PermissionMode {
+    /// Standard interactive permission prompts.
+    Default,
+    /// Read-only planning mode; no mutating tools may run.
+    Plan,
+    /// Edits are automatically accepted without prompting.
+    AcceptEdits,
+    /// The session runs autonomously, evaluating permissions itself.
+    Auto,
+    /// Permission prompts are skipped without asking the user.
+    DontAsk,
+    /// All permission checks are bypassed entirely.
+    BypassPermissions,
+    /// A permission mode not recognized by this version of the protocol.
+    #[serde(other)]
+    Unknown,
+}
+
+/// The effort level configured for the current session.
+///
+/// # Examples
+///
+/// ```
+/// # use inceptool_protocol::error::ProtocolError;
+/// # fn main() -> Result<(), ProtocolError> {
+/// use inceptool_protocol::EffortLevel;
+///
+/// let level: EffortLevel = serde_json::from_str(r#""high""#)?;
+/// assert_eq!(level, EffortLevel::High);
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum EffortLevel {
+    /// Minimal reasoning effort.
+    Low,
+    /// Default/balanced reasoning effort.
+    Medium,
+    /// Increased reasoning effort.
+    High,
+    /// Higher-than-high reasoning effort.
+    Xhigh,
+    /// Maximum reasoning effort.
+    Max,
+    /// An effort level not recognized by this version of the protocol.
+    #[serde(other)]
+    Unknown,
+}
+
+/// The effort configuration for the current session.
+///
+/// # Examples
+///
+/// ```
+/// # use inceptool_protocol::error::ProtocolError;
+/// # fn main() -> Result<(), ProtocolError> {
+/// use inceptool_protocol::{Effort, EffortLevel};
+///
+/// let effort: Effort = serde_json::from_str(r#"{"level": "max"}"#)?;
+/// assert_eq!(effort.level, EffortLevel::Max);
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+pub struct Effort {
+    /// The configured reasoning effort level.
+    pub level: EffortLevel,
+}
+
+/// The behavior decided for a `PermissionRequest` hook.
+///
+/// # Examples
+///
+/// ```
+/// # use inceptool_protocol::error::ProtocolError;
+/// # fn main() -> Result<(), ProtocolError> {
+/// use inceptool_protocol::PermissionBehavior;
+///
+/// let behavior = PermissionBehavior::Allow;
+/// assert_eq!(serde_json::to_string(&behavior)?, r#""allow""#);
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PermissionBehavior {
+    /// Allow the tool to execute.
+    Allow,
+    /// Deny the tool from executing.
+    Deny,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,6 +213,58 @@ mod tests {
     #[case(Decision::Block, r#""block""#)]
     fn test_decision_serialization(
         #[case] input: Decision,
+        #[case] expected: &str,
+    ) -> Result<(), TestError> {
+        let serialized = serde_json::to_string(&input)?;
+        assert_eq!(serialized, expected);
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(r#""default""#, PermissionMode::Default)]
+    #[case(r#""plan""#, PermissionMode::Plan)]
+    #[case(r#""acceptEdits""#, PermissionMode::AcceptEdits)]
+    #[case(r#""auto""#, PermissionMode::Auto)]
+    #[case(r#""dontAsk""#, PermissionMode::DontAsk)]
+    #[case(r#""bypassPermissions""#, PermissionMode::BypassPermissions)]
+    #[case(r#""somethingNew""#, PermissionMode::Unknown)]
+    fn test_permission_mode_deserialization(
+        #[case] input: &str,
+        #[case] expected: PermissionMode,
+    ) -> Result<(), TestError> {
+        let parsed: PermissionMode = serde_json::from_str(input)?;
+        assert_eq!(parsed, expected);
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(r#""low""#, EffortLevel::Low)]
+    #[case(r#""medium""#, EffortLevel::Medium)]
+    #[case(r#""high""#, EffortLevel::High)]
+    #[case(r#""xhigh""#, EffortLevel::Xhigh)]
+    #[case(r#""max""#, EffortLevel::Max)]
+    #[case(r#""futuristic""#, EffortLevel::Unknown)]
+    fn test_effort_level_deserialization(
+        #[case] input: &str,
+        #[case] expected: EffortLevel,
+    ) -> Result<(), TestError> {
+        let parsed: EffortLevel = serde_json::from_str(input)?;
+        assert_eq!(parsed, expected);
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_effort_deserialization() -> Result<(), TestError> {
+        let parsed: Effort = serde_json::from_str(r#"{"level": "high"}"#)?;
+        assert_eq!(parsed.level, EffortLevel::High);
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(PermissionBehavior::Allow, r#""allow""#)]
+    #[case(PermissionBehavior::Deny, r#""deny""#)]
+    fn test_permission_behavior_serialization(
+        #[case] input: PermissionBehavior,
         #[case] expected: &str,
     ) -> Result<(), TestError> {
         let serialized = serde_json::to_string(&input)?;

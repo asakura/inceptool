@@ -1,7 +1,7 @@
 //! Session and connection metadata structures.
 
 use crate::input::HookInputEvent;
-use crate::types::RawJson;
+use crate::types::{Effort, PermissionMode, RawJson};
 
 use serde::Deserialize;
 use std::borrow::Cow;
