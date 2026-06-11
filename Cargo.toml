@@ -20,7 +20,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 thiserror = "2.0"
 rstest = "0.26.1"
-protocol = { package = "inceptool-protocols", path = "crates/protocol" }
+inceptool_protocol = { package = "inceptool-protocol", path = "crates/protocol" }
 
 [dependencies]
-protocol.workspace = true
+inceptool_protocol.workspace = true
