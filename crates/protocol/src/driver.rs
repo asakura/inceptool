@@ -57,10 +57,12 @@ pub fn to_wire<'a, D: Driver>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::input::{HookInputEvent, SessionEndInput};
-    use crate::output::{BeforeToolOutput, HookOutputEvent};
+    use crate::output::{HookOutputEvent, PreToolUseOutput};
     use crate::session::SessionMeta;
     use crate::types::Decision;
+
     use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Clone, Copy)]
@@ -98,6 +100,10 @@ mod tests {
                     timestamp: None,
                     driver: "Mock".into(),
                     driver_meta: None,
+                    permission_mode: None,
+                    effort: None,
+                    agent_id: None,
+                    agent_type: None,
                 },
                 event: HookInputEvent::SessionEnd(SessionEndInput {
                     reason: "test".into(),
@@ -120,19 +126,23 @@ mod tests {
     fn test_from_wire() -> Result<(), MockError> {
         let driver = MockDriver;
         let conn = from_wire(&driver, r#"{"_ignore":"val"}"#)?;
+
         assert_eq!(conn.session.driver, "Mock");
+
         Ok(())
     }
 
     #[test]
     fn test_to_wire() -> Result<(), MockError> {
         let driver = MockDriver;
-        let event = HookOutputEvent::BeforeTool(BeforeToolOutput {
+        let event = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Allow),
             ..Default::default()
         });
         let json = to_wire(&driver, "evt", &event)?;
+
         assert_eq!(json, r#"{"decision":"Allow"}"#);
+
         Ok(())
     }
 }
