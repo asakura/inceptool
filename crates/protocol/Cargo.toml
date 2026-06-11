@@ -2,6 +2,11 @@
 name = "inceptool-protocol"
 version = "0.1.0"
 edition = "2024"
+description = "Core protocol definitions for Inceptool"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/inceptool/inceptool"
+keywords = ["protocol", "core", "ai"]
+categories = ["development-tools"]
 
 [dependencies]
 serde.workspace = true
