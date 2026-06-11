@@ -12,9 +12,9 @@ use std::borrow::Cow;
 #[derive(Debug)]
 pub enum HookInputEvent<'a> {
     /// Triggered before a tool is executed.
-    BeforeTool(BeforeToolInput<'a>),
+    PreToolUse(PreToolUseInput<'a>),
     /// Triggered after a tool is executed.
-    AfterTool(AfterToolInput<'a>),
+    PostToolUse(PostToolUseInput<'a>),
     /// Triggered before an agent begins processing a prompt.
     BeforeAgent(BeforeAgentInput<'a>),
     /// Triggered after an agent completes processing.
@@ -32,7 +32,7 @@ pub enum HookInputEvent<'a> {
     /// Triggered for a generic notification.
     Notification(NotificationInput<'a>),
     /// Triggered before context compression occurs.
-    PreCompress(PreCompressInput<'a>),
+    PreCompact(PreCompactInput<'a>),
     /// Triggered when the session's current working directory changes.
     CwdChanged(CwdChangedInput<'a>),
     /// Triggered when a file is changed by the agent.
@@ -45,8 +45,6 @@ pub enum HookInputEvent<'a> {
     WorktreeCreate(WorktreeCreateInput<'a>),
     /// Triggered when a git worktree is removed.
     WorktreeRemove(WorktreeRemoveInput<'a>),
-
-    // --- Additional Hooks ---
     /// Triggered when the agent completes its initial setup phase.
     Setup(SetupInput<'a>),
     /// Triggered when a user prompt is expanded using custom instructions or memory.
@@ -85,9 +83,9 @@ pub enum HookInputEvent<'a> {
     ElicitationResult(ElicitationResultInput<'a>),
 }
 
-/// Input payload for the `BeforeTool` event.
+/// Input payload for the `PreToolUse` event.
 #[derive(Debug, Deserialize)]
-pub struct BeforeToolInput<'a> {
+pub struct PreToolUseInput<'a> {
     /// The name of the tool about to be executed.
     pub tool_name: Cow<'a, str>,
     /// The raw JSON arguments provided to the tool.
@@ -99,17 +97,19 @@ pub struct BeforeToolInput<'a> {
     pub original_request_name: Option<Cow<'a, str>>,
 }
 
-/// Input payload for the `AfterTool` event.
+/// Input payload for the `PostToolUse` event.
 #[derive(Debug, Deserialize)]
-pub struct AfterToolInput<'a> {
+pub struct PostToolUseInput<'a> {
     /// The name of the tool that was executed.
     pub tool_name: Cow<'a, str>,
     /// The raw JSON arguments provided to the tool.
     #[serde(borrow)]
     pub tool_input: RawJson<'a>,
-    /// The raw JSON response returned by the tool.
-    #[serde(borrow)]
-    pub tool_response: RawJson<'a>,
+    /// The raw JSON output returned by the tool.
+    #[serde(borrow, alias = "tool_response")]
+    pub tool_output: RawJson<'a>,
+    /// The source of the tool output (e.g., "tool", "hook").
+    pub tool_output_source: Option<Cow<'a, str>>,
     /// The context from an MCP server, if applicable.
     pub mcp_context: Option<RawJson<'a>>,
     /// The original request name.
@@ -170,6 +170,8 @@ pub struct SessionStartInput<'a> {
     pub agent_type: Option<Cow<'a, str>>,
     /// Path to the environment file loaded for this session.
     pub env_file: Option<Cow<'a, str>>,
+    /// The title of the session, if one has been set.
+    pub session_title: Option<Cow<'a, str>>,
 }
 
 /// Input payload for the `SessionEnd` event.
@@ -188,11 +190,13 @@ pub struct NotificationInput<'a> {
     pub notification_type: Option<Cow<'a, str>>,
     /// The title of the notification.
     pub title: Option<Cow<'a, str>>,
+    /// The severity level of the notification (e.g., "info", "warning", "error").
+    pub severity: Option<Cow<'a, str>>,
 }
 
-/// Input payload for the `PreCompress` event.
+/// Input payload for the `PreCompact` event.
 #[derive(Debug, Deserialize)]
-pub struct PreCompressInput<'a> {
+pub struct PreCompactInput<'a> {
     /// The trigger reason for the compression.
     pub trigger: Cow<'a, str>,
     /// Custom instructions provided during the compression phase.
@@ -203,9 +207,12 @@ pub struct PreCompressInput<'a> {
 #[derive(Debug, Deserialize)]
 pub struct CwdChangedInput<'a> {
     /// The previous current working directory.
-    pub previous_cwd: Cow<'a, str>,
+    #[serde(alias = "previous_cwd")]
+    pub old_cwd: Cow<'a, str>,
     /// The new current working directory.
     pub new_cwd: Cow<'a, str>,
+    /// The reason the working directory changed.
+    pub change_reason: Option<Cow<'a, str>>,
     /// Path to an environment file related to the directory change.
     pub env_file: Option<Cow<'a, str>>,
 }
@@ -216,7 +223,8 @@ pub struct FileChangedInput<'a> {
     /// The path of the file that changed.
     pub file_path: Cow<'a, str>,
     /// The type of change event (e.g., created, modified, deleted).
-    pub event: Option<Cow<'a, str>>,
+    #[serde(alias = "event")]
+    pub change_type: Option<Cow<'a, str>>,
     /// Path to the environment file associated with this change.
     pub env_file: Option<Cow<'a, str>>,
 }
@@ -249,8 +257,14 @@ pub struct UserPromptSubmitInput<'a> {
 /// Input payload for the `WorktreeCreate` event.
 #[derive(Debug, Deserialize)]
 pub struct WorktreeCreateInput<'a> {
-    /// The name of the newly created worktree.
-    pub name: Cow<'a, str>,
+    /// The name of the subagent the worktree is being created for, if any.
+    pub subagent_name: Option<Cow<'a, str>>,
+    /// A unique identifier for the worktree.
+    pub worktree_id: Option<Cow<'a, str>>,
+    /// The root of the git repository the worktree was created from.
+    pub git_root: Option<Cow<'a, str>>,
+    /// The path of the parent worktree, if this worktree was created from another worktree.
+    pub parent_path: Option<Cow<'a, str>>,
 }
 
 /// Input payload for the `WorktreeRemove` event.
@@ -266,9 +280,8 @@ pub struct WorktreeRemoveInput<'a> {
 /// It does not fire on normal startup. Use it for one-time dependency installation or scheduled cleanup.
 #[derive(Debug, Deserialize)]
 pub struct SetupInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// The trigger that initiated this setup run (e.g., "init" or "maintenance").
+    pub trigger: Cow<'a, str>,
 }
 
 /// Input payload for the `UserPromptExpansion` event.
@@ -278,9 +291,10 @@ pub struct SetupInput<'a> {
 /// or log which commands users invoke.
 #[derive(Debug, Deserialize)]
 pub struct UserPromptExpansionInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// The name of the slash command that was expanded.
+    pub command_name: Cow<'a, str>,
+    /// The prompt text the command expanded into, if available.
+    pub prompt: Option<Cow<'a, str>>,
 }
 
 /// Input payload for the `MessageDisplay` event.
@@ -290,9 +304,9 @@ pub struct UserPromptExpansionInput<'a> {
 /// and renders the hook’s replacement text in their place.
 #[derive(Debug, Deserialize)]
 pub struct MessageDisplayInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// The batch of newly completed lines ready to render.
+    #[serde(default)]
+    pub lines: Vec<Cow<'a, str>>,
 }
 
 /// Input payload for the `PermissionRequest` event.
@@ -301,9 +315,13 @@ pub struct MessageDisplayInput<'a> {
 /// Use PermissionRequest decision control to allow or deny on behalf of the user.
 #[derive(Debug, Deserialize)]
 pub struct PermissionRequestInput<'a> {
-    /// The raw payload of the hook event.
+    /// The name of the tool the permission dialog is being shown for.
+    pub tool_name: Cow<'a, str>,
+    /// The raw JSON arguments proposed for the tool.
     #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    pub tool_input: RawJson<'a>,
+    /// The name of the permission rule that triggered the dialog, if any.
+    pub permission_rule_name: Option<Cow<'a, str>>,
 }
 
 /// Input payload for the `PostToolUseFailure` event.
@@ -312,9 +330,13 @@ pub struct PermissionRequestInput<'a> {
 /// Use this to log failures, send alerts, or provide corrective feedback.
 #[derive(Debug, Deserialize)]
 pub struct PostToolUseFailureInput<'a> {
-    /// The raw payload of the hook event.
+    /// The name of the tool that failed.
+    pub tool_name: Cow<'a, str>,
+    /// The raw JSON arguments that were provided to the tool.
     #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    pub tool_input: RawJson<'a>,
+    /// The error message produced by the failed tool execution.
+    pub tool_error: Cow<'a, str>,
 }
 
 /// Input payload for the `PostToolBatch` event.
@@ -323,9 +345,9 @@ pub struct PostToolUseFailureInput<'a> {
 /// It is the right place to inject context that depends on the set of tools that ran rather than on any single tool.
 #[derive(Debug, Deserialize)]
 pub struct PostToolBatchInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// The raw JSON details of each tool call resolved in this batch.
+    #[serde(borrow, default)]
+    pub tool_calls: Vec<RawJson<'a>>,
 }
 
 /// Input payload for the `PermissionDenied` event.
@@ -335,9 +357,13 @@ pub struct PostToolBatchInput<'a> {
 /// Use it to log classifier denials, adjust configuration, or tell the model it may retry the tool call.
 #[derive(Debug, Deserialize)]
 pub struct PermissionDeniedInput<'a> {
-    /// The raw payload of the hook event.
+    /// The name of the tool that was denied.
+    pub tool_name: Cow<'a, str>,
+    /// The raw JSON arguments that were proposed for the tool.
     #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    pub tool_input: RawJson<'a>,
+    /// The reason the auto mode classifier denied the tool call, if provided.
+    pub reason: Option<Cow<'a, str>>,
 }
 
 /// Input payload for the `SubagentStart` event.
@@ -345,9 +371,10 @@ pub struct PermissionDeniedInput<'a> {
 /// Runs when a subagent is spawned via the Agent tool.
 #[derive(Debug, Deserialize)]
 pub struct SubagentStartInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// The type of the subagent that was spawned.
+    pub agent_type: Cow<'a, str>,
+    /// The prompt passed to the subagent, if available.
+    pub prompt: Option<Cow<'a, str>>,
 }
 
 /// Input payload for the `SubagentStop` event.
@@ -355,9 +382,10 @@ pub struct SubagentStartInput<'a> {
 /// Runs when a subagent has finished responding.
 #[derive(Debug, Deserialize)]
 pub struct SubagentStopInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// The type of the subagent that finished.
+    pub agent_type: Cow<'a, str>,
+    /// The result returned by the subagent, if available.
+    pub result: Option<Cow<'a, str>>,
 }
 
 /// Input payload for the `TaskCreated` event.
@@ -366,9 +394,9 @@ pub struct SubagentStopInput<'a> {
 /// require task descriptions, or prevent certain tasks from being created.
 #[derive(Debug, Deserialize)]
 pub struct TaskCreatedInput<'a> {
-    /// The raw payload of the hook event.
+    /// The raw JSON details of the task being created.
     #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    pub task: RawJson<'a>,
 }
 
 /// Input payload for the `TaskCompleted` event.
@@ -378,9 +406,9 @@ pub struct TaskCreatedInput<'a> {
 /// finishes its turn with in-progress tasks.
 #[derive(Debug, Deserialize)]
 pub struct TaskCompletedInput<'a> {
-    /// The raw payload of the hook event.
+    /// The raw JSON details of the task being completed.
     #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    pub task: RawJson<'a>,
 }
 
 /// Input payload for the `Stop` event.
@@ -388,9 +416,8 @@ pub struct TaskCompletedInput<'a> {
 /// Runs when the main agent has finished responding. Does not run if the stoppage occurred due to a user interrupt.
 #[derive(Debug, Deserialize)]
 pub struct StopInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// Claude's final response message for the turn, if available.
+    pub message: Option<Cow<'a, str>>,
 }
 
 /// Input payload for the `StopFailure` event.
@@ -400,9 +427,10 @@ pub struct StopInput<'a> {
 /// a response due to rate limits, authentication problems, or other API errors.
 #[derive(Debug, Deserialize)]
 pub struct StopFailureInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// The category of error that prevented the agent from completing its response.
+    pub error_type: Cow<'a, str>,
+    /// A human-readable description of the error.
+    pub error_message: Cow<'a, str>,
 }
 
 /// Input payload for the `TeammateIdle` event.
@@ -412,9 +440,8 @@ pub struct StopFailureInput<'a> {
 /// that output files exist.
 #[derive(Debug, Deserialize)]
 pub struct TeammateIdleInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// The result the teammate produced before going idle, if available.
+    pub result: Option<Cow<'a, str>>,
 }
 
 /// Input payload for the `ConfigChange` event.
@@ -423,9 +450,10 @@ pub struct TeammateIdleInput<'a> {
 /// enforce security policies, or block unauthorized modifications to configuration files.
 #[derive(Debug, Deserialize)]
 pub struct ConfigChangeInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// The source of the changed configuration (e.g., "user_settings", "project_settings").
+    pub config_source: Cow<'a, str>,
+    /// The path of the configuration file that changed.
+    pub changed_file: Cow<'a, str>,
 }
 
 /// Input payload for the `PostCompact` event.
@@ -434,9 +462,10 @@ pub struct ConfigChangeInput<'a> {
 /// for example to log the generated summary or update external state.
 #[derive(Debug, Deserialize)]
 pub struct PostCompactInput<'a> {
-    /// The raw payload of the hook event.
-    #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    /// The trigger reason for the compaction that just completed.
+    pub trigger: Option<Cow<'a, str>>,
+    /// A summary of the compaction that was performed.
+    pub summary: Option<Cow<'a, str>>,
 }
 
 /// Input payload for the `Elicitation` event.
@@ -445,9 +474,11 @@ pub struct PostCompactInput<'a> {
 /// and respond programmatically, skipping the dialog entirely.
 #[derive(Debug, Deserialize)]
 pub struct ElicitationInput<'a> {
-    /// The raw payload of the hook event.
+    /// The name of the MCP server that requested input, if known.
+    pub server_name: Option<Cow<'a, str>>,
+    /// The raw JSON elicitation request sent by the MCP server.
     #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    pub request: RawJson<'a>,
 }
 
 /// Input payload for the `ElicitationResult` event.
@@ -455,12 +486,12 @@ pub struct ElicitationInput<'a> {
 /// Runs when an elicitation result is received.
 #[derive(Debug, Deserialize)]
 pub struct ElicitationResultInput<'a> {
-    /// The raw payload of the hook event.
+    /// The raw JSON result of the elicitation request.
     #[serde(borrow)]
-    pub raw: Option<RawJson<'a>>,
+    pub result: RawJson<'a>,
 }
 
-impl<'a> BeforeToolInput<'a> {
+impl<'a> PreToolUseInput<'a> {
     /// Parses the raw tool input into a specific expected type `T`.
     ///
     /// # Examples
@@ -468,7 +499,7 @@ impl<'a> BeforeToolInput<'a> {
     /// ```
     /// # use inceptool_protocol::error::ProtocolError;
     /// # fn main() -> Result<(), ProtocolError> {
-    /// use inceptool_protocol::{BeforeToolInput, RawJson};
+    /// use inceptool_protocol::{PreToolUseInput, RawJson};
     /// use serde_json::value::RawValue;
     /// use serde::Deserialize;
     /// use std::borrow::Cow;
@@ -479,7 +510,7 @@ impl<'a> BeforeToolInput<'a> {
     /// }
     ///
     /// let raw = RawValue::from_string(r#"{"id": 42}"#.to_string())?;
-    /// let input = BeforeToolInput {
+    /// let input = PreToolUseInput {
     ///     tool_name: Cow::Borrowed("my_tool"),
     ///     tool_input: RawJson(&raw),
     ///     mcp_context: None,
@@ -496,7 +527,7 @@ impl<'a> BeforeToolInput<'a> {
     }
 }
 
-impl<'a> AfterToolInput<'a> {
+impl<'a> PostToolUseInput<'a> {
     /// Parses the raw tool input into a specific expected type `T`.
     ///
     /// # Examples
@@ -504,7 +535,7 @@ impl<'a> AfterToolInput<'a> {
     /// ```
     /// # use inceptool_protocol::error::ProtocolError;
     /// # fn main() -> Result<(), ProtocolError> {
-    /// use inceptool_protocol::{AfterToolInput, RawJson};
+    /// use inceptool_protocol::{PostToolUseInput, RawJson};
     /// use serde_json::value::RawValue;
     /// use serde::Deserialize;
     /// use std::borrow::Cow;
@@ -516,10 +547,11 @@ impl<'a> AfterToolInput<'a> {
     ///
     /// let raw_in = RawValue::from_string(r#"{"id": 42}"#.to_string())?;
     /// let raw_out = RawValue::from_string(r#"{}"#.to_string())?;
-    /// let input = AfterToolInput {
+    /// let input = PostToolUseInput {
     ///     tool_name: Cow::Borrowed("my_tool"),
     ///     tool_input: RawJson(&raw_in),
-    ///     tool_response: RawJson(&raw_out),
+    ///     tool_output: RawJson(&raw_out),
+    ///     tool_output_source: None,
     ///     mcp_context: None,
     ///     original_request_name: None,
     /// };
@@ -567,37 +599,37 @@ mod tests {
     }
 
     #[rstest]
-    fn test_before_tool_input_deserialization_tool_name(
+    fn test_pre_tool_use_input_deserialization_tool_name(
         grep_search_json: String,
     ) -> Result<(), TestError> {
-        let input: BeforeToolInput = serde_json::from_str(&grep_search_json)?;
+        let input: PreToolUseInput = serde_json::from_str(&grep_search_json)?;
         assert_eq!(input.tool_name, "grep_search");
         Ok(())
     }
 
     #[rstest]
-    fn test_before_tool_input_deserialization_original_name(
+    fn test_pre_tool_use_input_deserialization_original_name(
         grep_search_json: String,
     ) -> Result<(), TestError> {
-        let input: BeforeToolInput = serde_json::from_str(&grep_search_json)?;
+        let input: PreToolUseInput = serde_json::from_str(&grep_search_json)?;
         assert_eq!(input.original_request_name.as_deref(), Some("search"));
         Ok(())
     }
 
     #[rstest]
-    fn test_before_tool_input_deserialization_mcp_context(
+    fn test_pre_tool_use_input_deserialization_mcp_context(
         grep_search_json: String,
     ) -> Result<(), TestError> {
-        let input: BeforeToolInput = serde_json::from_str(&grep_search_json)?;
+        let input: PreToolUseInput = serde_json::from_str(&grep_search_json)?;
         assert!(input.mcp_context.is_none());
         Ok(())
     }
 
     #[rstest]
-    fn test_before_tool_input_deserialization_payload(
+    fn test_pre_tool_use_input_deserialization_payload(
         grep_search_json: String,
     ) -> Result<(), TestError> {
-        let input: BeforeToolInput = serde_json::from_str(&grep_search_json)?;
+        let input: PreToolUseInput = serde_json::from_str(&grep_search_json)?;
         let parsed_tool_input: serde_json::Value = serde_json::from_str(input.tool_input.0.get())?;
 
         assert_eq!(parsed_tool_input, json!({"query": "foo", "path": "/"}));
@@ -606,9 +638,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_before_tool_input_parse(raw_tool_input_json: String) -> Result<(), TestError> {
+    fn test_pre_tool_use_input_parse(raw_tool_input_json: String) -> Result<(), TestError> {
         let raw = serde_json::value::RawValue::from_string(raw_tool_input_json)?;
-        let input = BeforeToolInput {
+        let input = PreToolUseInput {
             tool_name: std::borrow::Cow::Borrowed("test"),
             tool_input: RawJson(&raw),
             mcp_context: None,
@@ -622,18 +654,383 @@ mod tests {
     }
 
     #[rstest]
-    fn test_after_tool_input_parse(raw_tool_input_json: String) -> Result<(), TestError> {
+    fn test_post_tool_use_input_parse(raw_tool_input_json: String) -> Result<(), TestError> {
         let raw = serde_json::value::RawValue::from_string(raw_tool_input_json)?;
-        let after_input = AfterToolInput {
+        let after_input = PostToolUseInput {
             tool_name: std::borrow::Cow::Borrowed("test"),
             tool_input: RawJson(&raw),
-            tool_response: RawJson(&raw),
+            tool_output: RawJson(&raw),
+            tool_output_source: None,
             mcp_context: None,
             original_request_name: None,
         };
 
         let parsed: serde_json::Value = after_input.parse_tool_input()?;
         assert_eq!(parsed, json!({"key": "value"}));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_post_tool_use_input_deserialization_tool_output_alias() -> Result<(), TestError> {
+        let json = r#"{
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls"},
+            "tool_response": {"stdout": "ok"},
+            "mcp_context": null,
+            "original_request_name": null
+        }"#;
+
+        let input: PostToolUseInput = serde_json::from_str(json)?;
+        let parsed: serde_json::Value = serde_json::from_str(input.tool_output.0.get())?;
+
+        assert_eq!(parsed, json!({"stdout": "ok"}));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_post_tool_use_input_deserialization_tool_output_new_name() -> Result<(), TestError> {
+        let json = r#"{
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls"},
+            "tool_output": {"stdout": "ok"},
+            "tool_output_source": "tool",
+            "mcp_context": null,
+            "original_request_name": null
+        }"#;
+
+        let input: PostToolUseInput = serde_json::from_str(json)?;
+        let parsed: serde_json::Value = serde_json::from_str(input.tool_output.0.get())?;
+
+        assert_eq!(parsed, json!({"stdout": "ok"}));
+        assert_eq!(input.tool_output_source.as_deref(), Some("tool"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_cwd_changed_input_deserialization_old_cwd_alias() -> Result<(), TestError> {
+        let json = r#"{"previous_cwd": "/old", "new_cwd": "/new"}"#;
+        let input: CwdChangedInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.old_cwd, "/old");
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_cwd_changed_input_deserialization_old_cwd_new_name() -> Result<(), TestError> {
+        let json = r#"{"old_cwd": "/old", "new_cwd": "/new"}"#;
+        let input: CwdChangedInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.old_cwd, "/old");
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_cwd_changed_input_deserialization_change_reason() -> Result<(), TestError> {
+        let json = r#"{"old_cwd": "/old", "new_cwd": "/new", "change_reason": "cd command"}"#;
+        let input: CwdChangedInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.change_reason.as_deref(), Some("cd command"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_file_changed_input_deserialization_change_type_alias() -> Result<(), TestError> {
+        let json = r#"{"file_path": "/a.txt", "event": "modified"}"#;
+        let input: FileChangedInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.change_type.as_deref(), Some("modified"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_file_changed_input_deserialization_change_type_new_name() -> Result<(), TestError> {
+        let json = r#"{"file_path": "/a.txt", "change_type": "created"}"#;
+        let input: FileChangedInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.change_type.as_deref(), Some("created"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_notification_input_deserialization_severity() -> Result<(), TestError> {
+        let json = r#"{"message": "disk low", "severity": "warning"}"#;
+        let input: NotificationInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.severity.as_deref(), Some("warning"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_session_start_input_deserialization_session_title() -> Result<(), TestError> {
+        let json = r#"{"session_title": "Refactor auth module"}"#;
+        let input: SessionStartInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.session_title.as_deref(), Some("Refactor auth module"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_worktree_create_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{
+            "subagent_name": "explorer",
+            "worktree_id": "wt-1",
+            "git_root": "/repo",
+            "parent_path": "/repo/.worktrees/main"
+        }"#;
+        let input: WorktreeCreateInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.subagent_name.as_deref(), Some("explorer"));
+        assert_eq!(input.worktree_id.as_deref(), Some("wt-1"));
+        assert_eq!(input.git_root.as_deref(), Some("/repo"));
+        assert_eq!(input.parent_path.as_deref(), Some("/repo/.worktrees/main"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::init("init")]
+    #[case::maintenance("maintenance")]
+    fn test_setup_input_deserialization_trigger(#[case] trigger: &str) -> Result<(), TestError> {
+        let json = format!(r#"{{"trigger": "{trigger}"}}"#);
+        let input: SetupInput = serde_json::from_str(&json)?;
+
+        assert_eq!(input.trigger, trigger);
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_user_prompt_expansion_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"command_name": "/review", "prompt": "Review this PR"}"#;
+        let input: UserPromptExpansionInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.command_name, "/review");
+        assert_eq!(input.prompt.as_deref(), Some("Review this PR"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_message_display_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"lines": ["line one", "line two"]}"#;
+        let input: MessageDisplayInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.lines, vec!["line one", "line two"]);
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_message_display_input_deserialization_defaults_to_empty() -> Result<(), TestError> {
+        let input: MessageDisplayInput = serde_json::from_str("{}")?;
+        assert!(input.lines.is_empty());
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_permission_request_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{
+            "tool_name": "Bash",
+            "tool_input": {"command": "rm -rf /tmp/x"},
+            "permission_rule_name": "Bash(rm:*)"
+        }"#;
+        let input: PermissionRequestInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.tool_name, "Bash");
+        assert_eq!(input.permission_rule_name.as_deref(), Some("Bash(rm:*)"));
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(input.tool_input.0.get())?,
+            json!({"command": "rm -rf /tmp/x"})
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_post_tool_use_failure_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{
+            "tool_name": "Bash",
+            "tool_input": {"command": "false"},
+            "tool_error": "exit status 1"
+        }"#;
+        let input: PostToolUseFailureInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.tool_name, "Bash");
+        assert_eq!(input.tool_error, "exit status 1");
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_post_tool_batch_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"tool_calls": [{"tool_name": "Bash"}, {"tool_name": "Read"}]}"#;
+        let input: PostToolBatchInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.tool_calls.len(), 2);
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(input.tool_calls[0].0.get())?,
+            json!({"tool_name": "Bash"})
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_post_tool_batch_input_deserialization_defaults_to_empty() -> Result<(), TestError> {
+        let input: PostToolBatchInput = serde_json::from_str("{}")?;
+        assert!(input.tool_calls.is_empty());
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_permission_denied_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{
+            "tool_name": "Bash",
+            "tool_input": {"command": "curl evil.com"},
+            "reason": "network access denied"
+        }"#;
+        let input: PermissionDeniedInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.tool_name, "Bash");
+        assert_eq!(input.reason.as_deref(), Some("network access denied"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_subagent_start_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"agent_type": "Explore", "prompt": "Find usages of foo"}"#;
+        let input: SubagentStartInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.agent_type, "Explore");
+        assert_eq!(input.prompt.as_deref(), Some("Find usages of foo"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_subagent_stop_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"agent_type": "Explore", "result": "Found 3 usages"}"#;
+        let input: SubagentStopInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.agent_type, "Explore");
+        assert_eq!(input.result.as_deref(), Some("Found 3 usages"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_task_created_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"task": {"id": "task-1", "title": "Write tests"}}"#;
+        let input: TaskCreatedInput = serde_json::from_str(json)?;
+
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(input.task.0.get())?,
+            json!({"id": "task-1", "title": "Write tests"})
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_task_completed_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"task": {"id": "task-1", "status": "done"}}"#;
+        let input: TaskCompletedInput = serde_json::from_str(json)?;
+
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(input.task.0.get())?,
+            json!({"id": "task-1", "status": "done"})
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_stop_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"message": "All done"}"#;
+        let input: StopInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.message.as_deref(), Some("All done"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_stop_failure_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"error_type": "rate_limit", "error_message": "Too many requests"}"#;
+        let input: StopFailureInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.error_type, "rate_limit");
+        assert_eq!(input.error_message, "Too many requests");
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_teammate_idle_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"result": "Implemented feature X"}"#;
+        let input: TeammateIdleInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.result.as_deref(), Some("Implemented feature X"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_config_change_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"config_source": "project_settings", "changed_file": "/repo/.claude/settings.json"}"#;
+        let input: ConfigChangeInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.config_source, "project_settings");
+        assert_eq!(input.changed_file, "/repo/.claude/settings.json");
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_post_compact_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"trigger": "auto", "summary": "Compacted 50 messages"}"#;
+        let input: PostCompactInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.trigger.as_deref(), Some("auto"));
+        assert_eq!(input.summary.as_deref(), Some("Compacted 50 messages"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_elicitation_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"server_name": "filesystem", "request": {"prompt": "Confirm overwrite?"}}"#;
+        let input: ElicitationInput = serde_json::from_str(json)?;
+
+        assert_eq!(input.server_name.as_deref(), Some("filesystem"));
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(input.request.0.get())?,
+            json!({"prompt": "Confirm overwrite?"})
+        );
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_elicitation_result_input_deserialization() -> Result<(), TestError> {
+        let json = r#"{"result": {"accepted": true}}"#;
+        let input: ElicitationResultInput = serde_json::from_str(json)?;
+
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(input.result.0.get())?,
+            json!({"accepted": true})
+        );
 
         Ok(())
     }
