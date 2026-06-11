@@ -228,10 +228,9 @@ impl<'a> BeforeToolInput<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use inceptool_protocols::error::ProtocolError;
+    /// # use inceptool_protocol::error::ProtocolError;
     /// # fn main() -> Result<(), ProtocolError> {
-    /// use inceptool_protocols::BeforeToolInput;
-    /// use inceptool_protocols::RawJson;
+    /// use inceptool_protocol::{BeforeToolInput, RawJson};
     /// use serde_json::value::RawValue;
     /// use serde::Deserialize;
     /// use std::borrow::Cow;
@@ -265,10 +264,9 @@ impl<'a> AfterToolInput<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use inceptool_protocols::error::ProtocolError;
+    /// # use inceptool_protocol::error::ProtocolError;
     /// # fn main() -> Result<(), ProtocolError> {
-    /// use inceptool_protocols::AfterToolInput;
-    /// use inceptool_protocols::RawJson;
+    /// use inceptool_protocol::{AfterToolInput, RawJson};
     /// use serde_json::value::RawValue;
     /// use serde::Deserialize;
     /// use std::borrow::Cow;
