@@ -1,0 +1,19 @@
+[package]
+name = "inceptool-driver-gemini"
+version = "0.9.0"
+edition = "2024"
+authors = ["Mikalai Seva"]
+description = "Gemini driver for Inceptool protocol"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/asakura/inceptool"
+keywords = ["gemini", "driver", "ai"]
+categories = ["development-tools"]
+
+[dependencies]
+inceptool_protocol.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
