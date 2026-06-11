@@ -1,0 +1,26 @@
+[package]
+name = "inceptool"
+version = "0.1.0"
+edition = "2024"
+authors = ["Mikalai Seva"]
+description = "An extensible LLM agent hook architecture"
+license = "MIT"
+repository = "https://github.com/asakura/inceptool"
+readme = "README.md"
+keywords = ["llm", "agents", "hooks", "ai"]
+categories = ["development-tools"]
+
+[workspace]
+members = [
+    "crates/protocol",
+]
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+thiserror = "2.0"
+rstest = "0.26.1"
+protocol = { package = "inceptool-protocols", path = "crates/protocol" }
+
+[dependencies]
+protocol.workspace = true
