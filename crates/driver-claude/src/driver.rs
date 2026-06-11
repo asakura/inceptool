@@ -26,11 +26,34 @@ impl Driver for ClaudeDriver {
             "PostToolUse" => HookInputEvent::AfterTool(serde_json::from_str(raw_json)?),
             "UserPromptSubmit" => HookInputEvent::UserPromptSubmit(serde_json::from_str(raw_json)?),
             "SessionStart" => HookInputEvent::SessionStart(serde_json::from_str(raw_json)?),
+            "SessionEnd" => HookInputEvent::SessionEnd(serde_json::from_str(raw_json)?),
             "CwdChanged" => HookInputEvent::CwdChanged(serde_json::from_str(raw_json)?),
             "FileChanged" => HookInputEvent::FileChanged(serde_json::from_str(raw_json)?),
             "InstructionsLoaded" => {
                 HookInputEvent::InstructionsLoaded(serde_json::from_str(raw_json)?)
             }
+            "Setup" => HookInputEvent::Setup(serde_json::from_str(raw_json)?),
+            "UserPromptExpansion" => HookInputEvent::UserPromptExpansion(serde_json::from_str(raw_json)?),
+            "MessageDisplay" => HookInputEvent::MessageDisplay(serde_json::from_str(raw_json)?),
+            "PermissionRequest" => HookInputEvent::PermissionRequest(serde_json::from_str(raw_json)?),
+            "PostToolUseFailure" => HookInputEvent::PostToolUseFailure(serde_json::from_str(raw_json)?),
+            "PostToolBatch" => HookInputEvent::PostToolBatch(serde_json::from_str(raw_json)?),
+            "PermissionDenied" => HookInputEvent::PermissionDenied(serde_json::from_str(raw_json)?),
+            "SubagentStart" => HookInputEvent::SubagentStart(serde_json::from_str(raw_json)?),
+            "SubagentStop" => HookInputEvent::SubagentStop(serde_json::from_str(raw_json)?),
+            "TaskCreated" => HookInputEvent::TaskCreated(serde_json::from_str(raw_json)?),
+            "TaskCompleted" => HookInputEvent::TaskCompleted(serde_json::from_str(raw_json)?),
+            "Stop" => HookInputEvent::Stop(serde_json::from_str(raw_json)?),
+            "StopFailure" => HookInputEvent::StopFailure(serde_json::from_str(raw_json)?),
+            "TeammateIdle" => HookInputEvent::TeammateIdle(serde_json::from_str(raw_json)?),
+            "ConfigChange" => HookInputEvent::ConfigChange(serde_json::from_str(raw_json)?),
+            "PreCompact" => HookInputEvent::PreCompress(serde_json::from_str(raw_json)?),
+            "PostCompact" => HookInputEvent::PostCompact(serde_json::from_str(raw_json)?),
+            "Elicitation" => HookInputEvent::Elicitation(serde_json::from_str(raw_json)?),
+            "ElicitationResult" => HookInputEvent::ElicitationResult(serde_json::from_str(raw_json)?),
+            "Notification" => HookInputEvent::Notification(serde_json::from_str(raw_json)?),
+            "WorktreeCreate" => HookInputEvent::WorktreeCreate(serde_json::from_str(raw_json)?),
+            "WorktreeRemove" => HookInputEvent::WorktreeRemove(serde_json::from_str(raw_json)?),
             _ => {
                 return Err(
                     ProtocolError::UnsupportedEvent(meta.hook_event_name.into_owned()).into(),
@@ -103,9 +126,32 @@ mod tests {
         r#"{"session_id": "1", "hook_event_name": "UserPromptSubmit", "prompt": "test"}"#
     )]
     #[case::session_start(r#"{"session_id": "1", "hook_event_name": "SessionStart"}"#)]
+    #[case::session_end(r#"{"session_id": "1", "hook_event_name": "SessionEnd", "reason": "test"}"#)]
     #[case::cwd_changed(r#"{"session_id": "1", "hook_event_name": "CwdChanged", "new_cwd": "test", "previous_cwd": "old"}"#)]
     #[case::file_changed(r#"{"session_id": "1", "hook_event_name": "FileChanged", "file_path": "test", "content": "test"}"#)]
     #[case::instructions_loaded(r#"{"session_id": "1", "hook_event_name": "InstructionsLoaded", "instructions": "test", "file_path": "test", "memory_type": "project", "load_reason": "startup"}"#)]
+    #[case::setup(r#"{"session_id": "1", "hook_event_name": "Setup"}"#)]
+    #[case::user_prompt_expansion(r#"{"session_id": "1", "hook_event_name": "UserPromptExpansion"}"#)]
+    #[case::message_display(r#"{"session_id": "1", "hook_event_name": "MessageDisplay"}"#)]
+    #[case::permission_request(r#"{"session_id": "1", "hook_event_name": "PermissionRequest"}"#)]
+    #[case::post_tool_use_failure(r#"{"session_id": "1", "hook_event_name": "PostToolUseFailure"}"#)]
+    #[case::post_tool_batch(r#"{"session_id": "1", "hook_event_name": "PostToolBatch"}"#)]
+    #[case::permission_denied(r#"{"session_id": "1", "hook_event_name": "PermissionDenied"}"#)]
+    #[case::subagent_start(r#"{"session_id": "1", "hook_event_name": "SubagentStart"}"#)]
+    #[case::subagent_stop(r#"{"session_id": "1", "hook_event_name": "SubagentStop"}"#)]
+    #[case::task_created(r#"{"session_id": "1", "hook_event_name": "TaskCreated"}"#)]
+    #[case::task_completed(r#"{"session_id": "1", "hook_event_name": "TaskCompleted"}"#)]
+    #[case::stop(r#"{"session_id": "1", "hook_event_name": "Stop"}"#)]
+    #[case::stop_failure(r#"{"session_id": "1", "hook_event_name": "StopFailure"}"#)]
+    #[case::teammate_idle(r#"{"session_id": "1", "hook_event_name": "TeammateIdle"}"#)]
+    #[case::config_change(r#"{"session_id": "1", "hook_event_name": "ConfigChange"}"#)]
+    #[case::pre_compact(r#"{"session_id": "1", "hook_event_name": "PreCompact", "trigger": "limit"}"#)]
+    #[case::post_compact(r#"{"session_id": "1", "hook_event_name": "PostCompact"}"#)]
+    #[case::elicitation(r#"{"session_id": "1", "hook_event_name": "Elicitation"}"#)]
+    #[case::elicitation_result(r#"{"session_id": "1", "hook_event_name": "ElicitationResult"}"#)]
+    #[case::notification(r#"{"session_id": "1", "hook_event_name": "Notification", "message": "msg"}"#)]
+    #[case::worktree_create(r#"{"session_id": "1", "hook_event_name": "WorktreeCreate", "name": "wt"}"#)]
+    #[case::worktree_remove(r#"{"session_id": "1", "hook_event_name": "WorktreeRemove", "worktree_path": "wt"}"#)]
     fn test_parse_valid_events(#[case] payload: &str) -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let conn = inceptool_protocol::from_wire(&driver, payload)?;

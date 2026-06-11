@@ -45,6 +45,44 @@ pub enum HookInputEvent<'a> {
     WorktreeCreate(WorktreeCreateInput<'a>),
     /// Triggered when a git worktree is removed.
     WorktreeRemove(WorktreeRemoveInput<'a>),
+
+    // --- Additional Hooks ---
+    /// Triggered when the agent completes its initial setup phase.
+    Setup(SetupInput<'a>),
+    /// Triggered when a user prompt is expanded using custom instructions or memory.
+    UserPromptExpansion(UserPromptExpansionInput<'a>),
+    /// Triggered before a message is displayed to the user.
+    MessageDisplay(MessageDisplayInput<'a>),
+    /// Triggered when a tool requires explicit permission to execute.
+    PermissionRequest(PermissionRequestInput<'a>),
+    /// Triggered when a tool execution fails.
+    PostToolUseFailure(PostToolUseFailureInput<'a>),
+    /// Triggered after a batch of tools have finished executing.
+    PostToolBatch(PostToolBatchInput<'a>),
+    /// Triggered when permission to execute a tool is denied.
+    PermissionDenied(PermissionDeniedInput<'a>),
+    /// Triggered when a subagent is started.
+    SubagentStart(SubagentStartInput<'a>),
+    /// Triggered when a subagent finishes.
+    SubagentStop(SubagentStopInput<'a>),
+    /// Triggered when a background task is created.
+    TaskCreated(TaskCreatedInput<'a>),
+    /// Triggered when a background task completes.
+    TaskCompleted(TaskCompletedInput<'a>),
+    /// Triggered before the agent stops running.
+    Stop(StopInput<'a>),
+    /// Triggered if the agent fails to stop.
+    StopFailure(StopFailureInput<'a>),
+    /// Triggered when a teammate becomes idle.
+    TeammateIdle(TeammateIdleInput<'a>),
+    /// Triggered when the user's configuration changes.
+    ConfigChange(ConfigChangeInput<'a>),
+    /// Triggered after context compression has finished.
+    PostCompact(PostCompactInput<'a>),
+    /// Triggered when an elicitation request is sent.
+    Elicitation(ElicitationInput<'a>),
+    /// Triggered when an elicitation result is received.
+    ElicitationResult(ElicitationResultInput<'a>),
 }
 
 /// Input payload for the `BeforeTool` event.
@@ -220,6 +258,206 @@ pub struct WorktreeCreateInput<'a> {
 pub struct WorktreeRemoveInput<'a> {
     /// The path of the removed worktree.
     pub worktree_path: Cow<'a, str>,
+}
+
+/// Input payload for the `Setup` event.
+///
+/// Fires only when launching with --init-only, or with --init or --maintenance in print mode (-p).
+/// It does not fire on normal startup. Use it for one-time dependency installation or scheduled cleanup.
+#[derive(Debug, Deserialize)]
+pub struct SetupInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `UserPromptExpansion` event.
+///
+/// Runs when a user-typed slash command expands into a prompt before reaching the model.
+/// Use this to block specific commands from direct invocation, inject context for a particular skill,
+/// or log which commands users invoke.
+#[derive(Debug, Deserialize)]
+pub struct UserPromptExpansionInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `MessageDisplay` event.
+///
+/// Runs while an assistant message streams to the screen. Displays the message in increments.
+/// Each time a batch of newly completed lines is ready to render, the hook runs once with those lines
+/// and renders the hook’s replacement text in their place.
+#[derive(Debug, Deserialize)]
+pub struct MessageDisplayInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `PermissionRequest` event.
+///
+/// Runs when the user is shown a permission dialog.
+/// Use PermissionRequest decision control to allow or deny on behalf of the user.
+#[derive(Debug, Deserialize)]
+pub struct PermissionRequestInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `PostToolUseFailure` event.
+///
+/// Runs when a tool execution fails. This event fires for tool calls that throw errors or return failure results.
+/// Use this to log failures, send alerts, or provide corrective feedback.
+#[derive(Debug, Deserialize)]
+pub struct PostToolUseFailureInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `PostToolBatch` event.
+///
+/// Runs once after every tool call in a batch has resolved, before sending the next request to the model.
+/// It is the right place to inject context that depends on the set of tools that ran rather than on any single tool.
+#[derive(Debug, Deserialize)]
+pub struct PostToolBatchInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `PermissionDenied` event.
+///
+/// Runs when the auto mode classifier denies a tool call. This hook only fires in auto mode:
+/// it does not run when you manually deny a permission dialog or when a PreToolUse hook blocks a call.
+/// Use it to log classifier denials, adjust configuration, or tell the model it may retry the tool call.
+#[derive(Debug, Deserialize)]
+pub struct PermissionDeniedInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `SubagentStart` event.
+///
+/// Runs when a subagent is spawned via the Agent tool.
+#[derive(Debug, Deserialize)]
+pub struct SubagentStartInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `SubagentStop` event.
+///
+/// Runs when a subagent has finished responding.
+#[derive(Debug, Deserialize)]
+pub struct SubagentStopInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `TaskCreated` event.
+///
+/// Runs when a task is being created via the TaskCreate tool. Use this to enforce naming conventions,
+/// require task descriptions, or prevent certain tasks from being created.
+#[derive(Debug, Deserialize)]
+pub struct TaskCreatedInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `TaskCompleted` event.
+///
+/// Runs when a task is being marked as completed. This fires in two situations: when any agent
+/// explicitly marks a task as completed through the TaskUpdate tool, or when an agent team teammate
+/// finishes its turn with in-progress tasks.
+#[derive(Debug, Deserialize)]
+pub struct TaskCompletedInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `Stop` event.
+///
+/// Runs when the main agent has finished responding. Does not run if the stoppage occurred due to a user interrupt.
+#[derive(Debug, Deserialize)]
+pub struct StopInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `StopFailure` event.
+///
+/// Runs instead of Stop when the turn ends due to an API error.
+/// Use this to log failures, send alerts, or take recovery actions when the agent cannot complete
+/// a response due to rate limits, authentication problems, or other API errors.
+#[derive(Debug, Deserialize)]
+pub struct StopFailureInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `TeammateIdle` event.
+///
+/// Runs when an agent team teammate is about to go idle after finishing its turn. Use this to enforce
+/// quality gates before a teammate stops working, such as requiring passing lint checks or verifying
+/// that output files exist.
+#[derive(Debug, Deserialize)]
+pub struct TeammateIdleInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `ConfigChange` event.
+///
+/// Runs when a configuration file changes during a session. Use this to audit settings changes,
+/// enforce security policies, or block unauthorized modifications to configuration files.
+#[derive(Debug, Deserialize)]
+pub struct ConfigChangeInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `PostCompact` event.
+///
+/// Runs after a compact operation completes. Use this event to react to the new compacted state,
+/// for example to log the generated summary or update external state.
+#[derive(Debug, Deserialize)]
+pub struct PostCompactInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `Elicitation` event.
+///
+/// Runs when an MCP server requests user input mid-task. Hooks can intercept this request
+/// and respond programmatically, skipping the dialog entirely.
+#[derive(Debug, Deserialize)]
+pub struct ElicitationInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
+}
+
+/// Input payload for the `ElicitationResult` event.
+///
+/// Runs when an elicitation result is received.
+#[derive(Debug, Deserialize)]
+pub struct ElicitationResultInput<'a> {
+    /// The raw payload of the hook event.
+    #[serde(borrow)]
+    pub raw: Option<RawJson<'a>>,
 }
 
 impl<'a> BeforeToolInput<'a> {
