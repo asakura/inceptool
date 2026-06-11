@@ -319,6 +319,69 @@ impl HookOutputEvent {
             _ => (None, None),
         }
     }
+
+    /// Returns the decision associated with the hook output, if any.
+    pub fn decision(&self) -> Option<Decision> {
+        match self {
+            HookOutputEvent::BeforeTool(o) => o.decision,
+            HookOutputEvent::AfterTool(o) => o.decision,
+            HookOutputEvent::BeforeAgent(o) => o.decision,
+            HookOutputEvent::AfterAgent(o) => o.decision,
+            HookOutputEvent::BeforeModel(o) => o.decision,
+            HookOutputEvent::AfterModel(o) => o.decision,
+            HookOutputEvent::PreCompress(o) => o.decision,
+            HookOutputEvent::UserPromptSubmit(o) => o.decision,
+            _ => None,
+        }
+    }
+
+    /// Returns the reason associated with the hook output, if any.
+    pub fn reason(&self) -> Option<&str> {
+        match self {
+            HookOutputEvent::BeforeTool(o) => o.reason.as_deref(),
+            HookOutputEvent::AfterTool(o) => o.reason.as_deref(),
+            HookOutputEvent::BeforeAgent(o) => o.reason.as_deref(),
+            HookOutputEvent::AfterAgent(o) => o.reason.as_deref(),
+            HookOutputEvent::BeforeModel(o) => o.reason.as_deref(),
+            HookOutputEvent::AfterModel(o) => o.reason.as_deref(),
+            HookOutputEvent::PreCompress(o) => o.reason.as_deref(),
+            HookOutputEvent::UserPromptSubmit(o) => o.reason.as_deref(),
+            _ => None,
+        }
+    }
+
+    /// Returns whether to halt the process entirely.
+    pub fn halt(&self) -> Option<bool> {
+        match self {
+            HookOutputEvent::BeforeTool(o) => o.halt,
+            HookOutputEvent::AfterTool(o) => o.halt,
+            HookOutputEvent::BeforeAgent(o) => o.halt,
+            HookOutputEvent::AfterAgent(o) => o.halt,
+            HookOutputEvent::BeforeModel(o) => o.halt,
+            HookOutputEvent::AfterModel(o) => o.halt,
+            _ => None,
+        }
+    }
+
+    /// Returns whether to suppress output.
+    pub fn suppress_output(&self) -> Option<bool> {
+        match self {
+            HookOutputEvent::AfterTool(o) => o.suppress_output,
+            _ => None,
+        }
+    }
+
+    /// Returns the system message associated with the hook output, if any.
+    pub fn system_message(&self) -> Option<&str> {
+        match self {
+            HookOutputEvent::SessionStart(o) => o.system_message.as_deref(),
+            HookOutputEvent::SessionEnd(o) => o.system_message.as_deref(),
+            HookOutputEvent::Notification(o) => o.system_message.as_deref(),
+            HookOutputEvent::PreCompress(o) => o.system_message.as_deref(),
+            HookOutputEvent::InstructionsLoaded(o) => o.system_message.as_deref(),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -467,6 +530,66 @@ mod tests {
     ) -> Result<(), TestError> {
         let (code, _) = output.exit_metadata();
         assert_eq!(code, Some(expected_code));
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::before_tool(HookOutputEvent::BeforeTool(BeforeToolOutput { decision: Some(Decision::Allow), ..Default::default() }), Some(Decision::Allow))]
+    #[case::after_tool(HookOutputEvent::AfterTool(AfterToolOutput { decision: Some(Decision::Block), ..Default::default() }), Some(Decision::Block))]
+    #[case::session_start_none(HookOutputEvent::SessionStart(SessionStartOutput::default()), None)]
+    fn test_decision_accessor(
+        #[case] output: HookOutputEvent,
+        #[case] expected: Option<Decision>,
+    ) -> Result<(), TestError> {
+        assert_eq!(output.decision(), expected);
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::before_tool(HookOutputEvent::BeforeTool(BeforeToolOutput { reason: Some("test".into()), ..Default::default() }), Some("test"))]
+    #[case::after_tool(HookOutputEvent::AfterTool(AfterToolOutput { reason: Some("denied".into()), ..Default::default() }), Some("denied"))]
+    #[case::session_start_none(HookOutputEvent::SessionStart(SessionStartOutput::default()), None)]
+    fn test_reason_accessor(
+        #[case] output: HookOutputEvent,
+        #[case] expected: Option<&str>,
+    ) -> Result<(), TestError> {
+        assert_eq!(output.reason(), expected);
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::before_tool(HookOutputEvent::BeforeTool(BeforeToolOutput { halt: Some(true), ..Default::default() }), Some(true))]
+    #[case::after_tool(HookOutputEvent::AfterTool(AfterToolOutput { halt: Some(false), ..Default::default() }), Some(false))]
+    #[case::session_start_none(HookOutputEvent::SessionStart(SessionStartOutput::default()), None)]
+    fn test_halt_accessor(
+        #[case] output: HookOutputEvent,
+        #[case] expected: Option<bool>,
+    ) -> Result<(), TestError> {
+        assert_eq!(output.halt(), expected);
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::after_tool(HookOutputEvent::AfterTool(AfterToolOutput { suppress_output: Some(true), ..Default::default() }), Some(true))]
+    #[case::after_tool_none(HookOutputEvent::AfterTool(AfterToolOutput::default()), None)]
+    #[case::before_tool_none(HookOutputEvent::BeforeTool(BeforeToolOutput::default()), None)]
+    fn test_suppress_output_accessor(
+        #[case] output: HookOutputEvent,
+        #[case] expected: Option<bool>,
+    ) -> Result<(), TestError> {
+        assert_eq!(output.suppress_output(), expected);
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::session_start(HookOutputEvent::SessionStart(SessionStartOutput { system_message: Some("hello".into()), ..Default::default() }), Some("hello"))]
+    #[case::session_end(HookOutputEvent::SessionEnd(SessionEndOutput { system_message: Some("bye".into()) }), Some("bye"))]
+    #[case::before_tool_none(HookOutputEvent::BeforeTool(BeforeToolOutput::default()), None)]
+    fn test_system_message_accessor(
+        #[case] output: HookOutputEvent,
+        #[case] expected: Option<&str>,
+    ) -> Result<(), TestError> {
+        assert_eq!(output.system_message(), expected);
         Ok(())
     }
 }

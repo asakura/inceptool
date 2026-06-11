@@ -1,6 +1,6 @@
 //! Defines the driver trait abstractions for agent backends.
 
-use crate::error::{ProtocolError};
+use crate::error::ProtocolError;
 use crate::output::HookOutputEvent;
 use crate::session::Conn;
 
