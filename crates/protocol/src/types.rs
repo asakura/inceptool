@@ -13,9 +13,9 @@ use serde_json::value::RawValue;
 /// # Examples
 ///
 /// ```
-/// # use inceptool_protocols::error::ProtocolError;
+/// # use inceptool_protocol::error::ProtocolError;
 /// # fn main() -> Result<(), ProtocolError> {
-/// use inceptool_protocols::RawJson;
+/// use inceptool_protocol::RawJson;
 /// use serde_json::value::RawValue;
 ///
 /// let raw = RawValue::from_string(r#"{"hello":"world"}"#.to_string())?;
@@ -40,9 +40,9 @@ impl<'a> Serialize for RawJson<'a> {
 /// # Examples
 ///
 /// ```
-/// # use inceptool_protocols::error::ProtocolError;
+/// # use inceptool_protocol::error::ProtocolError;
 /// # fn main() -> Result<(), ProtocolError> {
-/// use inceptool_protocols::Decision;
+/// use inceptool_protocol::Decision;
 ///
 /// let decision: Decision = serde_json::from_str(r#""allow""#)?;
 /// assert_eq!(decision, Decision::Allow);
