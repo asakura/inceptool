@@ -3,8 +3,9 @@
 use crate::error::{ConversionError, GeminiDriverError};
 
 use inceptool_protocol::{
-    AfterAgentOutput, AfterModelOutput, AfterToolOutput, BeforeAgentOutput, BeforeModelOutput,
-    BeforeToolOutput, BeforeToolSelectionOutput, HookOutputEvent, SessionStartOutput,
+    AfterAgentOutput, AfterModelOutput, BeforeAgentOutput, BeforeModelOutput,
+    BeforeToolSelectionOutput, HookOutputEvent, PostToolUseOutput, PreToolUseOutput,
+    SessionStartOutput,
 };
 
 use serde::{Deserialize, Serialize};
@@ -111,10 +112,10 @@ pub enum GeminiHookSpecificOutput<'a> {
     },
 }
 
-impl<'a> TryFrom<&'a BeforeToolOutput> for GeminiHookSpecificOutput<'a> {
+impl<'a> TryFrom<&'a PreToolUseOutput> for GeminiHookSpecificOutput<'a> {
     type Error = GeminiDriverError;
 
-    fn try_from(o: &'a BeforeToolOutput) -> Result<Self, Self::Error> {
+    fn try_from(o: &'a PreToolUseOutput) -> Result<Self, Self::Error> {
         if o.updated_input.is_some() {
             Ok(GeminiHookSpecificOutput::BeforeTool {
                 updated_input: o.updated_input.as_ref(),
@@ -125,10 +126,10 @@ impl<'a> TryFrom<&'a BeforeToolOutput> for GeminiHookSpecificOutput<'a> {
     }
 }
 
-impl<'a> TryFrom<&'a AfterToolOutput> for GeminiHookSpecificOutput<'a> {
+impl<'a> TryFrom<&'a PostToolUseOutput> for GeminiHookSpecificOutput<'a> {
     type Error = GeminiDriverError;
 
-    fn try_from(o: &'a AfterToolOutput) -> Result<Self, Self::Error> {
+    fn try_from(o: &'a PostToolUseOutput) -> Result<Self, Self::Error> {
         o.updated_tool_output
             .as_ref()
             .map(|v| GeminiHookSpecificOutput::AfterTool {
@@ -220,8 +221,8 @@ impl<'a> TryFrom<&'a HookOutputEvent> for GeminiHookSpecificOutput<'a> {
 
     fn try_from(output: &'a HookOutputEvent) -> Result<Self, Self::Error> {
         match output {
-            HookOutputEvent::BeforeTool(o) => o.try_into(),
-            HookOutputEvent::AfterTool(o) => o.try_into(),
+            HookOutputEvent::PreToolUse(o) => o.try_into(),
+            HookOutputEvent::PostToolUse(o) => o.try_into(),
             HookOutputEvent::BeforeAgent(o) => o.try_into(),
             HookOutputEvent::AfterAgent(o) => o.try_into(),
             HookOutputEvent::BeforeModel(o) => o.try_into(),
@@ -239,29 +240,29 @@ mod tests {
 
     #[test]
     fn test_gemini_hook_specific_output_before_tool() {
-        let o = BeforeToolOutput {
+        let o = PreToolUseOutput {
             updated_input: Some(serde_json::json!({})),
             ..Default::default()
         };
 
         assert!(GeminiHookSpecificOutput::try_from(&o).is_ok());
-        assert!(GeminiHookSpecificOutput::try_from(&HookOutputEvent::BeforeTool(o)).is_ok());
+        assert!(GeminiHookSpecificOutput::try_from(&HookOutputEvent::PreToolUse(o)).is_ok());
 
-        let o_err = BeforeToolOutput::default();
+        let o_err = PreToolUseOutput::default();
         assert!(GeminiHookSpecificOutput::try_from(&o_err).is_err());
     }
 
     #[test]
     fn test_gemini_hook_specific_output_after_tool() {
-        let o = AfterToolOutput {
+        let o = PostToolUseOutput {
             updated_tool_output: Some(serde_json::json!({})),
             ..Default::default()
         };
 
         assert!(GeminiHookSpecificOutput::try_from(&o).is_ok());
-        assert!(GeminiHookSpecificOutput::try_from(&HookOutputEvent::AfterTool(o)).is_ok());
+        assert!(GeminiHookSpecificOutput::try_from(&HookOutputEvent::PostToolUse(o)).is_ok());
 
-        let o_err = AfterToolOutput::default();
+        let o_err = PostToolUseOutput::default();
         assert!(GeminiHookSpecificOutput::try_from(&o_err).is_err());
     }
 
