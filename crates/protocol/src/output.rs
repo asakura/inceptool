@@ -978,7 +978,7 @@ mod tests {
     #[case::returns_message_string_when_session_end_event_has_system_message(HookOutputEvent::SessionEnd(SessionEndOutput { system_message: Some("bye".into()) }), Some("bye"))]
     #[case::returns_message_string_when_notification_event_has_system_message(HookOutputEvent::Notification(NotificationOutput { system_message: Some("msg".into()) }), Some("msg"))]
     #[case::returns_message_string_when_pre_compact_event_has_system_message(HookOutputEvent::PreCompact(PreCompactOutput { system_message: Some("msg".into()), ..Default::default() }), Some("msg"))]
-    #[case::returns_message_string_when_instructions_loaded_event_has_system_message(HookOutputEvent::InstructionsLoaded(InstructionsLoadedOutput { system_message: Some("msg".into()), ..Default::default() }), Some("msg"))]
+    #[case::returns_message_string_when_instructions_loaded_event_has_system_message(HookOutputEvent::InstructionsLoaded(InstructionsLoadedOutput { system_message: Some("msg".into()) }), Some("msg"))]
     #[case::returns_message_string_when_post_compact_event_has_system_message(HookOutputEvent::PostCompact(PostCompactOutput { system_message: Some("msg".into()) }), Some("msg"))]
     #[case::returns_none_when_pre_tool_use_event_does_not_support_system_message(
         HookOutputEvent::PreToolUse(PreToolUseOutput::default()),
