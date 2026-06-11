@@ -13,6 +13,8 @@ categories = ["development-tools"]
 [workspace]
 members = [
     "crates/protocol",
+    "crates/driver-claude",
+    "crates/driver-gemini",
 ]
 
 [workspace.dependencies]
@@ -21,6 +23,10 @@ serde_json = { version = "1.0", features = ["raw_value"] }
 thiserror = "2.0"
 rstest = "0.26.1"
 inceptool_protocol = { package = "inceptool-protocol", path = "crates/protocol" }
+driver-claude = { package = "inceptool-driver-claude", path = "crates/driver-claude" }
+driver-gemini = { package = "inceptool-driver-gemini", path = "crates/driver-gemini" }
 
 [dependencies]
 inceptool_protocol.workspace = true
+driver-claude.workspace = true
+driver-gemini.workspace = true
