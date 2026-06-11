@@ -2,7 +2,10 @@
 
 use crate::error::{ClaudeDriverError, ConversionError};
 use inceptool_protocol::{
-    AfterToolOutput, BeforeToolOutput, HookOutputEvent, UserPromptSubmitOutput,
+    Effort, ElicitationOutput, HookOutputEvent, MessageDisplayOutput, PermissionBehavior,
+    PermissionDeniedOutput, PermissionMode, PermissionRequestOutput, PostToolUseOutput,
+    PreToolUseOutput, SessionStartOutput, SetupOutput, StopOutput, SubagentStartOutput,
+    SubagentStopOutput, UserPromptExpansionOutput, UserPromptSubmitOutput, WorktreeCreateOutput,
 };
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -16,6 +19,18 @@ pub(crate) struct ClaudeMeta<'a> {
     #[serde(default)]
     pub(crate) cwd: Option<Cow<'a, str>>,
     pub(crate) hook_event_name: Cow<'a, str>,
+    /// The permission mode active for the session, if known.
+    #[serde(default)]
+    pub(crate) permission_mode: Option<PermissionMode>,
+    /// The reasoning effort configured for the session, if known.
+    #[serde(default)]
+    pub(crate) effort: Option<Effort>,
+    /// The identifier of the agent handling this session, if applicable.
+    #[serde(default)]
+    pub(crate) agent_id: Option<Cow<'a, str>>,
+    /// The type of agent handling this session, if applicable.
+    #[serde(default)]
+    pub(crate) agent_type: Option<Cow<'a, str>>,
 }
 
 /// The output wire format for Claude driver.
@@ -53,12 +68,28 @@ pub struct ClaudeOutputWire<'a> {
     pub hook_specific_output: Option<ClaudeHookSpecificOutput<'a>>,
 }
 
+/// The nested permission decision for a `PermissionRequest` hook-specific output.
+#[derive(Debug, Serialize)]
+pub struct ClaudePermissionDecision<'a> {
+    /// The behavior to apply to the permission request.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub behavior: Option<PermissionBehavior>,
+    /// The potentially modified input parameters for the tool.
+    #[serde(rename = "updatedInput")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_input: Option<&'a serde_json::Value>,
+    /// An overridden permission rule definition to apply.
+    #[serde(rename = "permissionRuleDefinition")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permission_rule_definition: Option<&'a serde_json::Value>,
+}
+
 /// Hook-specific output payload for Claude.
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum ClaudeHookSpecificOutput<'a> {
     /// Payload structure for the `PreToolUse` hook phase.
-    BeforeTool {
+    PreToolUse {
         /// The name of the hook event (always "PreToolUse").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
@@ -74,9 +105,13 @@ pub enum ClaudeHookSpecificOutput<'a> {
         #[serde(rename = "updatedInput")]
         #[serde(skip_serializing_if = "Option::is_none")]
         updated_input: Option<&'a serde_json::Value>,
+        /// Additional context injected into the prompt.
+        #[serde(rename = "additionalContext")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        additional_context: Option<&'a str>,
     },
     /// Payload structure for the `PostToolUse` hook phase.
-    AfterTool {
+    PostToolUse {
         /// The name of the hook event (always "PostToolUse").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
@@ -84,6 +119,10 @@ pub enum ClaudeHookSpecificOutput<'a> {
         #[serde(rename = "additionalContext")]
         #[serde(skip_serializing_if = "Option::is_none")]
         additional_context: Option<&'a str>,
+        /// Overridden output returned to the model.
+        #[serde(rename = "updatedToolOutput")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        updated_tool_output: Option<&'a serde_json::Value>,
     },
     /// Payload structure for the user prompt submission hook phase.
     UserPromptSubmit {
@@ -95,24 +134,150 @@ pub enum ClaudeHookSpecificOutput<'a> {
         #[serde(skip_serializing_if = "Option::is_none")]
         additional_context: Option<&'a str>,
     },
+    /// Payload structure for the `SessionStart` hook phase.
+    SessionStart {
+        /// The name of the hook event (always "SessionStart").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// Additional context to start the session with.
+        #[serde(rename = "additionalContext")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        additional_context: Option<&'a str>,
+        /// An initial user message to seed the new session with.
+        #[serde(rename = "initialUserMessage")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        initial_user_message: Option<&'a str>,
+        /// A title to assign to the new session.
+        #[serde(rename = "sessionTitle")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        session_title: Option<&'a str>,
+        /// Additional paths to watch for the duration of the session.
+        #[serde(rename = "watchPaths")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        watch_paths: Option<&'a [String]>,
+        /// Whether to reload skills for the new session.
+        #[serde(rename = "reloadSkills")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        reload_skills: Option<bool>,
+    },
+    /// Payload structure for the `Setup` hook phase.
+    Setup {
+        /// The name of the hook event (always "Setup").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// Additional context to inject during setup.
+        #[serde(rename = "additionalContext")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        additional_context: Option<&'a str>,
+    },
+    /// Payload structure for the `PermissionRequest` hook phase.
+    PermissionRequest {
+        /// The name of the hook event (always "PermissionRequest").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// The permission decision for the request, if any.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        decision: Option<ClaudePermissionDecision<'a>>,
+    },
+    /// Payload structure for the `WorktreeCreate` hook phase.
+    WorktreeCreate {
+        /// The name of the hook event (always "WorktreeCreate").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// The path to the created worktree, if modified by the hook.
+        #[serde(rename = "worktreePath")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        worktree_path: Option<&'a str>,
+    },
+    /// Payload structure for the `Stop` hook phase.
+    Stop {
+        /// The name of the hook event (always "Stop").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// Additional context to continue with if the agent does not stop.
+        #[serde(rename = "additionalContext")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        additional_context: Option<&'a str>,
+    },
+    /// Payload structure for the `UserPromptExpansion` hook phase.
+    UserPromptExpansion {
+        /// The name of the hook event (always "UserPromptExpansion").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// Additional context to append as a result of the expansion.
+        #[serde(rename = "additionalContext")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        additional_context: Option<&'a str>,
+    },
+    /// Payload structure for the `SubagentStart` hook phase.
+    SubagentStart {
+        /// The name of the hook event (always "SubagentStart").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// Additional context to inject for the spawned subagent.
+        #[serde(rename = "additionalContext")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        additional_context: Option<&'a str>,
+    },
+    /// Payload structure for the `SubagentStop` hook phase.
+    SubagentStop {
+        /// The name of the hook event (always "SubagentStop").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// Additional context to inject as a result of the subagent's run.
+        #[serde(rename = "additionalContext")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        additional_context: Option<&'a str>,
+    },
+    /// Payload structure for the `PermissionDenied` hook phase.
+    PermissionDenied {
+        /// The name of the hook event (always "PermissionDenied").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// Additional context to inject after the denial.
+        #[serde(rename = "additionalContext")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        additional_context: Option<&'a str>,
+    },
+    /// Payload structure for the `MessageDisplay` hook phase.
+    MessageDisplay {
+        /// The name of the hook event (always "MessageDisplay").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// Replacement text for the displayed message.
+        #[serde(rename = "replacementText")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        replacement_text: Option<&'a str>,
+    },
+    /// Payload structure for the `Elicitation` hook phase.
+    Elicitation {
+        /// The name of the hook event (always "Elicitation").
+        #[serde(rename = "hookEventName")]
+        hook_event_name: &'a str,
+        /// The response to send back to the MCP server.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        response: Option<&'a serde_json::Value>,
+    },
 }
 
-impl<'a> From<&'a BeforeToolOutput> for ClaudeHookSpecificOutput<'a> {
-    fn from(o: &'a BeforeToolOutput) -> Self {
-        ClaudeHookSpecificOutput::BeforeTool {
+impl<'a> From<&'a PreToolUseOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a PreToolUseOutput) -> Self {
+        ClaudeHookSpecificOutput::PreToolUse {
             hook_event_name: "PreToolUse",
             permission_decision: o.decision,
             permission_decision_reason: o.reason.as_deref(),
             updated_input: o.updated_input.as_ref(),
+            additional_context: o.additional_context.as_deref(),
         }
     }
 }
 
-impl<'a> From<&'a AfterToolOutput> for ClaudeHookSpecificOutput<'a> {
-    fn from(o: &'a AfterToolOutput) -> Self {
-        ClaudeHookSpecificOutput::AfterTool {
+impl<'a> From<&'a PostToolUseOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a PostToolUseOutput) -> Self {
+        ClaudeHookSpecificOutput::PostToolUse {
             hook_event_name: "PostToolUse",
             additional_context: o.additional_context.as_deref(),
+            updated_tool_output: o.updated_tool_output.as_ref(),
         }
     }
 }
@@ -126,14 +291,134 @@ impl<'a> From<&'a UserPromptSubmitOutput> for ClaudeHookSpecificOutput<'a> {
     }
 }
 
+impl<'a> From<&'a SessionStartOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a SessionStartOutput) -> Self {
+        ClaudeHookSpecificOutput::SessionStart {
+            hook_event_name: "SessionStart",
+            additional_context: o.additional_context.as_deref(),
+            initial_user_message: o.initial_user_message.as_deref(),
+            session_title: o.session_title.as_deref(),
+            watch_paths: o.watch_paths.as_deref(),
+            reload_skills: o.reload_skills,
+        }
+    }
+}
+
+impl<'a> From<&'a SetupOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a SetupOutput) -> Self {
+        ClaudeHookSpecificOutput::Setup {
+            hook_event_name: "Setup",
+            additional_context: o.additional_context.as_deref(),
+        }
+    }
+}
+
+impl<'a> From<&'a PermissionRequestOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a PermissionRequestOutput) -> Self {
+        let decision = o.behavior.map(|behavior| ClaudePermissionDecision {
+            behavior: Some(behavior),
+            updated_input: o.updated_input.as_ref(),
+            permission_rule_definition: o.permission_rule_definition.as_ref(),
+        });
+
+        ClaudeHookSpecificOutput::PermissionRequest {
+            hook_event_name: "PermissionRequest",
+            decision,
+        }
+    }
+}
+
+impl<'a> From<&'a WorktreeCreateOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a WorktreeCreateOutput) -> Self {
+        ClaudeHookSpecificOutput::WorktreeCreate {
+            hook_event_name: "WorktreeCreate",
+            worktree_path: o.worktree_path.as_deref(),
+        }
+    }
+}
+
+impl<'a> From<&'a StopOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a StopOutput) -> Self {
+        ClaudeHookSpecificOutput::Stop {
+            hook_event_name: "Stop",
+            additional_context: o.additional_context.as_deref(),
+        }
+    }
+}
+
+impl<'a> From<&'a UserPromptExpansionOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a UserPromptExpansionOutput) -> Self {
+        ClaudeHookSpecificOutput::UserPromptExpansion {
+            hook_event_name: "UserPromptExpansion",
+            additional_context: o.additional_context.as_deref(),
+        }
+    }
+}
+
+impl<'a> From<&'a SubagentStartOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a SubagentStartOutput) -> Self {
+        ClaudeHookSpecificOutput::SubagentStart {
+            hook_event_name: "SubagentStart",
+            additional_context: o.additional_context.as_deref(),
+        }
+    }
+}
+
+impl<'a> From<&'a SubagentStopOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a SubagentStopOutput) -> Self {
+        ClaudeHookSpecificOutput::SubagentStop {
+            hook_event_name: "SubagentStop",
+            additional_context: o.additional_context.as_deref(),
+        }
+    }
+}
+
+impl<'a> From<&'a PermissionDeniedOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a PermissionDeniedOutput) -> Self {
+        ClaudeHookSpecificOutput::PermissionDenied {
+            hook_event_name: "PermissionDenied",
+            additional_context: o.additional_context.as_deref(),
+        }
+    }
+}
+
+impl<'a> From<&'a MessageDisplayOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a MessageDisplayOutput) -> Self {
+        ClaudeHookSpecificOutput::MessageDisplay {
+            hook_event_name: "MessageDisplay",
+            replacement_text: o.replacement_text.as_deref(),
+        }
+    }
+}
+
+impl<'a> From<&'a ElicitationOutput> for ClaudeHookSpecificOutput<'a> {
+    fn from(o: &'a ElicitationOutput) -> Self {
+        ClaudeHookSpecificOutput::Elicitation {
+            hook_event_name: "Elicitation",
+            response: o.response.as_ref(),
+        }
+    }
+}
+
 impl<'a> TryFrom<&'a HookOutputEvent> for ClaudeHookSpecificOutput<'a> {
     type Error = ClaudeDriverError;
 
     fn try_from(output: &'a HookOutputEvent) -> Result<Self, Self::Error> {
         match output {
-            HookOutputEvent::BeforeTool(o) => Ok(o.into()),
-            HookOutputEvent::AfterTool(o) => Ok(o.into()),
+            HookOutputEvent::PreToolUse(o) => Ok(o.into()),
+            HookOutputEvent::PostToolUse(o) => Ok(o.into()),
             HookOutputEvent::UserPromptSubmit(o) => Ok(o.into()),
+            HookOutputEvent::SessionStart(o) => Ok(o.into()),
+            HookOutputEvent::Setup(o) => Ok(o.into()),
+            HookOutputEvent::PermissionRequest(o) => Ok(o.into()),
+            HookOutputEvent::WorktreeCreate(o) => Ok(o.into()),
+            HookOutputEvent::Stop(o) => Ok(o.into()),
+            HookOutputEvent::UserPromptExpansion(o) => Ok(o.into()),
+            HookOutputEvent::SubagentStart(o) => Ok(o.into()),
+            HookOutputEvent::SubagentStop(o) => Ok(o.into()),
+            HookOutputEvent::PermissionDenied(o) => Ok(o.into()),
+            HookOutputEvent::MessageDisplay(o) => Ok(o.into()),
+            HookOutputEvent::Elicitation(o) => Ok(o.into()),
             e => Err(ConversionError::UnsupportedEvent(e.into()).into()),
         }
     }
@@ -144,14 +429,14 @@ mod tests {
     use super::*;
 
     use inceptool_protocol::{
-        AfterToolOutput, BeforeToolOutput, Decision, HookOutputEvent, UserPromptSubmitOutput,
+        Decision, HookOutputEvent, PostToolUseOutput, PreToolUseOutput, UserPromptSubmitOutput,
     };
 
     use core::assert_matches;
 
     #[test]
-    fn test_claude_hook_specific_output_from_before_tool() {
-        let o = BeforeToolOutput {
+    fn test_claude_hook_specific_output_from_pre_tool_use() {
+        let o = PreToolUseOutput {
             decision: Some(Decision::Allow),
             ..Default::default()
         };
@@ -159,19 +444,19 @@ mod tests {
 
         assert_matches!(
             h,
-            ClaudeHookSpecificOutput::BeforeTool {
+            ClaudeHookSpecificOutput::PreToolUse {
                 permission_decision: Some(Decision::Allow),
                 ..
             }
         );
 
-        let e = HookOutputEvent::BeforeTool(o);
+        let e = HookOutputEvent::PreToolUse(o);
         assert!(ClaudeHookSpecificOutput::try_from(&e).is_ok());
     }
 
     #[test]
-    fn test_claude_hook_specific_output_from_after_tool() {
-        let o = AfterToolOutput {
+    fn test_claude_hook_specific_output_from_post_tool_use() {
+        let o = PostToolUseOutput {
             additional_context: Some("ctx".into()),
             ..Default::default()
         };
@@ -179,13 +464,13 @@ mod tests {
 
         assert_matches!(
             h,
-            ClaudeHookSpecificOutput::AfterTool {
+            ClaudeHookSpecificOutput::PostToolUse {
                 additional_context: Some("ctx"),
                 ..
             }
         );
 
-        let e = HookOutputEvent::AfterTool(o);
+        let e = HookOutputEvent::PostToolUse(o);
         assert!(ClaudeHookSpecificOutput::try_from(&e).is_ok());
     }
 
