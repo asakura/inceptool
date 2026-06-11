@@ -21,8 +21,8 @@ impl Driver for GeminiDriver {
         let meta: GeminiMeta<'a> = serde_json::from_str(raw_json)?;
 
         let event = match meta.hook_event_name.as_ref() {
-            "BeforeTool" => HookInputEvent::BeforeTool(serde_json::from_str(raw_json)?),
-            "AfterTool" => HookInputEvent::AfterTool(serde_json::from_str(raw_json)?),
+            "BeforeTool" => HookInputEvent::PreToolUse(serde_json::from_str(raw_json)?),
+            "AfterTool" => HookInputEvent::PostToolUse(serde_json::from_str(raw_json)?),
             "BeforeAgent" => HookInputEvent::BeforeAgent(serde_json::from_str(raw_json)?),
             "AfterAgent" => HookInputEvent::AfterAgent(serde_json::from_str(raw_json)?),
             "BeforeModel" => HookInputEvent::BeforeModel(serde_json::from_str(raw_json)?),
@@ -33,7 +33,7 @@ impl Driver for GeminiDriver {
             "SessionStart" => HookInputEvent::SessionStart(serde_json::from_str(raw_json)?),
             "SessionEnd" => HookInputEvent::SessionEnd(serde_json::from_str(raw_json)?),
             "Notification" => HookInputEvent::Notification(serde_json::from_str(raw_json)?),
-            "PreCompress" => HookInputEvent::PreCompress(serde_json::from_str(raw_json)?),
+            "PreCompress" => HookInputEvent::PreCompact(serde_json::from_str(raw_json)?),
             _ => {
                 return Err(
                     ProtocolError::UnsupportedEvent(meta.hook_event_name.into_owned()).into(),
@@ -49,6 +49,10 @@ impl Driver for GeminiDriver {
                 timestamp: meta.timestamp,
                 driver: "Gemini".into(),
                 driver_meta: None,
+                permission_mode: None,
+                effort: None,
+                agent_id: None,
+                agent_type: None,
             },
             event,
         })
@@ -78,7 +82,7 @@ impl Driver for GeminiDriver {
 mod tests {
     use super::*;
 
-    use inceptool_protocol::{BeforeToolOutput, Decision};
+    use inceptool_protocol::{Decision, PreToolUseOutput};
 
     use rstest::rstest;
 
@@ -144,7 +148,7 @@ mod tests {
     #[rstest]
     fn test_format_output_decision() -> Result<(), TestError> {
         let driver = GeminiDriver;
-        let output = HookOutputEvent::BeforeTool(BeforeToolOutput {
+        let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Block),
             ..Default::default()
         });
@@ -163,7 +167,7 @@ mod tests {
     #[rstest]
     fn test_format_output_halt() -> Result<(), TestError> {
         let driver = GeminiDriver;
-        let output = HookOutputEvent::BeforeTool(BeforeToolOutput {
+        let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             halt: Some(true),
             ..Default::default()
         });
@@ -187,7 +191,7 @@ mod tests {
         input_map.insert("key".to_string(), serde_json::json!("val"));
 
         let updated_input = serde_json::Value::Object(input_map);
-        let output = HookOutputEvent::BeforeTool(BeforeToolOutput {
+        let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             updated_input: Some(updated_input),
             ..Default::default()
         });
