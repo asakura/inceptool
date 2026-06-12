@@ -31,6 +31,19 @@ exits with a code to signal a blocking decision back to the agent).
   high-performance Rust AST parsers (e.g. `flash` for bash shell scripts) rather
   than external binaries or brittle regex checks.
 
+## Usage
+
+```
+inceptool <driver> <hook>
+```
+
+- `<driver>`: `claude` or `gemini` - selects the wire format used to parse
+  stdin and format stdout.
+- `<hook>`: the raw hook event name configured for this command in the agent's
+  hook settings (e.g. `PreToolUse` for Claude, `BeforeTool` for Gemini). Each
+  driver maps this, via `Driver::hook_kind`, to the canonical `HookKind` that
+  selects which stage pipeline runs - dispatch is driven entirely by this CLI
+  argument, never by inspecting the JSON payload.
 
 ## Configuration
 
