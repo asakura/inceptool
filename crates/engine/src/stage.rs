@@ -21,7 +21,7 @@ pub trait Stage: Send + Sync {
     /// whose [`HookInputEvent::tool_name`](inceptool_protocol::HookInputEvent::tool_name)
     /// is `None`.
     fn tool_names(&self) -> &'static [&'static str] {
-        ["*"].as_slice()
+        &["*"]
     }
 
     /// Process the given connection.
