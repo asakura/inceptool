@@ -64,9 +64,7 @@ impl Stage for RtkStage {
             return Ok(None);
         };
 
-        let mut parsed: Value = input
-            .parse_tool_input()
-            .map_err(|e| EngineError::StageExecution(e.to_string()))?;
+        let mut parsed: Value = input.parse_tool_input()?;
 
         let Some(cmd) = parsed.get("command").and_then(Value::as_str) else {
             return Ok(None);
