@@ -1,0 +1,59 @@
+# cargo-deny configuration: https://embarkstudios.github.io/cargo-deny/
+#
+# Run locally with `nix develop -c cargo deny check` (or plain `cargo deny
+# check` if cargo-deny is installed). CI runs this as part of `ci.yml`.
+
+[graph]
+all-features = false
+no-default-features = false
+
+# https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
+[advisories]
+ignore = [
+    # `atty` is unmaintained, pulled in transitively via `flash` (the same
+    # GPL-3.0-or-later dependency already exempted below for licensing). No
+    # safe upgrade is available upstream - resolve alongside the `flash`
+    # licensing issue before/at crates.io publication.
+    "RUSTSEC-2024-0375",
+]
+
+# https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
+[licenses]
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSL-1.0",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+confidence-threshold = 0.8
+
+# `flash` (the bash AST parser `inceptool-stages` uses for guardrails) is
+# GPL-3.0-or-later, which is otherwise incompatible with this workspace's
+# `MIT OR Apache-2.0` licensing. This is a known, deliberate exception -
+# resolve before/at crates.io publication (e.g. a relicensing discussion with
+# upstream, dual-licensing `inceptool`, or replacing the dependency).
+[[licenses.exceptions]]
+allow = ["GPL-3.0-or-later"]
+crate = "flash"
+
+# https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+skip = [
+    { crate = "getrandom" },
+    { crate = "unicode-width" },
+    { crate = "wit-bindgen" },
+]
+
+# https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
