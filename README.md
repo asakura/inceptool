@@ -1,5 +1,7 @@
 # Inceptool
 
+[![CI](https://github.com/asakura/inceptool/actions/workflows/ci.yml/badge.svg)](https://github.com/asakura/inceptool/actions/workflows/ci.yml)
+
 `inceptool-rs` is a high-performance, native Rust replacement for the
 Nushell-based "Inceptool". It runs as a hook executor / interceptor proxy
 between an AI coding agent (Claude Code or Gemini CLI) and the operating system,
@@ -72,6 +74,54 @@ Example `inceptool.toml`:
 # leave everything else at its default (enabled).
 [hooks.rtk]
 enabled = false
+
+## Installation
+
+Prebuilt static Linux binaries (`x86_64` and `aarch64`) are attached to
+[GitHub Releases](https://github.com/asakura/inceptool/releases). Releases
+and crates.io publishing are automated by
+[release-plz](https://release-plz.dev) from conventional commits on `main`.
+
+Alternatively, install from crates.io:
+
+```sh
+cargo install inceptool
+```
+
+## Development
+
+This project uses [Nix flakes](https://nixos.wiki/wiki/Flakes) to provide
+a fully reproducible development environment. The Nix shell automatically
+provisions the pinned Rust toolchain (via `rust-toolchain.toml`) along with
+all external tools the `stages` crate relies on (`git`, `pre-commit`,
+`nixfmt`, `shfmt`, `shellcheck`, `cargo-nextest`, `cargo-deny`).
+
+To enter the development environment, run:
+
+```sh
+nix develop
+```
+
+Once inside the Nix shell, you have access to the full suite of tools:
+
+```sh
+cargo build --workspace
+cargo nextest run    # fast test runner (replacing `cargo test`)
+cargo fmt
+cargo clippy --workspace --all-targets -- -D warnings
+cargo deny check     # supply-chain / license / advisory checks
+```
+
+Without Nix, install the toolchain pinned in `rust-toolchain.toml` via
+`rustup`; the same `cargo` commands work, aside from stages that shell out to
+Nix-provided tools.
+
+`nix flake check` runs the `fmt`/`clippy` checks used in CI. The static musl
+binaries used for release artifacts can be built locally with:
+
+```sh
+nix build .#inceptool-x86_64-linux-musl
+nix build .#inceptool-aarch64-linux-musl
 ```
 
 ## Workspace Layout
