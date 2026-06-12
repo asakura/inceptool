@@ -96,6 +96,7 @@
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [ inceptool ];
+          RUSTFLAGS = "";
           packages = with pkgs; [
             rustToolchain
             git
