@@ -1,0 +1,59 @@
+name: Release Binaries
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  upload-binaries:
+    name: Build & upload (${{ matrix.target }})
+    # No `pull_request` trigger exists for this workflow at all (release
+    # events only); this guard additionally no-ops the job if a fork happens
+    # to publish its own release with this same workflow file. Only the
+    # `inceptool` binary crate uses a bare `vX.Y.Z` tag (library crates are
+    # tagged `<crate>-vX.Y.Z`), so `startsWith(tag, 'v')` selects exactly the
+    # CLI release.
+    if: github.repository_owner == 'asakura' && startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            package: inceptool-x86_64-linux-musl
+          - target: aarch64-unknown-linux-musl
+            package: inceptool-aarch64-linux-musl
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: cachix/cachix-action@v16
+        with:
+          name: inceptool
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Build static binary
+        run: nix build ".#${{ matrix.package }}" -L
+
+      - name: Package archive
+        run: |
+          set -euo pipefail
+          stage="inceptool-${{ github.event.release.tag_name }}-${{ matrix.target }}"
+          mkdir "$stage"
+          cp result/bin/inceptool "$stage/"
+          tar czf "$stage.tar.gz" "$stage"
+          sha256sum "$stage.tar.gz" > "$stage.tar.gz.sha256"
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            inceptool-*.tar.gz inceptool-*.tar.gz.sha256 \
+            --repo "${{ github.repository }}" \
+            --clobber
