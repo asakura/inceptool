@@ -99,7 +99,7 @@ engine, drivers, the CLI) don't need to match on every variant themselves:
   the user (`SessionStart`, `SessionEnd`, `Notification`, `PreCompact`,
   `InstructionsLoaded`, `PostCompact`).
 - `exit_metadata(&self) -> (Option<i32>, Option<&str>)` — the `(exit_code,
-  reason)` pair for variants that can halt the process with a specific exit
+reason)` pair for variants that can halt the process with a specific exit
   code (`PreToolUse`, `PostToolUse`, `BeforeAgent`, `AfterAgent`,
   `BeforeModel`, `AfterModel`, `PreCompact`). All other variants return
   `(None, None)`.

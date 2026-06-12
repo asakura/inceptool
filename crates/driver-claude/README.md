@@ -95,7 +95,7 @@ Some(true)` becomes `"continue": false`).
   inside `ClaudeOutputWire`. Each variant corresponds to one Claude hook
   phase and carries only the fields Claude expects for that phase, e.g.:
   - `PreToolUse { hookEventName, permissionDecision, permissionDecisionReason,
- updatedInput, additionalContext }`
+updatedInput, additionalContext }`
   - `PostToolUse { hookEventName, additionalContext, updatedToolOutput }`
   - `UserPromptSubmit`, `SessionStart` (including `initialUserMessage`,
     `sessionTitle`, `watchPaths`, `reloadSkills`), `Setup`,

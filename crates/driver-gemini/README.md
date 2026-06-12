@@ -56,14 +56,14 @@ exported from the crate.
 The top-level JSON shape Gemini CLI expects back from a hook. Fields are all
 optional and skipped when `None`:
 
-| Field (wire name)     | Rust field        | Source                                |
-|-----------------------|--------------------|---------------------------------------|
-| `decision`            | `decision`         | `HookOutputEvent::decision()`          |
-| `reason`               | `reason`            | `HookOutputEvent::reason()`            |
-| `continue`            | `continue_flag`     | `!HookOutputEvent::halt()` (inverted)  |
-| `suppressOutput`      | `suppress_output`   | `HookOutputEvent::suppress_output()`   |
-| `systemMessage`       | `system_message`    | `HookOutputEvent::system_message()`    |
-| `hookSpecificOutput`  | `hook_specific_output` | `GeminiHookSpecificOutput` (best-effort) |
+| Field (wire name)    | Rust field             | Source                                   |
+| -------------------- | ---------------------- | ---------------------------------------- |
+| `decision`           | `decision`             | `HookOutputEvent::decision()`            |
+| `reason`             | `reason`               | `HookOutputEvent::reason()`              |
+| `continue`           | `continue_flag`        | `!HookOutputEvent::halt()` (inverted)    |
+| `suppressOutput`     | `suppress_output`      | `HookOutputEvent::suppress_output()`     |
+| `systemMessage`      | `system_message`       | `HookOutputEvent::system_message()`      |
+| `hookSpecificOutput` | `hook_specific_output` | `GeminiHookSpecificOutput` (best-effort) |
 
 ### `GeminiHookSpecificOutput<'a>`
 
@@ -73,16 +73,16 @@ variant is built via a `TryFrom<&HookOutputEvent variant>` impl that fails
 (returning a `ConversionError`) when the underlying protocol output is missing
 the data the Gemini payload requires:
 
-| Variant                | Wire field(s)                              | Built from                     | Fails when                          |
-|-------------------------|---------------------------------------------|----------------------------------|---------------------------------------|
-| `BeforeTool`            | `tool_input` (optional)                      | `PreToolUseOutput`                | `updated_input` is `None`              |
-| `AfterTool`             | `updatedToolOutput`                          | `PostToolUseOutput`               | `updated_tool_output` is `None`        |
-| `BeforeAgent`           | `additionalContext`                          | `BeforeAgentOutput`               | `additional_context` is `None`         |
-| `AfterAgent`            | `clearContext`                               | `AfterAgentOutput`                | `clear_context` is not `Some(true)`    |
-| `BeforeModel`           | `llm_request` / `llm_response` (either optional) | `BeforeModelOutput`            | both `llm_request` and `llm_response` are `None` |
-| `AfterModel`            | `llm_response`                               | `AfterModelOutput`                | `llm_response` is `None`               |
-| `BeforeToolSelection`   | `toolConfig`                                  | `BeforeToolSelectionOutput`       | `tool_config` is `None`                |
-| `SessionStart`          | `additionalContext`                          | `SessionStartOutput`              | `additional_context` is `None`         |
+| Variant               | Wire field(s)                                    | Built from                  | Fails when                                       |
+| --------------------- | ------------------------------------------------ | --------------------------- | ------------------------------------------------ |
+| `BeforeTool`          | `tool_input` (optional)                          | `PreToolUseOutput`          | `updated_input` is `None`                        |
+| `AfterTool`           | `updatedToolOutput`                              | `PostToolUseOutput`         | `updated_tool_output` is `None`                  |
+| `BeforeAgent`         | `additionalContext`                              | `BeforeAgentOutput`         | `additional_context` is `None`                   |
+| `AfterAgent`          | `clearContext`                                   | `AfterAgentOutput`          | `clear_context` is not `Some(true)`              |
+| `BeforeModel`         | `llm_request` / `llm_response` (either optional) | `BeforeModelOutput`         | both `llm_request` and `llm_response` are `None` |
+| `AfterModel`          | `llm_response`                                   | `AfterModelOutput`          | `llm_response` is `None`                         |
+| `BeforeToolSelection` | `toolConfig`                                     | `BeforeToolSelectionOutput` | `tool_config` is `None`                          |
+| `SessionStart`        | `additionalContext`                              | `SessionStartOutput`        | `additional_context` is `None`                   |
 
 A blanket `TryFrom<&HookOutputEvent>` dispatches to the matching variant impl
 above based on the `HookOutputEvent` discriminant, and returns
@@ -97,18 +97,18 @@ listed in the table (e.g. `SessionEnd`, `Notification`, `PreCompact`,
   the protocol's `HookInputEvent` variants:
 
   | Gemini `hook_event_name` | Protocol `HookInputEvent` variant |
-  |----------------------------|--------------------------------------|
-  | `BeforeTool`               | `PreToolUse`                          |
-  | `AfterTool`                 | `PostToolUse`                         |
-  | `BeforeAgent`               | `BeforeAgent`                          |
-  | `AfterAgent`                | `AfterAgent`                           |
-  | `BeforeModel`               | `BeforeModel`                          |
-  | `AfterModel`                | `AfterModel`                           |
-  | `BeforeToolSelection`       | `BeforeToolSelection`                  |
-  | `SessionStart`              | `SessionStart`                         |
-  | `SessionEnd`                | `SessionEnd`                           |
-  | `Notification`              | `Notification`                         |
-  | `PreCompress`               | `PreCompact`                           |
+  | ------------------------ | --------------------------------- |
+  | `BeforeTool`             | `PreToolUse`                      |
+  | `AfterTool`              | `PostToolUse`                     |
+  | `BeforeAgent`            | `BeforeAgent`                     |
+  | `AfterAgent`             | `AfterAgent`                      |
+  | `BeforeModel`            | `BeforeModel`                     |
+  | `AfterModel`             | `AfterModel`                      |
+  | `BeforeToolSelection`    | `BeforeToolSelection`             |
+  | `SessionStart`           | `SessionStart`                    |
+  | `SessionEnd`             | `SessionEnd`                      |
+  | `Notification`           | `Notification`                    |
+  | `PreCompress`            | `PreCompact`                      |
 
   Note in particular `PreCompress` (Gemini) vs `PreCompact` (protocol/Claude),
   and the `Before*`/`After*` naming convention Gemini uses in place of
