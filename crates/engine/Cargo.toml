@@ -1,0 +1,19 @@
+[package]
+name = "inceptool-engine"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+description = "Execution engine for Inceptool"
+license.workspace = true
+repository.workspace = true
+keywords = ["engine", "ai"]
+categories = ["development-tools"]
+
+[dependencies]
+inceptool_protocol.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+serde_json.workspace = true
