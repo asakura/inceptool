@@ -1,4 +1,15 @@
 //! Error types for the Claude driver.
+//!
+//! [`ClaudeDriverError`] is the `Driver::Error` associated type for
+//! [`ClaudeDriver`](crate::driver::ClaudeDriver), returned by `map_input` /
+//! `map_output` and thus by [`inceptool_protocol::from_wire`] /
+//! [`inceptool_protocol::to_wire`] on failure.
+//!
+//! [`ConversionError`] is produced when converting a `HookOutputEvent` into a
+//! [`ClaudeHookSpecificOutput`](crate::ClaudeHookSpecificOutput); it is
+//! wrapped by [`ClaudeDriverError::Conversion`], but
+//! [`ClaudeDriver::map_output`](crate::driver::ClaudeDriver) catches it with
+//! `.ok()` rather than propagating it.
 
 use inceptool_protocol::ProtocolError;
 use thiserror::Error;

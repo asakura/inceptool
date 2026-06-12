@@ -1,4 +1,20 @@
-//! Implementation of the Driver trait for Claude.
+//! [`ClaudeDriver`] implements [`inceptool_protocol::Driver`] for Claude Code.
+//!
+//! - `map_input` reads a small `ClaudeMeta` envelope to determine
+//!   `hook_event_name`, retains the full raw JSON as a zero-copy
+//!   [`inceptool_protocol::types::RawJson`] `driver_meta`, then
+//!   re-deserializes the same JSON into the matching
+//!   [`inceptool_protocol::HookInputEvent`] variant. Every `hook_event_name`
+//!   Claude Code documents is handled; an unrecognized name yields
+//!   [`ProtocolError::UnsupportedEvent`].
+//! - `map_output` builds a [`ClaudeOutputWire`] from the
+//!   [`inceptool_protocol::HookOutputEvent`]'s generic accessors
+//!   (`decision()`, `reason()`, `halt()`, ...), collapsing
+//!   `Decision::Deny`/`Decision::Block` to the top-level `"decision": "block"`
+//!   and leaving `Allow`/`Ask` to be conveyed via
+//!   `hookSpecificOutput.permissionDecision` (see
+//!   [`ClaudeHookSpecificOutput`]). `stopReason` and the top-level
+//!   `permissionDecision` are always `None`.
 
 use crate::error::ClaudeDriverError;
 use crate::types::{ClaudeHookSpecificOutput, ClaudeMeta, ClaudeOutputWire};
@@ -7,7 +23,12 @@ use inceptool_protocol::{
     Conn, Decision, Driver, HookInputEvent, HookOutputEvent, ProtocolError, SessionMeta, types,
 };
 
-/// Implements `Driver` for Claude Code.
+/// Zero-sized [`Driver`] implementation for Claude Code.
+///
+/// `Self::InputWire<'a> = &'a RawValue` (Claude's hook payload is consumed as
+/// borrowed raw JSON), `Self::OutputWire<'a> = ClaudeOutputWire<'a>`, and
+/// `Self::Error = ClaudeDriverError`. See the module docs for what
+/// `map_input`/`map_output` do.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ClaudeDriver;
 
@@ -246,7 +267,7 @@ mod tests {
 
         let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Allow),
-            reason: Some("Allowed reason".to_string()),
+            reason: Some("Allowed reason".into()),
             updated_input: Some(updated_input),
             ..Default::default()
         });
@@ -290,7 +311,7 @@ mod tests {
     fn test_format_output_hook_specific_post_tool_use() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::PostToolUse(inceptool_protocol::PostToolUseOutput {
-            additional_context: Some("ctx".to_string()),
+            additional_context: Some("ctx".into()),
             ..Default::default()
         });
 
@@ -321,7 +342,7 @@ mod tests {
     fn test_format_output_hook_specific_pre_tool_use_additional_context() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
-            additional_context: Some("extra context".to_string()),
+            additional_context: Some("extra context".into()),
             ..Default::default()
         });
 
@@ -371,7 +392,7 @@ mod tests {
     fn test_format_output_hook_specific_session_start() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::SessionStart(inceptool_protocol::SessionStartOutput {
-            additional_context: Some("ctx".to_string()),
+            additional_context: Some("ctx".into()),
             initial_user_message: Some("hello".to_string()),
             session_title: Some("My Session".to_string()),
             watch_paths: Some(vec!["/repo/src".to_string()]),
@@ -424,7 +445,7 @@ mod tests {
     fn test_format_output_hook_specific_setup() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::Setup(inceptool_protocol::SetupOutput {
-            additional_context: Some("setup ctx".to_string()),
+            additional_context: Some("setup ctx".into()),
         });
 
         let formatted = inceptool_protocol::to_wire(&driver, "Setup", &output)?;
@@ -522,7 +543,7 @@ mod tests {
     fn test_format_output_hook_specific_stop() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::Stop(inceptool_protocol::StopOutput {
-            additional_context: Some("keep going".to_string()),
+            additional_context: Some("keep going".into()),
             ..Default::default()
         });
 
@@ -547,7 +568,7 @@ mod tests {
         let driver = ClaudeDriver;
         let output =
             HookOutputEvent::UserPromptExpansion(inceptool_protocol::UserPromptExpansionOutput {
-                additional_context: Some("expanded".to_string()),
+                additional_context: Some("expanded".into()),
                 ..Default::default()
             });
 
@@ -571,7 +592,7 @@ mod tests {
     fn test_format_output_hook_specific_subagent_start() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::SubagentStart(inceptool_protocol::SubagentStartOutput {
-            additional_context: Some("subagent ctx".to_string()),
+            additional_context: Some("subagent ctx".into()),
         });
 
         let formatted = inceptool_protocol::to_wire(&driver, "SubagentStart", &output)?;
@@ -594,7 +615,7 @@ mod tests {
     fn test_format_output_hook_specific_subagent_stop() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::SubagentStop(inceptool_protocol::SubagentStopOutput {
-            additional_context: Some("subagent done".to_string()),
+            additional_context: Some("subagent done".into()),
             ..Default::default()
         });
 
@@ -619,7 +640,7 @@ mod tests {
         let driver = ClaudeDriver;
         let output =
             HookOutputEvent::PermissionDenied(inceptool_protocol::PermissionDeniedOutput {
-                additional_context: Some("denied ctx".to_string()),
+                additional_context: Some("denied ctx".into()),
             });
 
         let formatted = inceptool_protocol::to_wire(&driver, "PermissionDenied", &output)?;

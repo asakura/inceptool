@@ -1,4 +1,27 @@
-//! Type definitions for the Claude driver.
+//! Wire types for the Claude driver.
+//!
+//! These model the JSON Claude Code sends to and expects back from a hook,
+//! as distinct from the protocol's normalized [`inceptool_protocol::Conn`] /
+//! [`inceptool_protocol::HookInputEvent`] /
+//! [`inceptool_protocol::HookOutputEvent`] types:
+//!
+//! - `ClaudeMeta` is a `pub(crate)` "peek" struct:
+//!   [`ClaudeDriver::map_input`](crate::driver::ClaudeDriver) deserializes it
+//!   first to read the common envelope fields (`session_id`,
+//!   `hook_event_name`, `permission_mode`, ...) before re-parsing the same
+//!   JSON into the concrete `HookInputEvent` variant.
+//! - [`ClaudeOutputWire`] is the top-level JSON object written back to Claude
+//!   on stdout (`continue`, `suppressOutput`, `decision`,
+//!   `hookSpecificOutput`, ...).
+//! - [`ClaudeHookSpecificOutput`] is the `hookSpecificOutput` payload nested
+//!   inside [`ClaudeOutputWire`], with one variant per Claude hook phase.
+//!   Each variant is produced from the matching protocol output type via a
+//!   `From` impl; the `TryFrom<&HookOutputEvent>` impl dispatches on the
+//!   `HookOutputEvent` discriminant and returns
+//!   [`ConversionError::UnsupportedEvent`] for variants with no
+//!   Claude-specific mapping.
+//! - [`ClaudePermissionDecision`] is the nested `decision` object for the
+//!   `PermissionRequest` hook phase's `hookSpecificOutput`.
 
 use crate::error::{ClaudeDriverError, ConversionError};
 use inceptool_protocol::{
@@ -13,11 +36,16 @@ use std::borrow::Cow;
 /// Metadata associated with a Claude session payload.
 #[derive(Deserialize)]
 pub(crate) struct ClaudeMeta<'a> {
+    /// The Claude Code session this hook event belongs to.
     pub(crate) session_id: Cow<'a, str>,
+    /// Path to the session's transcript file, if provided.
     #[serde(default)]
     pub(crate) transcript_path: Option<Cow<'a, str>>,
+    /// The working directory the session is running in, if provided.
     #[serde(default)]
     pub(crate) cwd: Option<Cow<'a, str>>,
+    /// The Claude hook name (e.g. `"PreToolUse"`), used to select which
+    /// `HookInputEvent` variant to deserialize the payload into.
     pub(crate) hook_event_name: Cow<'a, str>,
     /// The permission mode active for the session, if known.
     #[serde(default)]
@@ -33,7 +61,9 @@ pub(crate) struct ClaudeMeta<'a> {
     pub(crate) agent_type: Option<Cow<'a, str>>,
 }
 
-/// The output wire format for Claude driver.
+/// The top-level JSON object [`ClaudeDriver::map_output`](crate::driver::ClaudeDriver)
+/// produces, written back to Claude Code on stdout. All fields are optional
+/// and skipped when `None`.
 #[derive(Serialize)]
 pub struct ClaudeOutputWire<'a> {
     /// Indicates whether the driver should continue execution. If false, it halts.
@@ -44,11 +74,17 @@ pub struct ClaudeOutputWire<'a> {
     #[serde(rename = "suppressOutput")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suppress_output: Option<bool>,
-    /// The explicit reason for stopping execution, if any.
+    /// The explicit reason for stopping execution, if any. Always `None` in
+    /// [`ClaudeDriver::map_output`](crate::driver::ClaudeDriver) - reserved
+    /// for schema completeness.
     #[serde(rename = "stopReason")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_reason: Option<&'a str>,
-    /// The decision rendered by a gatekeeping hook (e.g., "block").
+    /// The top-level gatekeeping decision.
+    /// [`ClaudeDriver::map_output`](crate::driver::ClaudeDriver) only ever
+    /// sets this to `Some("block")` (for `Decision::Deny` /
+    /// `Decision::Block`); `Allow`/`Ask` decisions for tool-use hooks are
+    /// instead conveyed via `hookSpecificOutput.permissionDecision`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub decision: Option<&'a str>,
     /// The explanation or reason backing the decision.
@@ -58,7 +94,10 @@ pub struct ClaudeOutputWire<'a> {
     #[serde(rename = "systemMessage")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system_message: Option<&'a str>,
-    /// Specific permission decision for operations requiring authorization.
+    /// Top-level permission decision string. Always `None` in
+    /// [`ClaudeDriver::map_output`](crate::driver::ClaudeDriver) - per-tool
+    /// permission decisions are instead nested under
+    /// `hookSpecificOutput.permissionDecision`.
     #[serde(rename = "permissionDecision")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub permission_decision: Option<&'a str>,
@@ -69,6 +108,10 @@ pub struct ClaudeOutputWire<'a> {
 }
 
 /// The nested permission decision for a `PermissionRequest` hook-specific output.
+///
+/// Only constructed (and thus emitted as `hookSpecificOutput.decision`) when
+/// the protocol's `PermissionRequestOutput.behavior` is `Some`; otherwise the
+/// whole `decision` field is omitted from `hookSpecificOutput`.
 #[derive(Debug, Serialize)]
 pub struct ClaudePermissionDecision<'a> {
     /// The behavior to apply to the permission request.
@@ -84,7 +127,13 @@ pub struct ClaudePermissionDecision<'a> {
     pub permission_rule_definition: Option<&'a serde_json::Value>,
 }
 
-/// Hook-specific output payload for Claude.
+/// The `hookSpecificOutput` payload nested in [`ClaudeOutputWire`].
+///
+/// Serialized `#[serde(untagged)]`, so only the active variant's fields
+/// appear in the JSON. One variant exists per Claude hook phase that has a
+/// defined `hookSpecificOutput` shape; each is constructed from the matching
+/// protocol output type via the `From` impls below, dispatched by the
+/// `TryFrom<&HookOutputEvent>` impl.
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum ClaudeHookSpecificOutput<'a> {
@@ -400,6 +449,15 @@ impl<'a> From<&'a ElicitationOutput> for ClaudeHookSpecificOutput<'a> {
     }
 }
 
+/// Dispatches on the `HookOutputEvent` discriminant to the matching
+/// `From<&XxxOutput>` impl above, producing the Claude-specific
+/// `hookSpecificOutput` payload for that hook phase.
+///
+/// Returns [`ConversionError::UnsupportedEvent`] for variants with no
+/// Claude-specific mapping (e.g. `Notification`, `SessionEnd`,
+/// `CwdChanged`). [`ClaudeDriver::map_output`](crate::driver::ClaudeDriver)
+/// treats that as "no `hookSpecificOutput`" via `.ok()` rather than
+/// propagating the error.
 impl<'a> TryFrom<&'a HookOutputEvent> for ClaudeHookSpecificOutput<'a> {
     type Error = ClaudeDriverError;
 
