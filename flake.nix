@@ -102,6 +102,7 @@
             pre-commit
             cargo-deny
             cargo-nextest
+            git-cliff
             nixfmt-rfc-style
             shfmt
             shellcheck
