@@ -625,6 +625,34 @@ impl HookOutputEvent {
         }
     }
 
+    /// Overwrites the decision on the hook output, if the variant carries a [`Decision`].
+    ///
+    /// Variants without a `decision` field (e.g. [`HookOutputEvent::SessionStart`] or
+    /// [`HookOutputEvent::PermissionRequest`], which conveys its outcome via `behavior`
+    /// instead) are left unchanged.
+    pub fn set_decision(&mut self, decision: Decision) {
+        match self {
+            HookOutputEvent::PreToolUse(o) => o.decision = Some(decision),
+            HookOutputEvent::PostToolUse(o) => o.decision = Some(decision),
+            HookOutputEvent::BeforeAgent(o) => o.decision = Some(decision),
+            HookOutputEvent::AfterAgent(o) => o.decision = Some(decision),
+            HookOutputEvent::BeforeModel(o) => o.decision = Some(decision),
+            HookOutputEvent::AfterModel(o) => o.decision = Some(decision),
+            HookOutputEvent::PreCompact(o) => o.decision = Some(decision),
+            HookOutputEvent::UserPromptSubmit(o) => o.decision = Some(decision),
+            HookOutputEvent::PostToolUseFailure(o) => o.decision = Some(decision),
+            HookOutputEvent::PostToolBatch(o) => o.decision = Some(decision),
+            HookOutputEvent::ConfigChange(o) => o.decision = Some(decision),
+            HookOutputEvent::Stop(o) => o.decision = Some(decision),
+            HookOutputEvent::UserPromptExpansion(o) => o.decision = Some(decision),
+            HookOutputEvent::SubagentStop(o) => o.decision = Some(decision),
+            HookOutputEvent::TaskCreated(o) => o.decision = Some(decision),
+            HookOutputEvent::TaskCompleted(o) => o.decision = Some(decision),
+            HookOutputEvent::TeammateIdle(o) => o.decision = Some(decision),
+            _ => {}
+        }
+    }
+
     /// Returns the reason associated with the hook output, if any.
     pub fn reason(&self) -> Option<&str> {
         match self {
@@ -900,6 +928,64 @@ mod tests {
         #[case] expected: Option<Decision>,
     ) -> Result<(), TestError> {
         assert_eq!(output.decision(), expected);
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::pre_tool_use(HookOutputEvent::PreToolUse(PreToolUseOutput::default()))]
+    #[case::post_tool_use(HookOutputEvent::PostToolUse(PostToolUseOutput::default()))]
+    #[case::before_agent(HookOutputEvent::BeforeAgent(BeforeAgentOutput::default()))]
+    #[case::after_agent(HookOutputEvent::AfterAgent(AfterAgentOutput::default()))]
+    #[case::before_model(HookOutputEvent::BeforeModel(BeforeModelOutput::default()))]
+    #[case::after_model(HookOutputEvent::AfterModel(AfterModelOutput::default()))]
+    #[case::pre_compact(HookOutputEvent::PreCompact(PreCompactOutput::default()))]
+    #[case::user_prompt_submit(HookOutputEvent::UserPromptSubmit(
+        UserPromptSubmitOutput::default()
+    ))]
+    #[case::post_tool_use_failure(HookOutputEvent::PostToolUseFailure(
+        PostToolUseFailureOutput::default()
+    ))]
+    #[case::post_tool_batch(HookOutputEvent::PostToolBatch(PostToolBatchOutput::default()))]
+    #[case::config_change(HookOutputEvent::ConfigChange(ConfigChangeOutput::default()))]
+    #[case::stop(HookOutputEvent::Stop(StopOutput::default()))]
+    #[case::user_prompt_expansion(HookOutputEvent::UserPromptExpansion(
+        UserPromptExpansionOutput::default()
+    ))]
+    #[case::subagent_stop(HookOutputEvent::SubagentStop(SubagentStopOutput::default()))]
+    #[case::task_created(HookOutputEvent::TaskCreated(TaskCreatedOutput::default()))]
+    #[case::task_completed(HookOutputEvent::TaskCompleted(TaskCompletedOutput::default()))]
+    #[case::teammate_idle(HookOutputEvent::TeammateIdle(TeammateIdleOutput::default()))]
+    fn test_set_decision_overwrites_supported_variants(
+        #[case] mut output: HookOutputEvent,
+    ) -> Result<(), TestError> {
+        output.set_decision(Decision::Ask);
+        assert_eq!(output.decision(), Some(Decision::Ask));
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_set_decision_overwrites_existing_decision() -> Result<(), TestError> {
+        let mut output = HookOutputEvent::PreToolUse(PreToolUseOutput {
+            decision: Some(Decision::Allow),
+            ..Default::default()
+        });
+
+        output.set_decision(Decision::Deny);
+
+        assert_eq!(output.decision(), Some(Decision::Deny));
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::session_start(HookOutputEvent::SessionStart(SessionStartOutput::default()))]
+    #[case::permission_request(HookOutputEvent::PermissionRequest(
+        PermissionRequestOutput::default()
+    ))]
+    fn test_set_decision_is_noop_for_unsupported_variants(
+        #[case] mut output: HookOutputEvent,
+    ) -> Result<(), TestError> {
+        output.set_decision(Decision::Ask);
+        assert_eq!(output.decision(), None);
         Ok(())
     }
 
