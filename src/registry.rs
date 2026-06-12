@@ -25,6 +25,7 @@ pub fn build_registry(config: &Config) -> Registry {
         "rtk" => RtkStage,
     );
 
+    #[cfg(debug_assertions)]
     register_mock_stages(&mut registry);
 
     registry
