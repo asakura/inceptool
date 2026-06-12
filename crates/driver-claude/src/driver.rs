@@ -342,7 +342,8 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_post_tool_use_updated_tool_output() -> Result<(), TestError> {
+    fn test_format_output_hook_specific_post_tool_use_updated_tool_output() -> Result<(), TestError>
+    {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::PostToolUse(inceptool_protocol::PostToolUseOutput {
             updated_tool_output: Some(serde_json::json!({"stdout": "ok"})),
