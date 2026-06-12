@@ -4,8 +4,6 @@ use crate::config::Config;
 
 use inceptool_engine::Registry;
 use inceptool_stages::RtkStage;
-use inceptool_stages::{
-};
 
 /// Registers the standard stages enabled by `config`.
 pub fn build_registry(config: &Config) -> Registry {
