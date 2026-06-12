@@ -1,0 +1,37 @@
+name: Update flake.lock
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-flake-lock:
+    # No `pull_request` trigger exists for this workflow at all (schedule /
+    # manual dispatch only); this guard additionally no-ops the job if a fork
+    # happens to enable this scheduled workflow on their own copy.
+    if: github.repository_owner == 'asakura'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: cachix/cachix-action@v16
+        with:
+          name: inceptool
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Update flake.lock
+        uses: DeterminateSystems/update-flake-lock@v3
+        with:
+          pr-title: "chore(flake): update flake.lock"
+          pr-labels: |
+            dependencies
+            automated
