@@ -1,3 +1,6 @@
 /target/
 **/*.rs.bk
 /inceptool.log
+/result
+/result-*
+.direnv/
