@@ -18,25 +18,44 @@ repository = "https://github.com/asakura/inceptool"
 
 [workspace]
 members = [
-    "crates/protocol",
     "crates/driver-claude",
     "crates/driver-gemini",
+    "crates/engine",
+    "crates/protocol",
+    "crates/stages",
 ]
 
 [workspace.dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0", features = ["raw_value"] }
-thiserror = "2.0"
-rstest = "0.26.1"
-strum = "0.28.0"
-strum_macros = "0.28.0"
-inceptool_protocol = { package = "inceptool-protocol", path = "crates/protocol" }
-driver-claude = { package = "inceptool-driver-claude", path = "crates/driver-claude" }
-driver-gemini = { package = "inceptool-driver-gemini", path = "crates/driver-gemini" }
+directories = "6.0"
+flash = "0.0"
 inceptool_driver-claude = { package = "inceptool-driver-claude", path = "crates/driver-claude" }
 inceptool_driver-gemini = { package = "inceptool-driver-gemini", path = "crates/driver-gemini" }
+inceptool_engine = { package = "inceptool-engine", path = "crates/engine" }
+inceptool_protocol = { package = "inceptool-protocol", path = "crates/protocol" }
+inceptool_stages = { package = "inceptool-stages", path = "crates/stages" }
+miette = { version = "7.0", features = ["fancy"] }
+regex = "1.10"
+rstest = "0.26.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+serde_yaml = "0.9"
+strum = "0.28.0"
+strum_macros = "0.28.0"
+thiserror = "2.0"
+toml = "1.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
 
 [dependencies]
-inceptool_protocol.workspace = true
+directories.workspace = true
 inceptool_driver-claude.workspace = true
 inceptool_driver-gemini.workspace = true
+inceptool_engine.workspace = true
+inceptool_protocol.workspace = true
+inceptool_stages.workspace = true
+miette.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
