@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: cachix/cachix-action@v16
+        with:
+          name: inceptool
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      # fmt + clippy, built in the Nix sandbox with vendored deps.
+      - name: nix flake check
+        run: nix flake check -L
+
+      # Runs outside the sandbox (network + .git access) inside the pinned devShell.
+      - name: cargo test --workspace
+        run: nix develop -c cargo test --workspace
+
+      - name: cargo deny check
+        run: nix develop -c cargo deny check
