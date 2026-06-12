@@ -1,0 +1,16 @@
+# release-plz configuration: https://release-plz.dev/docs/config
+[workspace]
+changelog_config = "cliff.toml"
+changelog_update = true
+git_release_enable = true
+git_tag_enable = true
+pr_labels = ["release"]
+
+# `inceptool` is the user-facing CLI release artifact. Give it a clean
+# `vX.Y.Z` tag/release name (release-binaries.yml matches on this) instead of
+# release-plz's default `inceptool-vX.Y.Z`. The library crates keep their
+# default `{{ package }}-v{{ version }}` tags.
+[[package]]
+name = "inceptool"
+git_tag_name = "v{{ version }}"
+git_release_name = "v{{ version }}"
