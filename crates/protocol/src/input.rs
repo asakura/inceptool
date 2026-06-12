@@ -83,6 +83,151 @@ pub enum HookInputEvent<'a> {
     ElicitationResult(ElicitationResultInput<'a>),
 }
 
+/// A fieldless discriminant mirroring [`HookInputEvent`], one variant per CLI hook.
+///
+/// Used as an array index (`kind as usize`) to dispatch a [`HookInputEvent`] to its
+/// corresponding pipeline without allocating or hashing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum HookKind {
+    /// See [`HookInputEvent::PreToolUse`].
+    PreToolUse,
+    /// See [`HookInputEvent::PostToolUse`].
+    PostToolUse,
+    /// See [`HookInputEvent::BeforeAgent`].
+    BeforeAgent,
+    /// See [`HookInputEvent::AfterAgent`].
+    AfterAgent,
+    /// See [`HookInputEvent::BeforeModel`].
+    BeforeModel,
+    /// See [`HookInputEvent::AfterModel`].
+    AfterModel,
+    /// See [`HookInputEvent::BeforeToolSelection`].
+    BeforeToolSelection,
+    /// See [`HookInputEvent::SessionStart`].
+    SessionStart,
+    /// See [`HookInputEvent::SessionEnd`].
+    SessionEnd,
+    /// See [`HookInputEvent::Notification`].
+    Notification,
+    /// See [`HookInputEvent::PreCompact`].
+    PreCompact,
+    /// See [`HookInputEvent::CwdChanged`].
+    CwdChanged,
+    /// See [`HookInputEvent::FileChanged`].
+    FileChanged,
+    /// See [`HookInputEvent::InstructionsLoaded`].
+    InstructionsLoaded,
+    /// See [`HookInputEvent::UserPromptSubmit`].
+    UserPromptSubmit,
+    /// See [`HookInputEvent::WorktreeCreate`].
+    WorktreeCreate,
+    /// See [`HookInputEvent::WorktreeRemove`].
+    WorktreeRemove,
+    /// See [`HookInputEvent::Setup`].
+    Setup,
+    /// See [`HookInputEvent::UserPromptExpansion`].
+    UserPromptExpansion,
+    /// See [`HookInputEvent::MessageDisplay`].
+    MessageDisplay,
+    /// See [`HookInputEvent::PermissionRequest`].
+    PermissionRequest,
+    /// See [`HookInputEvent::PostToolUseFailure`].
+    PostToolUseFailure,
+    /// See [`HookInputEvent::PostToolBatch`].
+    PostToolBatch,
+    /// See [`HookInputEvent::PermissionDenied`].
+    PermissionDenied,
+    /// See [`HookInputEvent::SubagentStart`].
+    SubagentStart,
+    /// See [`HookInputEvent::SubagentStop`].
+    SubagentStop,
+    /// See [`HookInputEvent::TaskCreated`].
+    TaskCreated,
+    /// See [`HookInputEvent::TaskCompleted`].
+    TaskCompleted,
+    /// See [`HookInputEvent::Stop`].
+    Stop,
+    /// See [`HookInputEvent::StopFailure`].
+    StopFailure,
+    /// See [`HookInputEvent::TeammateIdle`].
+    TeammateIdle,
+    /// See [`HookInputEvent::ConfigChange`].
+    ConfigChange,
+    /// See [`HookInputEvent::PostCompact`].
+    PostCompact,
+    /// See [`HookInputEvent::Elicitation`].
+    Elicitation,
+    /// See [`HookInputEvent::ElicitationResult`].
+    ElicitationResult,
+}
+
+impl HookKind {
+    /// The total number of [`HookKind`] variants.
+    pub const COUNT: usize = 35;
+}
+
+impl<'a> HookInputEvent<'a> {
+    /// Returns the [`HookKind`] discriminant for this event.
+    pub fn kind(&self) -> HookKind {
+        match self {
+            HookInputEvent::PreToolUse(_) => HookKind::PreToolUse,
+            HookInputEvent::PostToolUse(_) => HookKind::PostToolUse,
+            HookInputEvent::BeforeAgent(_) => HookKind::BeforeAgent,
+            HookInputEvent::AfterAgent(_) => HookKind::AfterAgent,
+            HookInputEvent::BeforeModel(_) => HookKind::BeforeModel,
+            HookInputEvent::AfterModel(_) => HookKind::AfterModel,
+            HookInputEvent::BeforeToolSelection(_) => HookKind::BeforeToolSelection,
+            HookInputEvent::SessionStart(_) => HookKind::SessionStart,
+            HookInputEvent::SessionEnd(_) => HookKind::SessionEnd,
+            HookInputEvent::Notification(_) => HookKind::Notification,
+            HookInputEvent::PreCompact(_) => HookKind::PreCompact,
+            HookInputEvent::CwdChanged(_) => HookKind::CwdChanged,
+            HookInputEvent::FileChanged(_) => HookKind::FileChanged,
+            HookInputEvent::InstructionsLoaded(_) => HookKind::InstructionsLoaded,
+            HookInputEvent::UserPromptSubmit(_) => HookKind::UserPromptSubmit,
+            HookInputEvent::WorktreeCreate(_) => HookKind::WorktreeCreate,
+            HookInputEvent::WorktreeRemove(_) => HookKind::WorktreeRemove,
+            HookInputEvent::Setup(_) => HookKind::Setup,
+            HookInputEvent::UserPromptExpansion(_) => HookKind::UserPromptExpansion,
+            HookInputEvent::MessageDisplay(_) => HookKind::MessageDisplay,
+            HookInputEvent::PermissionRequest(_) => HookKind::PermissionRequest,
+            HookInputEvent::PostToolUseFailure(_) => HookKind::PostToolUseFailure,
+            HookInputEvent::PostToolBatch(_) => HookKind::PostToolBatch,
+            HookInputEvent::PermissionDenied(_) => HookKind::PermissionDenied,
+            HookInputEvent::SubagentStart(_) => HookKind::SubagentStart,
+            HookInputEvent::SubagentStop(_) => HookKind::SubagentStop,
+            HookInputEvent::TaskCreated(_) => HookKind::TaskCreated,
+            HookInputEvent::TaskCompleted(_) => HookKind::TaskCompleted,
+            HookInputEvent::Stop(_) => HookKind::Stop,
+            HookInputEvent::StopFailure(_) => HookKind::StopFailure,
+            HookInputEvent::TeammateIdle(_) => HookKind::TeammateIdle,
+            HookInputEvent::ConfigChange(_) => HookKind::ConfigChange,
+            HookInputEvent::PostCompact(_) => HookKind::PostCompact,
+            HookInputEvent::Elicitation(_) => HookKind::Elicitation,
+            HookInputEvent::ElicitationResult(_) => HookKind::ElicitationResult,
+        }
+    }
+
+    /// Returns the tool name associated with this event, if any.
+    ///
+    /// Only [`PreToolUse`](HookInputEvent::PreToolUse),
+    /// [`PostToolUse`](HookInputEvent::PostToolUse),
+    /// [`PermissionRequest`](HookInputEvent::PermissionRequest),
+    /// [`PostToolUseFailure`](HookInputEvent::PostToolUseFailure), and
+    /// [`PermissionDenied`](HookInputEvent::PermissionDenied) carry a tool name;
+    /// all other variants return `None`.
+    pub fn tool_name(&self) -> Option<&str> {
+        match self {
+            HookInputEvent::PreToolUse(input) => Some(input.tool_name.as_ref()),
+            HookInputEvent::PostToolUse(input) => Some(input.tool_name.as_ref()),
+            HookInputEvent::PermissionRequest(input) => Some(input.tool_name.as_ref()),
+            HookInputEvent::PostToolUseFailure(input) => Some(input.tool_name.as_ref()),
+            HookInputEvent::PermissionDenied(input) => Some(input.tool_name.as_ref()),
+            _ => None,
+        }
+    }
+}
+
 /// Input payload for the `PreToolUse` event.
 #[derive(Debug, Deserialize)]
 pub struct PreToolUseInput<'a> {
@@ -1033,5 +1178,88 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[rstest]
+    fn test_hook_input_event_kind_pre_tool_use(grep_search_json: String) -> Result<(), TestError> {
+        let input: PreToolUseInput = serde_json::from_str(&grep_search_json)?;
+        let event = HookInputEvent::PreToolUse(input);
+
+        assert_eq!(event.kind(), HookKind::PreToolUse);
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_hook_input_event_kind_before_agent() -> Result<(), TestError> {
+        let input: BeforeAgentInput = serde_json::from_str(r#"{"prompt": "hello"}"#)?;
+        let event = HookInputEvent::BeforeAgent(input);
+
+        assert_eq!(event.kind(), HookKind::BeforeAgent);
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_hook_input_event_kind_session_start() -> Result<(), TestError> {
+        let input: SessionStartInput = serde_json::from_str("{}")?;
+        let event = HookInputEvent::SessionStart(input);
+
+        assert_eq!(event.kind(), HookKind::SessionStart);
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_hook_input_event_kind_elicitation_result() -> Result<(), TestError> {
+        let json = r#"{"result": {"accepted": true}}"#;
+        let input: ElicitationResultInput = serde_json::from_str(json)?;
+        let event = HookInputEvent::ElicitationResult(input);
+
+        assert_eq!(event.kind(), HookKind::ElicitationResult);
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_hook_input_event_tool_name_pre_tool_use(
+        grep_search_json: String,
+    ) -> Result<(), TestError> {
+        let input: PreToolUseInput = serde_json::from_str(&grep_search_json)?;
+        let event = HookInputEvent::PreToolUse(input);
+
+        assert_eq!(event.tool_name(), Some("grep_search"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_hook_input_event_tool_name_permission_denied() -> Result<(), TestError> {
+        let json = r#"{
+            "tool_name": "Bash",
+            "tool_input": {"command": "curl evil.com"},
+            "reason": "network access denied"
+        }"#;
+        let input: PermissionDeniedInput = serde_json::from_str(json)?;
+        let event = HookInputEvent::PermissionDenied(input);
+
+        assert_eq!(event.tool_name(), Some("Bash"));
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_hook_input_event_tool_name_before_agent_is_none() -> Result<(), TestError> {
+        let input: BeforeAgentInput = serde_json::from_str(r#"{"prompt": "hello"}"#)?;
+        let event = HookInputEvent::BeforeAgent(input);
+
+        assert_eq!(event.tool_name(), None);
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_hook_kind_count_matches_variant_count() {
+        assert_eq!(HookKind::ElicitationResult as usize + 1, HookKind::COUNT);
     }
 }
