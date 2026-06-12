@@ -35,14 +35,25 @@ pub trait Driver {
     ) -> Result<Self::OutputWire<'a>, Self::Error>;
 }
 
-/// Generic entry point to parse a raw JSON payload using a specific driver.
+/// Deserializes a driver's wire-format input from a raw JSON string and maps
+/// it into a canonical [`Conn`].
+///
+/// This is the entry point the CLI uses to turn the raw JSON it reads from
+/// stdin into the [`Conn`] / `HookInputEvent` that the engine and stages
+/// operate on. It first deserializes `raw_json` into `D::InputWire`, then
+/// delegates to [`Driver::map_input`] to produce the canonical representation.
 pub fn from_wire<'a, D: Driver>(driver: &D, raw_json: &'a str) -> Result<Conn<'a>, D::Error> {
     let wire = serde_json::from_str::<D::InputWire<'a>>(raw_json)?;
 
     driver.map_input(wire)
 }
 
-/// Generic entry point to format a protocol output event to JSON using a specific driver.
+/// Maps a canonical [`HookOutputEvent`] into a driver's wire-format output via
+/// [`Driver::map_output`] and serializes it back to a JSON string.
+///
+/// This is the entry point the CLI uses to turn the canonical
+/// [`HookOutputEvent`] produced by the engine and stages back into the raw
+/// JSON it writes to stdout.
 pub fn to_wire<'a, D: Driver>(
     driver: &'a D,
     event_name: &'a str,

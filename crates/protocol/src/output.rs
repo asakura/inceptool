@@ -572,7 +572,12 @@ pub struct ElicitationOutput {
 pub struct EmptyOutput {}
 
 impl HookOutputEvent {
-    /// Returns the exit code and reason associated with the hook output, if halting.
+    /// Returns the `(exit_code, reason)` pair for variants that can halt the
+    /// process with a specific exit code ([`HookOutputEvent::PreToolUse`],
+    /// [`HookOutputEvent::PostToolUse`], [`HookOutputEvent::BeforeAgent`],
+    /// [`HookOutputEvent::AfterAgent`], [`HookOutputEvent::BeforeModel`],
+    /// [`HookOutputEvent::AfterModel`], [`HookOutputEvent::PreCompact`]).
+    /// All other variants return `(None, None)`.
     ///
     /// # Examples
     ///
@@ -602,6 +607,9 @@ impl HookOutputEvent {
     }
 
     /// Returns the decision associated with the hook output, if any.
+    ///
+    /// See [`HookOutputEvent::set_decision`] for the full list of variants
+    /// that carry a `decision` field; all other variants return `None`.
     pub fn decision(&self) -> Option<Decision> {
         match self {
             HookOutputEvent::PreToolUse(o) => o.decision,
@@ -653,7 +661,10 @@ impl HookOutputEvent {
         }
     }
 
-    /// Returns the reason associated with the hook output, if any.
+    /// Returns the reason associated with the hook output's decision, if any.
+    ///
+    /// Mirrors [`HookOutputEvent::decision`]'s variant coverage, except
+    /// [`HookOutputEvent::Stop`] (whose output has no `reason` field).
     pub fn reason(&self) -> Option<&str> {
         match self {
             HookOutputEvent::PreToolUse(o) => o.reason.as_deref(),
@@ -676,7 +687,12 @@ impl HookOutputEvent {
         }
     }
 
-    /// Returns whether to halt the process entirely.
+    /// Returns whether the hook is requesting the process halt entirely.
+    ///
+    /// Only [`HookOutputEvent::PreToolUse`], [`HookOutputEvent::PostToolUse`],
+    /// [`HookOutputEvent::BeforeAgent`], [`HookOutputEvent::AfterAgent`],
+    /// [`HookOutputEvent::BeforeModel`], and [`HookOutputEvent::AfterModel`]
+    /// carry a `halt` field; all other variants return `None`.
     pub fn halt(&self) -> Option<bool> {
         match self {
             HookOutputEvent::PreToolUse(o) => o.halt,
@@ -689,7 +705,10 @@ impl HookOutputEvent {
         }
     }
 
-    /// Returns whether to suppress output.
+    /// Returns whether to suppress the tool's output from the model.
+    ///
+    /// Only [`HookOutputEvent::PostToolUse`] carries a `suppress_output`
+    /// field; all other variants return `None`.
     pub fn suppress_output(&self) -> Option<bool> {
         match self {
             HookOutputEvent::PostToolUse(o) => o.suppress_output,
@@ -698,6 +717,12 @@ impl HookOutputEvent {
     }
 
     /// Returns the system message associated with the hook output, if any.
+    ///
+    /// Only [`HookOutputEvent::SessionStart`], [`HookOutputEvent::SessionEnd`],
+    /// [`HookOutputEvent::Notification`], [`HookOutputEvent::PreCompact`],
+    /// [`HookOutputEvent::InstructionsLoaded`], and
+    /// [`HookOutputEvent::PostCompact`] carry a `system_message` field; all
+    /// other variants return `None`.
     pub fn system_message(&self) -> Option<&str> {
         match self {
             HookOutputEvent::SessionStart(o) => o.system_message.as_deref(),
