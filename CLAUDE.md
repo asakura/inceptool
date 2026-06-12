@@ -39,8 +39,8 @@
 
 - build: `cargo build --workspace`
 - test: `cargo test --workspace`
-- fmt: `cargo fmt && cargo clippy --workspace -- -D warnings`
-- check: `cargo check --workspace`
+- fmt: `cargo fmt`
+- check: `cargo check --workspace --all-targets && cargo clippy --workspace --all-targets -- -D warnings`
 
 ## WORKFLOW
 
