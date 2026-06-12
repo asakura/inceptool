@@ -1,0 +1,20 @@
+[package]
+name = "inceptool-stages"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+description = "Built-in stages for Inceptool"
+license.workspace = true
+repository.workspace = true
+keywords = ["stages", "hooks", "ai"]
+categories = ["development-tools"]
+
+[dependencies]
+flash.workspace = true
+inceptool_engine.workspace = true
+inceptool_protocol.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+tracing.workspace = true
