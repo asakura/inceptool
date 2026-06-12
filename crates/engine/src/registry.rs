@@ -6,12 +6,13 @@
 //! [`Registry`] holds one pipeline per
 //! [`HookKind`](inceptool_protocol::HookKind) — a fixed-size array of stage
 //! buckets built once at construction time from [`Registry::register`] calls.
-//! [`Registry::run_pipeline`] then:
+//! [`Registry::run_pipeline`] takes the [`HookKind`](inceptool_protocol::HookKind)
+//! to dispatch on as an explicit argument (the caller determines it via
+//! [`Driver::hook_kind`](inceptool_protocol::Driver::hook_kind) from the CLI
+//! invocation, not by inspecting `conn`), then:
 //!
-//! 1. Selects the bucket for `conn.event`'s
-//!    [`HookKind`](inceptool_protocol::HookKind) (via
-//!    [`HookInputEvent::kind`](inceptool_protocol::HookInputEvent::kind)) and
-//!    iterates its stages in registration order.
+//! 1. Selects the bucket for that [`HookKind`](inceptool_protocol::HookKind)
+//!    and iterates its stages in registration order.
 //! 2. Within that bucket, a stage only runs if its [`Stage::tool_names`] matches
 //!    `conn.event`'s tool name (via
 //!    [`HookInputEvent::tool_name`](inceptool_protocol::HookInputEvent::tool_name)) —
@@ -64,8 +65,8 @@ struct PipelineEntry {
 ///
 /// Stages are bucketed into one pipeline per [`HookKind`], built once at
 /// construction time from [`Registry::register`] calls.
-/// [`Registry::run_pipeline`] only considers the bucket matching the current
-/// event's [`HookKind`].
+/// [`Registry::run_pipeline`] only considers the bucket for the [`HookKind`]
+/// passed to it.
 pub struct Registry {
     pipelines: [Vec<PipelineEntry>; HookKind::COUNT],
 }
@@ -153,16 +154,18 @@ impl Registry {
     ///     }),
     /// };
     ///
-    /// let output = registry.run_pipeline(&mut conn)?;
+    /// let output = registry.run_pipeline(HookKind::BeforeAgent, &mut conn)?;
     /// assert_eq!(output.and_then(|o| o.decision()), Some(Decision::Block));
     /// # Ok(())
     /// # }
     /// ```
-    pub fn run_pipeline(&self, conn: &mut Conn) -> Result<Option<HookOutputEvent>, EngineError> {
+    pub fn run_pipeline(
+        &self,
+        kind: HookKind,
+        conn: &mut Conn,
+    ) -> Result<Option<HookOutputEvent>, EngineError> {
         let mut final_output = None;
         let mut combined_decision = None;
-
-        let kind = conn.event.kind();
 
         for entry in &self.pipelines[kind as usize] {
             if !tool_names_match(entry.tool_names, conn.event.tool_name()) {
@@ -458,14 +461,24 @@ mod tests {
     #[rstest]
     fn test_run_pipeline_with_no_stages_returns_none(mut conn: Conn) -> Result<(), TestError> {
         let registry = Registry::new();
-        assert_matches!(registry.run_pipeline(&mut conn)?, None);
+
+        assert_matches!(
+            registry.run_pipeline(HookKind::BeforeAgent, &mut conn)?,
+            None
+        );
+
         Ok(())
     }
 
     #[rstest]
     fn test_run_pipeline_default_registry_has_no_stages(mut conn: Conn) -> Result<(), TestError> {
         let registry = Registry::default();
-        assert_matches!(registry.run_pipeline(&mut conn)?, None);
+
+        assert_matches!(
+            registry.run_pipeline(HookKind::BeforeAgent, &mut conn)?,
+            None
+        );
+
         Ok(())
     }
 
@@ -480,7 +493,10 @@ mod tests {
             outcome: StubOutcome::Output(block_decision_output),
         });
 
-        assert_matches!(registry.run_pipeline(&mut conn)?, None);
+        assert_matches!(
+            registry.run_pipeline(HookKind::BeforeAgent, &mut conn)?,
+            None
+        );
 
         Ok(())
     }
@@ -498,7 +514,10 @@ mod tests {
             outcome: StubOutcome::None,
         });
 
-        assert_matches!(registry.run_pipeline(&mut conn)?, None);
+        assert_matches!(
+            registry.run_pipeline(HookKind::BeforeAgent, &mut conn)?,
+            None
+        );
 
         Ok(())
     }
@@ -517,7 +536,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_matches!(output, HookOutputEvent::BeforeAgent(_));
@@ -546,7 +565,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Block));
@@ -575,7 +594,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Block));
@@ -602,7 +621,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.halt(), Some(true));
@@ -630,7 +649,7 @@ mod tests {
             outcome: StubOutcome::Error,
         });
 
-        let output = registry.run_pipeline(&mut conn)?;
+        let output = registry.run_pipeline(HookKind::BeforeAgent, &mut conn)?;
 
         assert_matches!(
             output,
@@ -666,7 +685,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Block));
@@ -685,7 +704,7 @@ mod tests {
             outcome: StubOutcome::Error,
         });
 
-        let result = registry.run_pipeline(&mut conn);
+        let result = registry.run_pipeline(HookKind::BeforeAgent, &mut conn);
 
         assert_matches!(result, Err(EngineError::StageExecution(_)));
 
@@ -713,7 +732,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Allow));
@@ -741,7 +760,7 @@ mod tests {
             outcome: StubOutcome::Error,
         });
 
-        let result = registry.run_pipeline(&mut conn);
+        let result = registry.run_pipeline(HookKind::BeforeAgent, &mut conn);
 
         assert_matches!(result, Err(EngineError::StageExecution(_)));
 
@@ -768,7 +787,7 @@ mod tests {
             outcome: StubOutcome::Error,
         });
 
-        let result = registry.run_pipeline(&mut conn);
+        let result = registry.run_pipeline(HookKind::BeforeAgent, &mut conn);
 
         assert_matches!(result, Err(EngineError::StageExecution(_)));
 
@@ -794,7 +813,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Ask));
@@ -823,7 +842,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Ask));
@@ -852,7 +871,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Deny));
@@ -881,7 +900,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Deny));
@@ -903,7 +922,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::BeforeAgent, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), None);
@@ -926,7 +945,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::PreToolUse, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_matches!(output, HookOutputEvent::BeforeAgent(_));
@@ -949,7 +968,7 @@ mod tests {
         });
 
         let output = registry
-            .run_pipeline(&mut conn)?
+            .run_pipeline(HookKind::PreToolUse, &mut conn)?
             .ok_or(TestError::Failure("expected an output".into()))?;
 
         assert_matches!(output, HookOutputEvent::BeforeAgent(_));
@@ -971,7 +990,10 @@ mod tests {
             outcome: StubOutcome::Error,
         });
 
-        assert_matches!(registry.run_pipeline(&mut conn)?, None);
+        assert_matches!(
+            registry.run_pipeline(HookKind::PreToolUse, &mut conn)?,
+            None
+        );
 
         Ok(())
     }
@@ -989,7 +1011,10 @@ mod tests {
             outcome: StubOutcome::Error,
         });
 
-        assert_matches!(registry.run_pipeline(&mut conn)?, None);
+        assert_matches!(
+            registry.run_pipeline(HookKind::BeforeAgent, &mut conn)?,
+            None
+        );
 
         Ok(())
     }

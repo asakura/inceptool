@@ -20,7 +20,8 @@ use crate::error::ClaudeDriverError;
 use crate::types::{ClaudeHookSpecificOutput, ClaudeMeta, ClaudeOutputWire};
 
 use inceptool_protocol::{
-    Conn, Decision, Driver, HookInputEvent, HookOutputEvent, ProtocolError, SessionMeta, types,
+    Conn, Decision, Driver, HookInputEvent, HookKind, HookOutputEvent, ProtocolError, SessionMeta,
+    types,
 };
 
 /// Zero-sized [`Driver`] implementation for Claude Code.
@@ -130,6 +131,10 @@ impl Driver for ClaudeDriver {
 
         Ok(wire)
     }
+
+    fn hook_kind(&self, raw_name: &str) -> Result<HookKind, Self::Error> {
+        Ok(HookKind::parse(raw_name)?)
+    }
 }
 
 #[cfg(test)]
@@ -215,6 +220,27 @@ mod tests {
 
         assert!(result.is_err());
 
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::pre_tool_use("PreToolUse", HookKind::PreToolUse)]
+    #[case::post_tool_use("PostToolUse", HookKind::PostToolUse)]
+    #[case::session_start("SessionStart", HookKind::SessionStart)]
+    #[case::worktree_create("WorktreeCreate", HookKind::WorktreeCreate)]
+    fn test_hook_kind_valid(
+        #[case] raw_name: &str,
+        #[case] expected: HookKind,
+    ) -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        assert_eq!(driver.hook_kind(raw_name)?, expected);
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_hook_kind_invalid() -> Result<(), TestError> {
+        let driver = ClaudeDriver;
+        assert!(driver.hook_kind("NotAHook").is_err());
         Ok(())
     }
 

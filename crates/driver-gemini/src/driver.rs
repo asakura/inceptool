@@ -4,7 +4,7 @@ use crate::error::GeminiDriverError;
 use crate::types::{GeminiHookSpecificOutput, GeminiMeta, GeminiOutputWire};
 
 use inceptool_protocol::{
-    Conn, Driver, HookInputEvent, HookOutputEvent, ProtocolError, SessionMeta,
+    Conn, Driver, HookInputEvent, HookKind, HookOutputEvent, ProtocolError, SessionMeta,
 };
 
 /// Implements `Driver` for Gemini API.
@@ -76,6 +76,15 @@ impl Driver for GeminiDriver {
 
         Ok(wire)
     }
+
+    fn hook_kind(&self, raw_name: &str) -> Result<HookKind, Self::Error> {
+        match raw_name {
+            "BeforeTool" => Ok(HookKind::PreToolUse),
+            "AfterTool" => Ok(HookKind::PostToolUse),
+            "PreCompress" => Ok(HookKind::PreCompact),
+            other => Ok(HookKind::parse(other)?),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -142,6 +151,28 @@ mod tests {
 
         assert!(result.is_err());
 
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::before_tool("BeforeTool", HookKind::PreToolUse)]
+    #[case::after_tool("AfterTool", HookKind::PostToolUse)]
+    #[case::pre_compress("PreCompress", HookKind::PreCompact)]
+    #[case::before_agent("BeforeAgent", HookKind::BeforeAgent)]
+    #[case::session_start("SessionStart", HookKind::SessionStart)]
+    fn test_hook_kind_valid(
+        #[case] raw_name: &str,
+        #[case] expected: HookKind,
+    ) -> Result<(), TestError> {
+        let driver = GeminiDriver;
+        assert_eq!(driver.hook_kind(raw_name)?, expected);
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_hook_kind_invalid() -> Result<(), TestError> {
+        let driver = GeminiDriver;
+        assert!(driver.hook_kind("NotAHook").is_err());
         Ok(())
     }
 

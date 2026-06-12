@@ -1,5 +1,6 @@
 //! Definitions for all input payloads received by hooks.
 
+use crate::error::ProtocolError;
 use crate::types::RawJson;
 
 use serde::Deserialize;
@@ -87,7 +88,10 @@ pub enum HookInputEvent<'a> {
 ///
 /// Used as an array index (`kind as usize`) to dispatch a [`HookInputEvent`] to its
 /// corresponding pipeline without allocating or hashing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+///
+/// The derived [`strum_macros::EnumString`] implementation parses the
+/// canonical hook event name (e.g. `"PreToolUse"`) — see [`HookKind::parse`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum_macros::EnumString)]
 pub enum HookKind {
     /// See [`HookInputEvent::PreToolUse`].
     PreToolUse,
@@ -164,6 +168,30 @@ pub enum HookKind {
 impl HookKind {
     /// The total number of [`HookKind`] variants.
     pub const COUNT: usize = 35;
+
+    /// Parses a canonical hook event name (e.g. `"PreToolUse"`) into its
+    /// [`HookKind`].
+    ///
+    /// Used by [`Driver::hook_kind`](crate::driver::Driver::hook_kind)
+    /// implementations to map a driver-specific raw hook event name onto the
+    /// canonical [`HookKind`] used for pipeline dispatch. Returns
+    /// [`ProtocolError::UnsupportedEvent`] for names that don't match any
+    /// [`HookKind`] variant.
+    ///
+    /// ```
+    /// # use inceptool_protocol::ProtocolError;
+    /// # fn main() -> Result<(), ProtocolError> {
+    /// use inceptool_protocol::HookKind;
+    ///
+    /// assert_eq!(HookKind::parse("PreToolUse")?, HookKind::PreToolUse);
+    /// assert!(HookKind::parse("NotAHook").is_err());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn parse(name: &str) -> Result<Self, ProtocolError> {
+        name.parse()
+            .map_err(|_| ProtocolError::UnsupportedEvent(name.to_string()))
+    }
 }
 
 impl<'a> HookInputEvent<'a> {

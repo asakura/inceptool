@@ -68,10 +68,19 @@ can bucket stage pipelines into a fixed-size array (`[Vec<PipelineEntry>;
 HookKind::COUNT]`) and dispatch by `kind as usize` without hashing or
 allocating.
 
-`HookInputEvent` exposes two helper methods built around this:
+- `HookKind::parse(name: &str) -> Result<HookKind, ProtocolError>` — parses a
+  canonical hook event name (e.g. `"PreToolUse"`) into its `HookKind`,
+  returning `ProtocolError::UnsupportedEvent` for unrecognized names. Drivers
+  call this from their `Driver::hook_kind` implementation to map their own
+  hook-name vocabulary onto the canonical `HookKind` used for pipeline
+  dispatch (see [`crates/engine`](../engine/README.md)).
 
-- `kind(&self) -> HookKind` — returns the discriminant for the event, used by
-  the engine to select the correct pipeline.
+`HookInputEvent` exposes two helper methods:
+
+- `kind(&self) -> HookKind` — returns the discriminant for the event's own
+  variant, as determined by deserializing the payload. This is informational
+  only; the engine does not use it for pipeline dispatch — that's driven by
+  `Driver::hook_kind`, applied to the CLI's raw hook name argument.
 - `tool_name(&self) -> Option<&str>` — returns the tool name for the variants
   that carry one (`PreToolUse`, `PostToolUse`, `PermissionRequest`,
   `PostToolUseFailure`, `PermissionDenied`); all other variants return `None`.

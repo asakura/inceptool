@@ -1,14 +1,17 @@
 //! Defines the driver trait abstractions for agent backends.
 
 use crate::error::ProtocolError;
+use crate::input::HookKind;
 use crate::output::HookOutputEvent;
 use crate::session::Conn;
 
 /// An abstraction over a specific backend driver (e.g., Claude or Gemini).
 ///
 /// The `Driver` trait provides the necessary methods to convert raw JSON strings
-/// from the backend into canonical protocol objects (`Conn`), and format the hook
-/// results back into the JSON format expected by the backend.
+/// from the backend into canonical protocol objects (`Conn`), format the hook
+/// results back into the JSON format expected by the backend, and map the
+/// backend's raw hook event names onto the canonical [`HookKind`] used to
+/// select a stage pipeline.
 pub trait Driver {
     /// The specific error type returned by this driver.
     type Error: std::error::Error
@@ -33,6 +36,16 @@ pub trait Driver {
         event_name: &'a str,
         output: &'a HookOutputEvent,
     ) -> Result<Self::OutputWire<'a>, Self::Error>;
+
+    /// Maps a raw hook event name, in this driver's own vocabulary (e.g.
+    /// `"PreToolUse"` for Claude, `"BeforeTool"` for Gemini), to the
+    /// canonical [`HookKind`] used to select a stage pipeline bucket.
+    ///
+    /// The raw name is supplied by the CLI invocation (the `<hook>` argument
+    /// configured alongside this driver in the agent's hook settings), not
+    /// derived from the JSON payload — this is what lets dispatch happen
+    /// without any payload-sniffing heuristics.
+    fn hook_kind(&self, raw_name: &str) -> Result<HookKind, Self::Error>;
 }
 
 /// Deserializes a driver's wire-format input from a raw JSON string and maps
@@ -130,6 +143,10 @@ mod tests {
             Ok(MockOutput {
                 decision: output.decision().map(|d| format!("{:?}", d)),
             })
+        }
+
+        fn hook_kind(&self, raw_name: &str) -> Result<HookKind, Self::Error> {
+            Ok(HookKind::parse(raw_name)?)
         }
     }
 

@@ -7,10 +7,10 @@ orchestrating agent safety, linting, formatting, and context-optimization logic.
 
 ## How It Works
 
-`inceptool-rs` reads a single JSON hook payload from stdin, normalizes it into a
-protocol-level `Conn`, runs it through a pipeline of stages, and writes a JSON
-response to stdout (or exits with a code to signal a blocking decision back to
-the agent).
+`inceptool-rs` is invoked as `inceptool <driver> <hook>`. It reads a single
+JSON hook payload from stdin, normalizes it into a protocol-level `Conn`, runs
+it through a pipeline of stages, and writes a JSON response to stdout (or
+exits with a code to signal a blocking decision back to the agent).
 
 - **Zero-copy & low overhead**: Orchestration is built in Rust using Serde for
   rapid serialization/deserialization. Unlike the Nushell version, which relied
@@ -20,9 +20,9 @@ the agent).
 - **Modular engine system**: Stages are discrete plugins implementing the
   `Stage` trait. Each stage declares the `HookKind` it runs for and the tool
   names it applies to (`"*"` for all), and executes via `run`. The
-  `Engine`/`Registry` dispatches to the pipeline bucket matching the incoming
-  hook and returns early on the first stage that produces an output
-  modification.
+  `Engine`/`Registry` dispatches to the pipeline bucket for the `HookKind`
+  selected by the CLI invocation, and returns early on the first stage that
+  produces an output modification.
 - **Driver abstraction layer**: Instead of hardcoding AI-CLI-specific schemas
   throughout the pipeline, driver implementations (the `Driver` trait) adapt raw
   JSON from the agent into a normalized protocol format (`Conn`). Stage
@@ -31,10 +31,6 @@ the agent).
   high-performance Rust AST parsers (e.g. `flash` for bash shell scripts) rather
   than external binaries or brittle regex checks.
 
-The binary auto-selects a driver heuristically based on the incoming JSON:
-payloads containing Claude Code hook names (`PreToolUse`, `PostToolUse`,
-`UserPromptSubmit`) or a `permission_mode` field are routed through the Claude
-driver; everything else falls back to the Gemini driver.
 
 ## Configuration
 

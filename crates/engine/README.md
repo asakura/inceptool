@@ -7,8 +7,9 @@ builds and executes a pipeline of stages against an incoming
 immutable structs for performance and simplicity.
 
 A driver (e.g. `driver-claude`, `driver-gemini`) normalizes a wire-level hook
-event into a `Conn`. `Registry::run_pipeline` then selects and runs the
-stages registered for that event's `HookKind`, folding their outputs into a
+event into a `Conn`, and maps the CLI's raw hook name to a `HookKind` via
+`Driver::hook_kind`. `Registry::run_pipeline(kind, conn)` then selects and
+runs the stages registered for that `HookKind`, folding their outputs into a
 single `HookOutputEvent` that the caller serializes back to the agent.
 
 ## The Stage Trait
@@ -43,8 +44,10 @@ with.
 - **`Registry::register(stage)`** — reads `stage.hook()` and
   `stage.tool_names()`, then pushes the stage into the bucket for that
   `HookKind`. Stages run in the order they are registered within a bucket.
-- **`Registry::run_pipeline(conn)`** —
-  1. Selects the bucket for `conn.event.kind()`.
+- **`Registry::run_pipeline(kind, conn)`** —
+  1. Selects the bucket for the `kind` ([`HookKind`](inceptool_protocol::HookKind))
+     passed in. The caller determines this via `Driver::hook_kind` from the
+     CLI invocation — not by inspecting `conn`.
   2. Iterates that bucket's stages in registration order. A stage only runs
      if its `tool_names` matches `conn.event.tool_name()` via
      `tool_names_match`: `"*"` matches any tool name (including events that
