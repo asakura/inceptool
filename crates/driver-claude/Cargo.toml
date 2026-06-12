@@ -1,11 +1,11 @@
 [package]
 name = "inceptool-driver-claude"
 version = "0.9.0"
-edition = "2024"
-authors = ["Mikalai Seva"]
+edition.workspace = true
+authors.workspace = true
 description = "Claude driver for Inceptool protocol"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/asakura/inceptool"
+license.workspace = true
+repository.workspace = true
 keywords = ["claude", "driver", "ai"]
 categories = ["development-tools"]
 
