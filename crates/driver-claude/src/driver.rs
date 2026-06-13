@@ -120,7 +120,7 @@ impl Driver for ClaudeDriver {
             suppress_output: output.suppress_output(),
             stop_reason: None,
             decision: match output.decision() {
-                Some(Decision::Deny) | Some(Decision::Block) => Some("block"),
+                Some(Decision::Deny | Decision::Block) => Some("block"),
                 _ => None,
             },
             reason: output.reason(),
@@ -272,7 +272,7 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
 
         assert_eq!(
-            parsed.get("continue").and_then(|v| v.as_bool()),
+            parsed.get("continue").and_then(serde_json::Value::as_bool),
             Some(false)
         );
 

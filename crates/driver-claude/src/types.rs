@@ -64,7 +64,7 @@ pub(crate) struct ClaudeMeta<'a> {
 /// The top-level JSON object [`ClaudeDriver::map_output`](crate::driver::ClaudeDriver)
 /// produces, written back to Claude Code on stdout. All fields are optional
 /// and skipped when `None`.
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct ClaudeOutputWire<'a> {
     /// Indicates whether the driver should continue execution. If false, it halts.
     #[serde(rename = "continue")]
@@ -487,7 +487,8 @@ mod tests {
     use super::*;
 
     use inceptool_protocol::{
-        Decision, HookOutputEvent, PostToolUseOutput, PreToolUseOutput, UserPromptSubmitOutput,
+        Decision, HookOutputEvent, NotificationOutput, PostToolUseOutput, PreToolUseOutput,
+        UserPromptSubmitOutput,
     };
 
     use core::assert_matches;
@@ -554,7 +555,7 @@ mod tests {
 
     #[test]
     fn test_claude_hook_specific_output_try_from_err() {
-        let e_err = HookOutputEvent::Notification(Default::default());
+        let e_err = HookOutputEvent::Notification(NotificationOutput::default());
         assert!(ClaudeHookSpecificOutput::try_from(&e_err).is_err());
     }
 }

@@ -31,7 +31,7 @@ pub enum ClaudeDriverError {
 }
 
 /// Errors that can occur during conversion.
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Copy, Error)]
 pub enum ConversionError {
     /// An unsupported hook output event was encountered.
     #[error("Unsupported event variant for Claude: {0}")]
