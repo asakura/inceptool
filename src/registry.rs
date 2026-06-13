@@ -53,7 +53,7 @@ fn register_mock_stages(registry: &mut Registry) {
                 &["*"]
             }
 
-            fn run(&self, _conn: &mut Conn) -> Result<Option<HookOutputEvent>, EngineError> {
+            fn run(&self, _conn: &mut Conn<'_>) -> Result<Option<HookOutputEvent>, EngineError> {
                 Ok(Some(HookOutputEvent::WorktreeCreate(
                     WorktreeCreateOutput {
                         worktree_path: Some("/mock/worktree/path".to_string()),
