@@ -139,7 +139,7 @@ pub struct ClaudePermissionDecision<'a> {
 pub enum ClaudeHookSpecificOutput<'a> {
     /// Payload structure for the `PreToolUse` hook phase.
     PreToolUse {
-        /// The name of the hook event (always "PreToolUse").
+        /// The name of the hook event (always "`PreToolUse`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// The permission decision generated for the proposed tool use.
@@ -161,7 +161,7 @@ pub enum ClaudeHookSpecificOutput<'a> {
     },
     /// Payload structure for the `PostToolUse` hook phase.
     PostToolUse {
-        /// The name of the hook event (always "PostToolUse").
+        /// The name of the hook event (always "`PostToolUse`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// Additional context appended after tool execution.
@@ -175,7 +175,7 @@ pub enum ClaudeHookSpecificOutput<'a> {
     },
     /// Payload structure for the user prompt submission hook phase.
     UserPromptSubmit {
-        /// The name of the hook event (always "UserPromptSubmit").
+        /// The name of the hook event (always "`UserPromptSubmit`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// Context injected alongside the user's prompt submission.
@@ -185,7 +185,7 @@ pub enum ClaudeHookSpecificOutput<'a> {
     },
     /// Payload structure for the `SessionStart` hook phase.
     SessionStart {
-        /// The name of the hook event (always "SessionStart").
+        /// The name of the hook event (always "`SessionStart`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// Additional context to start the session with.
@@ -221,7 +221,7 @@ pub enum ClaudeHookSpecificOutput<'a> {
     },
     /// Payload structure for the `PermissionRequest` hook phase.
     PermissionRequest {
-        /// The name of the hook event (always "PermissionRequest").
+        /// The name of the hook event (always "`PermissionRequest`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// The permission decision for the request, if any.
@@ -230,7 +230,7 @@ pub enum ClaudeHookSpecificOutput<'a> {
     },
     /// Payload structure for the `WorktreeCreate` hook phase.
     WorktreeCreate {
-        /// The name of the hook event (always "WorktreeCreate").
+        /// The name of the hook event (always "`WorktreeCreate`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// The path to the created worktree, if modified by the hook.
@@ -250,7 +250,7 @@ pub enum ClaudeHookSpecificOutput<'a> {
     },
     /// Payload structure for the `UserPromptExpansion` hook phase.
     UserPromptExpansion {
-        /// The name of the hook event (always "UserPromptExpansion").
+        /// The name of the hook event (always "`UserPromptExpansion`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// Additional context to append as a result of the expansion.
@@ -260,7 +260,7 @@ pub enum ClaudeHookSpecificOutput<'a> {
     },
     /// Payload structure for the `SubagentStart` hook phase.
     SubagentStart {
-        /// The name of the hook event (always "SubagentStart").
+        /// The name of the hook event (always "`SubagentStart`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// Additional context to inject for the spawned subagent.
@@ -270,7 +270,7 @@ pub enum ClaudeHookSpecificOutput<'a> {
     },
     /// Payload structure for the `SubagentStop` hook phase.
     SubagentStop {
-        /// The name of the hook event (always "SubagentStop").
+        /// The name of the hook event (always "`SubagentStop`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// Additional context to inject as a result of the subagent's run.
@@ -280,7 +280,7 @@ pub enum ClaudeHookSpecificOutput<'a> {
     },
     /// Payload structure for the `PermissionDenied` hook phase.
     PermissionDenied {
-        /// The name of the hook event (always "PermissionDenied").
+        /// The name of the hook event (always "`PermissionDenied`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// Additional context to inject after the denial.
@@ -290,7 +290,7 @@ pub enum ClaudeHookSpecificOutput<'a> {
     },
     /// Payload structure for the `MessageDisplay` hook phase.
     MessageDisplay {
-        /// The name of the hook event (always "MessageDisplay").
+        /// The name of the hook event (always "`MessageDisplay`").
         #[serde(rename = "hookEventName")]
         hook_event_name: &'a str,
         /// Replacement text for the displayed message.

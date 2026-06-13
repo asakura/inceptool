@@ -23,31 +23,31 @@ pub enum GeminiDriverError {
 /// Errors that can occur during conversion.
 #[derive(Debug, Error)]
 pub enum ConversionError {
-    /// Missing updated_input.
+    /// Missing `updated_input`.
     #[error("Missing updated_input")]
     MissingUpdatedInput,
 
-    /// Missing updated_tool_output.
+    /// Missing `updated_tool_output`.
     #[error("Missing updated_tool_output")]
     MissingUpdatedToolOutput,
 
-    /// Missing additional_context.
+    /// Missing `additional_context`.
     #[error("Missing additional_context")]
     MissingAdditionalContext,
 
-    /// clear_context is not true.
+    /// `clear_context` is not true.
     #[error("clear_context is not true")]
     ClearContextNotTrue,
 
-    /// Missing llm_request and llm_response.
+    /// Missing `llm_request` and `llm_response`.
     #[error("Missing llm_request and llm_response")]
     MissingLlmRequestAndResponse,
 
-    /// Missing llm_response.
+    /// Missing `llm_response`.
     #[error("Missing llm_response")]
     MissingLlmResponse,
 
-    /// Missing tool_config.
+    /// Missing `tool_config`.
     #[error("Missing tool_config")]
     MissingToolConfig,
 
