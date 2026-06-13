@@ -8,6 +8,12 @@ use miette::{IntoDiagnostic, Result};
 use std::io::{self, Write};
 
 /// Translates the computed [`HookOutputEvent`] into JSON and issues side effects.
+#[expect(
+    clippy::print_stderr,
+    clippy::exit,
+    reason = "terminal hook actions are contractually required to write a message to stderr \
+              and exit with a specific code"
+)]
 pub fn handle_output<D: Driver>(output: Option<HookOutputEvent>, driver: &D) -> Result<()> {
     if let Some(output) = output {
         // `WorktreeCreate` is special-cased: when invoked as a command hook, Claude Code
@@ -35,7 +41,7 @@ pub fn handle_output<D: Driver>(output: Option<HookOutputEvent>, driver: &D) -> 
         // Handle terminal actions requiring system exit
         if let Some(code) = exit_code {
             if let Some(err) = stderr_string {
-                eprintln!("{}", err);
+                eprintln!("{err}");
             }
 
             std::process::exit(code);
