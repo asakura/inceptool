@@ -90,14 +90,14 @@ mod tests {
 
     #[rstest]
     fn test_session_meta_deserialization_id(session_meta_json: String) -> Result<(), TestError> {
-        let session: SessionMeta = serde_json::from_str(&session_meta_json)?;
+        let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
         assert_eq!(session.session_id, "123");
         Ok(())
     }
 
     #[rstest]
     fn test_session_meta_deserialization_cwd(session_meta_json: String) -> Result<(), TestError> {
-        let session: SessionMeta = serde_json::from_str(&session_meta_json)?;
+        let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
         assert_eq!(session.cwd.as_deref(), Some("/tmp"));
         Ok(())
     }
@@ -106,7 +106,7 @@ mod tests {
     fn test_session_meta_deserialization_driver(
         session_meta_json: String,
     ) -> Result<(), TestError> {
-        let session: SessionMeta = serde_json::from_str(&session_meta_json)?;
+        let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
         assert_eq!(session.driver, "Gemini");
         Ok(())
     }
@@ -115,7 +115,7 @@ mod tests {
     fn test_session_meta_deserialization_driver_meta(
         session_meta_json: String,
     ) -> Result<(), TestError> {
-        let session: SessionMeta = serde_json::from_str(&session_meta_json)?;
+        let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
         assert_eq!(
             session
                 .driver_meta
@@ -131,7 +131,7 @@ mod tests {
     fn test_session_meta_deserialization_missing_common_fields_default_to_none(
         session_meta_json: String,
     ) -> Result<(), TestError> {
-        let session: SessionMeta = serde_json::from_str(&session_meta_json)?;
+        let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
         assert!(session.permission_mode.is_none());
         assert!(session.effort.is_none());
         assert!(session.agent_id.is_none());
@@ -143,7 +143,7 @@ mod tests {
     fn test_session_meta_deserialization_permission_mode(
         session_meta_with_common_fields_json: String,
     ) -> Result<(), TestError> {
-        let session: SessionMeta = serde_json::from_str(&session_meta_with_common_fields_json)?;
+        let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;
         assert_eq!(
             session.permission_mode,
             Some(crate::types::PermissionMode::BypassPermissions)
@@ -155,7 +155,7 @@ mod tests {
     fn test_session_meta_deserialization_effort(
         session_meta_with_common_fields_json: String,
     ) -> Result<(), TestError> {
-        let session: SessionMeta = serde_json::from_str(&session_meta_with_common_fields_json)?;
+        let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;
         assert_eq!(
             session.effort.map(|e| e.level),
             Some(crate::types::EffortLevel::High)
@@ -167,7 +167,7 @@ mod tests {
     fn test_session_meta_deserialization_agent_id(
         session_meta_with_common_fields_json: String,
     ) -> Result<(), TestError> {
-        let session: SessionMeta = serde_json::from_str(&session_meta_with_common_fields_json)?;
+        let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;
         assert_eq!(session.agent_id.as_deref(), Some("agent-1"));
         Ok(())
     }
@@ -176,7 +176,7 @@ mod tests {
     fn test_session_meta_deserialization_agent_type(
         session_meta_with_common_fields_json: String,
     ) -> Result<(), TestError> {
-        let session: SessionMeta = serde_json::from_str(&session_meta_with_common_fields_json)?;
+        let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;
         assert_eq!(session.agent_type.as_deref(), Some("explore"));
         Ok(())
     }

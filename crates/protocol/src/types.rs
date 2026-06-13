@@ -26,7 +26,7 @@ use serde_json::value::RawValue;
 #[derive(Debug, Deserialize)]
 pub struct RawJson<'a>(#[serde(borrow)] pub &'a RawValue);
 
-impl<'a> Serialize for RawJson<'a> {
+impl Serialize for RawJson<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -281,7 +281,7 @@ mod tests {
         }
 
         let full_json = format!(r#"{{"data": {}}}"#, raw_json_str);
-        let parsed: Payload = serde_json::from_str(&full_json)?;
+        let parsed: Payload<'_> = serde_json::from_str(&full_json)?;
 
         let serialized = serde_json::to_string(&parsed)?;
         let val1: serde_json::Value = serde_json::from_str(&full_json)?;
