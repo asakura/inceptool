@@ -26,7 +26,7 @@ pub(crate) struct GeminiMeta<'a> {
 }
 
 /// The output wire format for the Gemini driver.
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct GeminiOutputWire<'a> {
     /// The decision rendered by a gatekeeping hook (e.g., allow, block).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -53,7 +53,7 @@ pub struct GeminiOutputWire<'a> {
 }
 
 /// Hook-specific output payload for Gemini.
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum GeminiHookSpecificOutput<'a> {
     /// Payload structure prior to tool invocation.
@@ -238,6 +238,8 @@ impl<'a> TryFrom<&'a HookOutputEvent> for GeminiHookSpecificOutput<'a> {
 mod tests {
     use super::*;
 
+    use inceptool_protocol::NotificationOutput;
+
     #[test]
     fn test_gemini_hook_specific_output_before_tool() {
         let o = PreToolUseOutput {
@@ -353,7 +355,7 @@ mod tests {
 
     #[test]
     fn test_gemini_hook_specific_output_err() {
-        let e_err = HookOutputEvent::Notification(Default::default());
+        let e_err = HookOutputEvent::Notification(NotificationOutput::default());
         assert!(GeminiHookSpecificOutput::try_from(&e_err).is_err());
     }
 }

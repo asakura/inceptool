@@ -21,7 +21,7 @@ pub enum GeminiDriverError {
 }
 
 /// Errors that can occur during conversion.
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Copy, Error)]
 pub enum ConversionError {
     /// Missing `updated_input`.
     #[error("Missing updated_input")]

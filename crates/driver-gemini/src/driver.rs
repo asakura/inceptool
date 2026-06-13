@@ -204,7 +204,7 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&formatted)?;
 
         assert_eq!(
-            parsed.get("continue").and_then(|v| v.as_bool()),
+            parsed.get("continue").and_then(serde_json::Value::as_bool),
             Some(false)
         );
 
