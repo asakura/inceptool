@@ -34,10 +34,49 @@ fn inceptool_cmd() -> Result<TestEnv> {
     // Provide a completely empty config to guarantee all stages use their default state
     fs::write(config_dir.join("inceptool.toml"), "").into_diagnostic()?;
 
+    let data_home = temp_dir.path().join("data");
+    fs::create_dir_all(&data_home).into_diagnostic()?;
+
+    // `rtk` crashes if `HOME/.claude/settings.json` doesn't exist but the project has `.claude`
+    let claude_dir = temp_dir.path().join(".claude");
+    fs::create_dir_all(&claude_dir).into_diagnostic()?;
+    let bin_dir = temp_dir.path().join("bin");
+    fs::create_dir_all(&bin_dir).into_diagnostic()?;
+    let dummy_hook = bin_dir.join("inceptool");
+    fs::write(&dummy_hook, "#!/bin/sh\nexit 0").into_diagnostic()?;
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(&dummy_hook, fs::Permissions::from_mode(0o755)).into_diagnostic()?;
+    let dummy_hook_path = dummy_hook.display().to_string();
+
+    let settings_json = format!(r#"{{
+  "hooks": {{
+    "PreToolUse": [
+      {{
+        "hooks": [
+          {{
+            "command": "{} claude PreToolUse",
+            "type": "command"
+          }}
+        ],
+        "matcher": "Bash"
+      }}
+    ]
+  }}
+}}"#, dummy_hook_path);
+    fs::write(claude_dir.join("settings.json"), settings_json).into_diagnostic()?;
+
+    // `rtk` also crashes (exit code 3) if run outside of a git repository
+    let _ = std::process::Command::new("git")
+        .arg("init")
+        .current_dir(temp_dir.path())
+        .output();
+
     let mut cmd = Command::cargo_bin("inceptool").into_diagnostic()?;
 
-    cmd.env("RUST_LOG", "off")
+    cmd.env("RUST_LOG", "debug")
         .env("XDG_CONFIG_HOME", temp_dir.path()) // isolate user config
+        .env("XDG_DATA_HOME", &data_home) // isolate rtk data
+        .env("HOME", temp_dir.path()) // fully isolate everything else
         .current_dir(temp_dir.path()); // isolate local config and file operations
 
     Ok(TestEnv {
@@ -94,6 +133,8 @@ fn integration_happy_path(
         .success();
 
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).into_diagnostic()?;
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).into_diagnostic()?;
+    eprintln!("STDERR:\n{}", stderr);
     let parsed: Value = serde_json::from_str(&stdout).into_diagnostic()?;
 
     insta::with_settings!({ snapshot_suffix => test_name }, {
