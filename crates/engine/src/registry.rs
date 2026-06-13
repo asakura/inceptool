@@ -305,7 +305,7 @@ mod tests {
     }
 
     /// A [`SessionMeta`] with placeholder values, shared by all `Conn` fixtures below.
-    fn session_meta() -> SessionMeta<'static> {
+    const fn session_meta() -> SessionMeta<'static> {
         SessionMeta {
             session_id: Cow::Borrowed("test-session"),
             transcript_path: None,
@@ -383,7 +383,7 @@ mod tests {
     }
 
     #[fixture]
-    fn conn() -> Conn<'static> {
+    const fn conn() -> Conn<'static> {
         Conn {
             session: session_meta(),
             event: HookInputEvent::BeforeAgent(BeforeAgentInput {

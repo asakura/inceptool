@@ -762,12 +762,12 @@ mod tests {
     }
 
     #[fixture]
-    fn allow_decision() -> Decision {
+    const fn allow_decision() -> Decision {
         Decision::Allow
     }
 
     #[fixture]
-    fn block_decision() -> Decision {
+    const fn block_decision() -> Decision {
         Decision::Block
     }
 
