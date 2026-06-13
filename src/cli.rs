@@ -33,6 +33,14 @@ pub struct Cli {
 
     /// The raw hook event name, in the selected driver's vocabulary.
     pub hook: String,
+
+    /// Increase verbosity of the `<cache_dir>/inceptool.log` file log
+    /// (`-v` warn, `-vv` info, `-vvv` debug, `-vvvv` trace).
+    ///
+    /// Error-level logging to stderr is unaffected by this flag and cannot
+    /// be disabled, as the host CLI depends on it for error reporting.
+    #[arg(short = 'v', long = "verbose", action = clap::ArgAction::Count)]
+    pub verbose: u8,
 }
 
 impl Cli {

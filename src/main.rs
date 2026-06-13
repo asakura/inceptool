@@ -61,9 +61,9 @@ where
 }
 
 fn main() -> Result<()> {
-    logging::setup_logging()?;
-
     let (cli, hook_kind) = Cli::parse_and_validate()?;
+
+    logging::setup_logging(cli.verbose)?;
 
     let mut raw_json = String::with_capacity(4 * 1024);
 

@@ -12,11 +12,17 @@ use tracing_subscriber::prelude::*;
 /// Initializes the `tracing` subscriber, writing to standard error and a
 /// cached log file.
 ///
-/// Errors at or above [`LevelFilter::ERROR`] are always written to stderr.
-/// A second layer logs to `<cache_dir>/inceptool.log` (filtered by
-/// `RUST_LOG`/[`EnvFilter::from_default_env`]) if [`project_dirs`] resolves
-/// to a valid location; otherwise file logging is skipped entirely.
-pub fn setup_logging() -> Result<()> {
+/// Errors at or above [`LevelFilter::ERROR`] are always written to stderr,
+/// independent of `verbosity` — the host CLI depends on this for error
+/// reporting and it cannot be raised or disabled.
+///
+/// `verbosity` is the number of times the CLI's `-v`/`--verbose` flag was
+/// repeated, and sets the default level (see [`verbosity_to_level_filter`])
+/// for the second layer, which logs to `<cache_dir>/inceptool.log` if
+/// [`project_dirs`] resolves to a valid location (otherwise file logging is
+/// skipped entirely). `RUST_LOG` takes precedence over `verbosity` for this
+/// layer when set.
+pub fn setup_logging(verbosity: u8) -> Result<()> {
     let stderr_layer = fmt::layer()
         .with_writer(io::stderr)
         .with_filter(LevelFilter::ERROR);
@@ -34,9 +40,11 @@ pub fn setup_logging() -> Result<()> {
                 .open(log_path)
                 .into_diagnostic()?;
 
-            Ok(fmt::layer()
-                .with_writer(log_file)
-                .with_filter(EnvFilter::from_default_env()))
+            let env_filter = EnvFilter::builder()
+                .with_default_directive(verbosity_to_level_filter(verbosity).into())
+                .from_env_lossy();
+
+            Ok(fmt::layer().with_writer(log_file).with_filter(env_filter))
         })
         .transpose()?;
 
@@ -46,4 +54,16 @@ pub fn setup_logging() -> Result<()> {
         .init();
 
     Ok(())
+}
+
+/// Maps a `-v`/`--verbose` repeat count to a [`LevelFilter`] used as the
+/// default directive for the file log layer.
+const fn verbosity_to_level_filter(verbosity: u8) -> LevelFilter {
+    match verbosity {
+        0 => LevelFilter::ERROR,
+        1 => LevelFilter::WARN,
+        2 => LevelFilter::INFO,
+        3 => LevelFilter::DEBUG,
+        _ => LevelFilter::TRACE,
+    }
 }
