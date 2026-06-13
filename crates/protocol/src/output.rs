@@ -772,9 +772,9 @@ mod tests {
     }
 
     #[rstest]
-    #[case(Some(42), Some("Access Denied".into()))]
+    #[case(Some(42_i32), Some("Access Denied".into()))]
     #[case(None, None)]
-    #[case(Some(1), None)]
+    #[case(Some(1_i32), None)]
     fn exit_metadata_extraction(
         block_decision: Decision,
         #[case] code: Option<i32>,
@@ -913,13 +913,13 @@ mod tests {
     }
 
     #[rstest]
-    #[case::pre_tool_use(HookOutputEvent::PreToolUse(PreToolUseOutput { exit_code: Some(1), ..Default::default() }), 1)]
-    #[case::post_tool_use(HookOutputEvent::PostToolUse(PostToolUseOutput { exit_code: Some(2), ..Default::default() }), 2)]
-    #[case::before_agent(HookOutputEvent::BeforeAgent(BeforeAgentOutput { exit_code: Some(3), ..Default::default() }), 3)]
-    #[case::after_agent(HookOutputEvent::AfterAgent(AfterAgentOutput { exit_code: Some(4), ..Default::default() }), 4)]
-    #[case::before_model(HookOutputEvent::BeforeModel(BeforeModelOutput { exit_code: Some(5), ..Default::default() }), 5)]
-    #[case::after_model(HookOutputEvent::AfterModel(AfterModelOutput { exit_code: Some(6), ..Default::default() }), 6)]
-    #[case::pre_compact(HookOutputEvent::PreCompact(PreCompactOutput { exit_code: Some(7), ..Default::default() }), 7)]
+    #[case::pre_tool_use(HookOutputEvent::PreToolUse(PreToolUseOutput { exit_code: Some(1_i32), ..Default::default() }), 1_i32)]
+    #[case::post_tool_use(HookOutputEvent::PostToolUse(PostToolUseOutput { exit_code: Some(2_i32), ..Default::default() }), 2_i32)]
+    #[case::before_agent(HookOutputEvent::BeforeAgent(BeforeAgentOutput { exit_code: Some(3_i32), ..Default::default() }), 3_i32)]
+    #[case::after_agent(HookOutputEvent::AfterAgent(AfterAgentOutput { exit_code: Some(4_i32), ..Default::default() }), 4_i32)]
+    #[case::before_model(HookOutputEvent::BeforeModel(BeforeModelOutput { exit_code: Some(5_i32), ..Default::default() }), 5_i32)]
+    #[case::after_model(HookOutputEvent::AfterModel(AfterModelOutput { exit_code: Some(6_i32), ..Default::default() }), 6_i32)]
+    #[case::pre_compact(HookOutputEvent::PreCompact(PreCompactOutput { exit_code: Some(7_i32), ..Default::default() }), 7_i32)]
     fn all_exit_metadata_arms(#[case] output: HookOutputEvent, #[case] expected_code: i32) {
         let (code, _) = output.exit_metadata();
         assert_eq!(code, Some(expected_code));
