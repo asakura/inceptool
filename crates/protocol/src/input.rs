@@ -201,6 +201,7 @@ impl HookKind {
 
 impl<'a> HookInputEvent<'a> {
     /// Returns the [`HookKind`] discriminant for this event.
+    #[must_use]
     pub const fn kind(&self) -> HookKind {
         match self {
             HookInputEvent::PreToolUse(_) => HookKind::PreToolUse,
@@ -249,6 +250,7 @@ impl<'a> HookInputEvent<'a> {
     /// [`PostToolUseFailure`](HookInputEvent::PostToolUseFailure), and
     /// [`PermissionDenied`](HookInputEvent::PermissionDenied) carry a tool name;
     /// all other variants return `None`.
+    #[must_use]
     pub fn tool_name(&self) -> Option<&str> {
         match self {
             HookInputEvent::PreToolUse(input) => Some(input.tool_name.as_ref()),
