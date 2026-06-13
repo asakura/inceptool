@@ -48,13 +48,12 @@ jobs:
         run: |
           set -euo pipefail
           nix develop -c cargo llvm-cov report --json --summary-only --output-path coverage-summary.json
-          pct=$(jq '.data[0].totals.lines.percent' coverage-summary.json)
-          jq -n --argjson pct "$pct" '{
+          jq '.data[0].totals.lines.percent as $p | {
             schemaVersion: 1,
             label: "coverage",
-            message: (($pct * 10 | round) / 10 | tostring) + "%",
-            color: (if $pct >= 80 then "brightgreen" elif $pct >= 60 then "yellow" else "red" end)
-          }' > target/llvm-cov/html/coverage.json
+            message: (($p * 10 | round) / 10 | tostring) + "%",
+            color: (if $p >= 80 then "brightgreen" elif $p >= 60 then "yellow" else "red" end)
+          }' coverage-summary.json > target/llvm-cov/html/coverage.json
 
       - uses: actions/configure-pages@v5
 
