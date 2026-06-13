@@ -30,7 +30,7 @@ pub fn handle_output<D: Driver>(output: Option<HookOutputEvent>, driver: &D) -> 
         }
 
         let (exit_code, stderr_msg) = output.exit_metadata();
-        let stderr_string = stderr_msg.map(str::to_string);
+        let stderr_string = stderr_msg.map(str::to_owned);
         let json_resp = inceptool_protocol::to_wire(driver, "", &output).into_diagnostic()?;
 
         // Print the result to stdout

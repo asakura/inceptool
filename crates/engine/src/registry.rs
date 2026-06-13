@@ -104,10 +104,12 @@ impl Registry {
         let tool_names = stage.tool_names();
         let kind = stage.hook();
 
-        self.pipelines[kind as usize].push(PipelineEntry {
-            tool_names,
-            stage: Box::new(stage),
-        });
+        if let Some(pipeline) = self.pipelines.get_mut(kind as usize) {
+            pipeline.push(PipelineEntry {
+                tool_names,
+                stage: Box::new(stage),
+            });
+        }
     }
 
     /// Run the pipeline for a given connection.

@@ -79,7 +79,9 @@ impl Stage for RtkStage {
             return Ok(None);
         };
 
-        parsed["command"] = Value::String(rewritten);
+        if let Some(cmd_val) = parsed.get_mut("command") {
+            *cmd_val = Value::String(rewritten);
+        }
 
         Ok(Some(HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Allow),
