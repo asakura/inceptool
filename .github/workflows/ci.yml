@@ -20,6 +20,8 @@ jobs:
 
       - uses: DeterminateSystems/nix-installer-action@main
 
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
       - uses: cachix/cachix-action@v17
         with:
           name: inceptool
@@ -27,9 +29,12 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      # fmt + clippy, built in the Nix sandbox with vendored deps.
-      - name: nix flake check
-        run: nix flake check -L
+      # Run all cargo checks outside the sandbox to share the rust-cache
+      - name: cargo fmt
+        run: nix develop -c cargo fmt --check
+
+      - name: cargo clippy
+        run: nix develop -c cargo clippy --workspace --all-targets -- -D warnings
 
       # Runs outside the sandbox (network + .git access) inside the pinned devShell.
       - name: cargo test --workspace
