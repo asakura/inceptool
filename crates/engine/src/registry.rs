@@ -539,7 +539,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_matches!(output, HookOutputEvent::BeforeAgent(_));
 
@@ -568,7 +568,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Block));
 
@@ -597,7 +597,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Block));
 
@@ -626,7 +626,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.halt(), Some(true));
 
@@ -690,7 +690,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Block));
 
@@ -735,7 +735,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Allow));
 
@@ -810,7 +810,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Ask));
 
@@ -839,7 +839,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Ask));
 
@@ -868,7 +868,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Deny));
 
@@ -897,7 +897,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), Some(Decision::Deny));
 
@@ -919,7 +919,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::BeforeAgent, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_eq!(output.decision(), None);
 
@@ -942,7 +942,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::PreToolUse, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_matches!(output, HookOutputEvent::BeforeAgent(_));
 
@@ -965,7 +965,7 @@ mod tests {
 
         let output = registry
             .run_pipeline(HookKind::PreToolUse, &mut conn)?
-            .ok_or(TestError::Failure("expected an output".into()))?;
+            .ok_or_else(|| TestError::Failure("expected an output".into()))?;
 
         assert_matches!(output, HookOutputEvent::BeforeAgent(_));
 

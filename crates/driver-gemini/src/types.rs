@@ -135,7 +135,7 @@ impl<'a> TryFrom<&'a PostToolUseOutput> for GeminiHookSpecificOutput<'a> {
             .map(|v| GeminiHookSpecificOutput::AfterTool {
                 updated_tool_output: v,
             })
-            .ok_or(ConversionError::MissingUpdatedToolOutput.into())
+            .ok_or_else(|| ConversionError::MissingUpdatedToolOutput.into())
     }
 }
 
@@ -148,7 +148,7 @@ impl<'a> TryFrom<&'a BeforeAgentOutput> for GeminiHookSpecificOutput<'a> {
             .map(|s| GeminiHookSpecificOutput::BeforeAgent {
                 additional_context: s,
             })
-            .ok_or(ConversionError::MissingAdditionalContext.into())
+            .ok_or_else(|| ConversionError::MissingAdditionalContext.into())
     }
 }
 
@@ -188,7 +188,7 @@ impl<'a> TryFrom<&'a AfterModelOutput> for GeminiHookSpecificOutput<'a> {
         o.llm_response
             .as_ref()
             .map(|v| GeminiHookSpecificOutput::AfterModel { llm_response: v })
-            .ok_or(ConversionError::MissingLlmResponse.into())
+            .ok_or_else(|| ConversionError::MissingLlmResponse.into())
     }
 }
 
@@ -199,7 +199,7 @@ impl<'a> TryFrom<&'a BeforeToolSelectionOutput> for GeminiHookSpecificOutput<'a>
         o.tool_config
             .as_ref()
             .map(|v| GeminiHookSpecificOutput::BeforeToolSelection { tool_config: v })
-            .ok_or(ConversionError::MissingToolConfig.into())
+            .ok_or_else(|| ConversionError::MissingToolConfig.into())
     }
 }
 
@@ -212,7 +212,7 @@ impl<'a> TryFrom<&'a SessionStartOutput> for GeminiHookSpecificOutput<'a> {
             .map(|s| GeminiHookSpecificOutput::SessionStart {
                 additional_context: s,
             })
-            .ok_or(ConversionError::MissingAdditionalContext.into())
+            .ok_or_else(|| ConversionError::MissingAdditionalContext.into())
     }
 }
 
