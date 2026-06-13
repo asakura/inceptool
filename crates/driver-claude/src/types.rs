@@ -498,7 +498,7 @@ mod tests {
             decision: Some(Decision::Allow),
             ..Default::default()
         };
-        let h: ClaudeHookSpecificOutput = (&o).into();
+        let h: ClaudeHookSpecificOutput<'_> = (&o).into();
 
         assert_matches!(
             h,
@@ -518,7 +518,7 @@ mod tests {
             additional_context: Some("ctx".into()),
             ..Default::default()
         };
-        let h: ClaudeHookSpecificOutput = (&o).into();
+        let h: ClaudeHookSpecificOutput<'_> = (&o).into();
 
         assert_matches!(
             h,
@@ -538,7 +538,7 @@ mod tests {
             additional_context: Some("ctx".into()),
             ..Default::default()
         };
-        let h: ClaudeHookSpecificOutput = (&o).into();
+        let h: ClaudeHookSpecificOutput<'_> = (&o).into();
 
         assert_matches!(
             h,

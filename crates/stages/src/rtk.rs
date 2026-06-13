@@ -59,7 +59,7 @@ impl Stage for RtkStage {
         &["Bash", "run_shell_command"]
     }
 
-    fn run(&self, conn: &mut Conn) -> Result<Option<HookOutputEvent>, EngineError> {
+    fn run(&self, conn: &mut Conn<'_>) -> Result<Option<HookOutputEvent>, EngineError> {
         let HookInputEvent::PreToolUse(input) = &conn.event else {
             return Ok(None);
         };

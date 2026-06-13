@@ -29,5 +29,9 @@ pub trait Stage: Send + Sync {
     /// If the stage decides to return output (e.g. to override data, provide context,
     /// or halt the pipeline), it returns `Some(HookOutputEvent)`.
     /// Otherwise, it returns `None` to allow the next stage to run.
-    fn run(&self, conn: &mut Conn) -> Result<Option<HookOutputEvent>, EngineError>;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EngineError`] if the stage fails to process the connection.
+    fn run(&self, conn: &mut Conn<'_>) -> Result<Option<HookOutputEvent>, EngineError>;
 }

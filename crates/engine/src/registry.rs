@@ -124,7 +124,7 @@ impl Registry {
     ///         HookKind::BeforeAgent
     ///     }
     ///
-    ///     fn run(&self, _conn: &mut Conn) -> Result<Option<HookOutputEvent>, EngineError> {
+    ///     fn run(&self, _conn: &mut Conn<'_>) -> Result<Option<HookOutputEvent>, EngineError> {
     ///         Ok(Some(HookOutputEvent::BeforeAgent(BeforeAgentOutput {
     ///             decision: Some(Decision::Block),
     ///             reason: Some("blocked by example".into()),
@@ -162,7 +162,7 @@ impl Registry {
     pub fn run_pipeline(
         &self,
         kind: HookKind,
-        conn: &mut Conn,
+        conn: &mut Conn<'_>,
     ) -> Result<Option<HookOutputEvent>, EngineError> {
         let mut final_output = None;
         let mut combined_decision = None;
@@ -282,7 +282,7 @@ mod tests {
             self.tool_names
         }
 
-        fn run(&self, _conn: &mut Conn) -> Result<Option<HookOutputEvent>, EngineError> {
+        fn run(&self, _conn: &mut Conn<'_>) -> Result<Option<HookOutputEvent>, EngineError> {
             match self.outcome {
                 StubOutcome::None => Ok(None),
                 StubOutcome::Output(build) => Ok(Some(build())),
@@ -309,7 +309,7 @@ mod tests {
 
     /// Builds a `PreToolUse` `Conn` from a JSON [`PreToolUseInput`] payload.
     fn pre_tool_use_conn(json: &str) -> Result<Conn<'_>, TestError> {
-        let input: PreToolUseInput = serde_json::from_str(json)?;
+        let input: PreToolUseInput<'_> = serde_json::from_str(json)?;
         Ok(Conn {
             session: session_meta(),
             event: HookInputEvent::PreToolUse(input),
@@ -459,7 +459,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_with_no_stages_returns_none(mut conn: Conn) -> Result<(), TestError> {
+    fn test_run_pipeline_with_no_stages_returns_none(mut conn: Conn<'_>) -> Result<(), TestError> {
         let registry = Registry::new();
 
         assert_matches!(
@@ -471,7 +471,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_default_registry_has_no_stages(mut conn: Conn) -> Result<(), TestError> {
+    fn test_run_pipeline_default_registry_has_no_stages(
+        mut conn: Conn<'_>,
+    ) -> Result<(), TestError> {
         let registry = Registry::default();
 
         assert_matches!(
@@ -483,7 +485,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_skips_non_matching_stage(mut conn: Conn) -> Result<(), TestError> {
+    fn test_run_pipeline_skips_non_matching_stage(mut conn: Conn<'_>) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -503,7 +505,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_ignores_matching_stage_with_no_output(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -524,7 +526,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_returns_output_from_matching_stage(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -546,7 +548,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_non_terminal_output_lets_later_stages_run(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -575,7 +577,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_terminal_decision_stops_remaining_stages(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -603,7 +605,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_halt_flag_stops_remaining_stages(mut conn: Conn) -> Result<(), TestError> {
+    fn test_run_pipeline_halt_flag_stops_remaining_stages(
+        mut conn: Conn<'_>,
+    ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -631,7 +635,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_permission_request_with_behavior_stops_remaining_stages(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -666,7 +670,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_permission_request_without_behavior_lets_later_stages_run(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -711,7 +715,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_all_allow_decisions_combine_to_allow(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -785,7 +789,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_combines_allow_then_ask_into_ask(mut conn: Conn) -> Result<(), TestError> {
+    fn test_run_pipeline_combines_allow_then_ask_into_ask(
+        mut conn: Conn<'_>,
+    ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -813,7 +819,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_ask_decision_is_not_downgraded_by_later_allow(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -842,7 +848,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_allow_decision_does_not_suppress_later_deny(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -871,7 +877,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_ask_decision_does_not_suppress_later_deny(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -900,7 +906,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_no_decision_from_any_stage_leaves_decision_unset(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
@@ -990,7 +996,7 @@ mod tests {
 
     #[rstest]
     fn test_run_pipeline_non_wildcard_tool_names_never_match_event_without_tool_name(
-        mut conn: Conn,
+        mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
