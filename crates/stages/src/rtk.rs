@@ -148,7 +148,7 @@ impl RtkStage {
 fn trim_in_place(s: &mut String) {
     let trimmed = s.trim();
     let start = (trimmed.as_ptr().addr()).saturating_sub(s.as_ptr().addr());
-    let end = start + trimmed.len();
+    let end = start.saturating_add(trimmed.len());
 
     s.truncate(end);
 
