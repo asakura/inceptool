@@ -6,6 +6,7 @@ authors.workspace = true
 description = "Built-in stages for Inceptool"
 license.workspace = true
 repository.workspace = true
+readme = "README.md"
 keywords = ["stages", "hooks", "ai"]
 categories = ["development-tools"]
 

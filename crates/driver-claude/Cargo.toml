@@ -6,6 +6,7 @@ authors.workspace = true
 description = "Claude driver for Inceptool protocol"
 license.workspace = true
 repository.workspace = true
+readme = "README.md"
 keywords = ["claude", "driver", "ai"]
 categories = ["development-tools"]
 

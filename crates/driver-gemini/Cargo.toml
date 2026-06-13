@@ -6,6 +6,7 @@ authors.workspace = true
 description = "Gemini driver for Inceptool protocol"
 license.workspace = true
 repository.workspace = true
+readme = "README.md"
 keywords = ["gemini", "driver", "ai"]
 categories = ["development-tools"]
 

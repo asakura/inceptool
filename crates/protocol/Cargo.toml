@@ -6,6 +6,7 @@ authors.workspace = true
 description = "Core protocol definitions for Inceptool"
 license.workspace = true
 repository.workspace = true
+readme = "README.md"
 keywords = ["protocol", "core", "ai"]
 categories = ["development-tools"]
 
