@@ -107,7 +107,10 @@ impl Registry {
         let tool_names = stage.tool_names();
         let kind = stage.hook();
 
-        if let Some(pipeline) = self.pipelines.get_mut(kind as usize) {
+        #[allow(clippy::as_conversions)]
+        let kind_idx = kind as usize;
+
+        if let Some(pipeline) = self.pipelines.get_mut(kind_idx) {
             pipeline.push(PipelineEntry {
                 tool_names,
                 stage: Box::new(stage),
