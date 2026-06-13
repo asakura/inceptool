@@ -34,10 +34,28 @@ fn inceptool_cmd() -> Result<TestEnv> {
     // Provide a completely empty config to guarantee all stages use their default state
     fs::write(config_dir.join("inceptool.toml"), "").into_diagnostic()?;
 
+    // Create a mock `rtk` binary so tests pass in CI where `rtk` isn't installed
+    let rtk_path = temp_dir.path().join("rtk");
+    fs::write(&rtk_path, "#!/bin/sh\nif [ \"$1\" = \"rewrite\" ]; then echo \"rtk $2\"; fi\n").into_diagnostic()?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&rtk_path).into_diagnostic()?.permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&rtk_path, perms).into_diagnostic()?;
+    }
+
+    let mut path_env = temp_dir.path().as_os_str().to_os_string();
+    if let Some(existing_path) = std::env::var_os("PATH") {
+        path_env.push(":");
+        path_env.push(existing_path);
+    }
+
     let mut cmd = Command::cargo_bin("inceptool").into_diagnostic()?;
 
     cmd.env("RUST_LOG", "off")
         .env("XDG_CONFIG_HOME", temp_dir.path()) // isolate user config
+        .env("PATH", path_env) // inject mock rtk
         .current_dir(temp_dir.path()); // isolate local config and file operations
 
     Ok(TestEnv {
