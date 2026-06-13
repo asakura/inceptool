@@ -1,5 +1,6 @@
 #![allow(
     clippy::panic_in_result_fn,
+    clippy::tests_outside_test_module,
     reason = "rstest cases return Result for `?`-based setup but use assert_eq!/assert_matches! \
               for assertions per project convention"
 )]
@@ -105,7 +106,7 @@ fn test_integration_happy_path(
 }
 
 #[rstest]
-fn test_integration_failure_invalid_json(inceptool_cmd: Result<TestEnv>) -> Result<()> {
+fn integration_failure_invalid_json(inceptool_cmd: Result<TestEnv>) -> Result<()> {
     let mut inceptool_cmd = inceptool_cmd?;
 
     inceptool_cmd
@@ -120,7 +121,7 @@ fn test_integration_failure_invalid_json(inceptool_cmd: Result<TestEnv>) -> Resu
 }
 
 #[rstest]
-fn test_integration_empty_stdin(inceptool_cmd: Result<TestEnv>) -> Result<()> {
+fn integration_empty_stdin(inceptool_cmd: Result<TestEnv>) -> Result<()> {
     let mut inceptool_cmd = inceptool_cmd?;
 
     let assert = inceptool_cmd
@@ -143,7 +144,7 @@ fn test_integration_empty_stdin(inceptool_cmd: Result<TestEnv>) -> Result<()> {
 }
 
 #[rstest]
-fn test_integration_invalid_hook_fails_fast(inceptool_cmd: Result<TestEnv>) -> Result<()> {
+fn integration_invalid_hook_fails_fast(inceptool_cmd: Result<TestEnv>) -> Result<()> {
     let mut inceptool_cmd = inceptool_cmd?;
 
     inceptool_cmd
@@ -157,7 +158,7 @@ fn test_integration_invalid_hook_fails_fast(inceptool_cmd: Result<TestEnv>) -> R
 }
 
 #[rstest]
-fn test_integration_worktree_create_special_case(inceptool_cmd: Result<TestEnv>) -> Result<()> {
+fn integration_worktree_create_special_case(inceptool_cmd: Result<TestEnv>) -> Result<()> {
     let mut inceptool_cmd = inceptool_cmd?;
 
     let input = serde_json::json!({
