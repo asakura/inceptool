@@ -1,0 +1,66 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# GitHub's recommended pattern for Pages deploys: queue rather than cancel, in
+# a group separate from the `ci.yml` workflow's.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: inceptool
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Run the workspace test suite once under coverage instrumentation,
+      # without generating a report yet, so the html and json reports below
+      # can both be rendered from the same profile data.
+      - name: cargo llvm-cov nextest --workspace
+        run: nix develop -c cargo llvm-cov nextest --workspace --no-report
+
+      - name: Generate HTML report
+        run: nix develop -c cargo llvm-cov report --html
+
+      - name: Generate coverage badge
+        run: |
+          set -euo pipefail
+          nix develop -c cargo llvm-cov report --json --summary-only --output-path coverage-summary.json
+          pct=$(jq '.data[0].totals.lines.percent' coverage-summary.json)
+          jq -n --argjson pct "$pct" '{
+            schemaVersion: 1,
+            label: "coverage",
+            message: (($pct * 10 | round) / 10 | tostring) + "%",
+            color: (if $pct >= 80 then "brightgreen" elif $pct >= 60 then "yellow" else "red" end)
+          }' > target/llvm-cov/html/coverage.json
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/llvm-cov/html
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

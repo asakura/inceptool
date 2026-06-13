@@ -102,6 +102,7 @@
             git
             pre-commit
             cargo-deny
+            cargo-llvm-cov
             cargo-nextest
             git-cliff
             nixfmt-rfc-style

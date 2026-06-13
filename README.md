@@ -1,9 +1,9 @@
 # Inceptool
 
 [![CI](https://github.com/asakura/inceptool/actions/workflows/ci.yml/badge.svg)](https://github.com/asakura/inceptool/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://asakura.github.io/inceptool/coverage.json)](https://asakura.github.io/inceptool/)
 
-`inceptool` is a high-performance, native Rust replacement for the
-Nushell-based "Inceptool". It runs as a hook executor / interceptor proxy
+`inceptool` runs as a hook executor / interceptor proxy
 between an AI coding agent (Claude Code or Gemini CLI) and the operating system,
 orchestrating agent safety, linting, formatting, and context-optimization logic.
 
@@ -111,6 +111,7 @@ cargo nextest run    # fast test runner (replacing `cargo test`)
 cargo fmt
 cargo clippy --workspace --all-targets -- -D warnings
 cargo deny check     # supply-chain / license / advisory checks
+cargo llvm-cov nextest --workspace --open  # generate & view HTML coverage report
 ```
 
 Without Nix, install the toolchain pinned in `rust-toolchain.toml` via
