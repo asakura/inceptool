@@ -8,6 +8,7 @@ use std::env;
 
 /// Registers the standard stages enabled by `config`.
 pub fn build_registry(config: &Config) -> Registry {
+    tracing::debug!(?config, "building registry from configuration");
     let mut registry = Registry::new();
 
     macro_rules! register_stages {

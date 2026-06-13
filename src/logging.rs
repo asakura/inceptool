@@ -22,6 +22,9 @@ use tracing_subscriber::prelude::*;
 /// [`project_dirs`] resolves to a valid location (otherwise file logging is
 /// skipped entirely). `RUST_LOG` takes precedence over `verbosity` for this
 /// layer when set.
+///
+/// The file layer uses `tracing-subscriber`'s pretty (multi-line, ANSI-free)
+/// formatter, since the log file is read by humans rather than a terminal.
 pub fn setup_logging(verbosity: u8) -> Result<()> {
     let stderr_layer = fmt::layer()
         .with_writer(io::stderr)
@@ -44,7 +47,11 @@ pub fn setup_logging(verbosity: u8) -> Result<()> {
                 .with_default_directive(verbosity_to_level_filter(verbosity).into())
                 .from_env_lossy();
 
-            Ok(fmt::layer().with_writer(log_file).with_filter(env_filter))
+            Ok(fmt::layer()
+                .pretty()
+                .with_ansi(false)
+                .with_writer(log_file)
+                .with_filter(env_filter))
         })
         .transpose()?;
 

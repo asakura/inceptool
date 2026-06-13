@@ -876,7 +876,16 @@ mod tests {
         #[case] out: HookOutputEvent,
     ) -> Result<(), TestError> {
         let serialized = serde_json::to_value(&out)?;
-        assert_eq!(serialized, json!({}));
+        match out {
+            HookOutputEvent::WorktreeRemove(_)
+            | HookOutputEvent::StopFailure(_)
+            | HookOutputEvent::ElicitationResult(_) => {
+                assert_eq!(serialized, json!(null));
+            }
+            _ => {
+                assert_eq!(serialized, json!({}));
+            }
+        }
         Ok(())
     }
 

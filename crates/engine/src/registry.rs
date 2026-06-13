@@ -183,6 +183,14 @@ impl Registry {
     /// # Errors
     ///
     /// Returns [`EngineError`] if any matching stage fails to process the connection.
+    ///
+    /// # Tracing
+    ///
+    /// Emits a span recording `hook` and `tool_name` — both borrowed/`Copy`
+    /// from `conn`, so recording them costs nothing unless a layer is
+    /// subscribed. Each matching [`Stage::run`] call is further wrapped in
+    /// its own span named after [`Stage::name`].
+    #[tracing::instrument(skip_all, fields(hook = ?kind, tool_name = ?conn.event.tool_name()))]
     pub fn run_pipeline(
         &self,
         kind: HookKind,
@@ -196,12 +204,20 @@ impl Registry {
 
         for entry in self.pipelines.get(kind_idx).into_iter().flatten() {
             if !tool_names_match(entry.tool_names, conn.event.tool_name()) {
+                tracing::trace!(
+                    stage = entry.stage.name(),
+                    "stage skipped (tool_name mismatch)"
+                );
                 continue;
             }
+
+            let _span = tracing::debug_span!("stage", stage = entry.stage.name()).entered();
 
             let Some(output) = entry.stage.run(conn)? else {
                 continue;
             };
+
+            tracing::debug!("stage halted pipeline with output");
 
             if is_terminal(&output) {
                 return Ok(Some(output));

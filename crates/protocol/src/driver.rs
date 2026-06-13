@@ -67,17 +67,24 @@ pub trait Driver {
 /// operate on. It first deserializes `raw_json` into `D::InputWire`, then
 /// delegates to [`Driver::map_input`] to produce the canonical representation.
 ///
+/// Emits a `tracing` span at [`DEBUG`](tracing::Level::DEBUG) recording the
+/// input's byte length and the raw wire JSON itself, and logs the resulting
+/// [`Conn`] upon return.
+///
 /// # Errors
 ///
 /// Returns an error if `raw_json` cannot be deserialized into
 /// `D::InputWire`, or if `Driver::map_input` fails.
+#[tracing::instrument(level = "debug", skip_all, fields(bytes = %raw_json.len(), wire_in = %raw_json), err)]
 pub fn from_wire<'a, D>(driver: &D, raw_json: &'a str) -> Result<Conn<'a>, D::Error>
 where
     D: Driver,
 {
     let wire = serde_json::from_str::<D::InputWire<'a>>(raw_json)?;
 
-    driver.map_input(wire)
+    let conn = driver.map_input(wire)?;
+    tracing::debug!("protocol_in:\n{:#?}", conn);
+    Ok(conn)
 }
 
 /// Maps a canonical [`HookOutputEvent`] into a driver's wire-format output via
@@ -87,10 +94,15 @@ where
 /// [`HookOutputEvent`] produced by the engine and stages back into the raw
 /// JSON it writes to stdout.
 ///
+/// Emits a `tracing` span at [`DEBUG`](tracing::Level::DEBUG) recording `event_name`,
+/// the output's variant name, and the canonical protocol data, and logs the
+/// serialized wire JSON upon return.
+///
 /// # Errors
 ///
 /// Returns an error if `Driver::map_output` fails, or if the resulting
 /// wire value cannot be serialized to JSON.
+#[tracing::instrument(level = "debug", skip_all, fields(event_name = %event_name, kind = %output.as_ref()), err)]
 pub fn to_wire<'a, D>(
     driver: &'a D,
     event_name: &'a str,
@@ -99,8 +111,10 @@ pub fn to_wire<'a, D>(
 where
     D: Driver,
 {
+    tracing::debug!("protocol_out:\n{:#?}", output);
     let wire = driver.map_output(event_name, output)?;
     let serialized = serde_json::to_string(&wire)?;
+    tracing::debug!("wire_out:\n{}", serialized);
 
     Ok(serialized)
 }

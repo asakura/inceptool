@@ -79,6 +79,8 @@ impl Stage for RtkStage {
             return Ok(None);
         };
 
+        tracing::info!(original = %cmd, %rewritten, "command rewritten by rtk");
+
         if let Some(cmd_val) = parsed.get_mut("command") {
             *cmd_val = Value::String(rewritten);
         }

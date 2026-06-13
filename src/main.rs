@@ -45,6 +45,7 @@ use miette::{IntoDiagnostic as _, Result};
 use std::io::{self, Read as _};
 
 /// Executes the payload processing pipeline for the selected driver.
+#[tracing::instrument(skip_all, fields(hook = ?kind), err)]
 fn run_with_driver<D>(
     driver: &D,
     raw_json: &str,
@@ -64,6 +65,8 @@ fn main() -> Result<()> {
     let (cli, hook_kind) = Cli::parse_and_validate()?;
 
     logging::setup_logging(cli.verbose)?;
+
+    tracing::info!(driver = ?cli.driver, hook = ?hook_kind, "processing hook");
 
     let mut raw_json = String::with_capacity(4 * 1024);
 
