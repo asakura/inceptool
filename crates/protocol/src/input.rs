@@ -188,6 +188,11 @@ impl HookKind {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns `ProtocolError::UnsupportedEvent` if `name` does not
+    /// correspond to a known `HookKind`.
     pub fn parse(name: &str) -> Result<Self, ProtocolError> {
         name.parse()
             .map_err(|_| ProtocolError::UnsupportedEvent(name.to_string()))
@@ -695,6 +700,11 @@ impl<'a> PreToolUseInput<'a> {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the raw tool input JSON cannot be deserialized
+    /// into `T`.
     pub fn parse_tool_input<T: serde::de::Deserialize<'a>>(&self) -> Result<T, serde_json::Error> {
         serde_json::from_str(self.tool_input.0.get())
     }
@@ -734,6 +744,11 @@ impl<'a> PostToolUseInput<'a> {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the raw tool input JSON cannot be deserialized
+    /// into `T`.
     pub fn parse_tool_input<T: serde::de::Deserialize<'a>>(&self) -> Result<T, serde_json::Error> {
         serde_json::from_str(self.tool_input.0.get())
     }

@@ -28,9 +28,19 @@ pub trait Driver {
     type OutputWire<'a>: serde::Serialize;
 
     /// Maps the parsed backend-specific input format into a standardized `Conn` object.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if the wire input cannot be mapped into a
+    /// canonical `Conn`.
     fn map_input<'a>(&self, wire: Self::InputWire<'a>) -> Result<Conn<'a>, Self::Error>;
 
     /// Maps the canonical hook output into the backend-specific output wrapper.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if the output cannot be mapped into the
+    /// backend-specific wire format.
     fn map_output<'a>(
         &self,
         event_name: &'a str,
@@ -45,6 +55,11 @@ pub trait Driver {
     /// configured alongside this driver in the agent's hook settings), not
     /// derived from the JSON payload — this is what lets dispatch happen
     /// without any payload-sniffing heuristics.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if `raw_name` does not correspond to a known
+    /// `HookKind`.
     fn hook_kind(&self, raw_name: &str) -> Result<HookKind, Self::Error>;
 }
 
@@ -55,6 +70,11 @@ pub trait Driver {
 /// stdin into the [`Conn`] / `HookInputEvent` that the engine and stages
 /// operate on. It first deserializes `raw_json` into `D::InputWire`, then
 /// delegates to [`Driver::map_input`] to produce the canonical representation.
+///
+/// # Errors
+///
+/// Returns an error if `raw_json` cannot be deserialized into
+/// `D::InputWire`, or if `Driver::map_input` fails.
 pub fn from_wire<'a, D: Driver>(driver: &D, raw_json: &'a str) -> Result<Conn<'a>, D::Error> {
     let wire = serde_json::from_str::<D::InputWire<'a>>(raw_json)?;
 
@@ -67,6 +87,11 @@ pub fn from_wire<'a, D: Driver>(driver: &D, raw_json: &'a str) -> Result<Conn<'a
 /// This is the entry point the CLI uses to turn the canonical
 /// [`HookOutputEvent`] produced by the engine and stages back into the raw
 /// JSON it writes to stdout.
+///
+/// # Errors
+///
+/// Returns an error if `Driver::map_output` fails, or if the resulting
+/// wire value cannot be serialized to JSON.
 pub fn to_wire<'a, D: Driver>(
     driver: &'a D,
     event_name: &'a str,
