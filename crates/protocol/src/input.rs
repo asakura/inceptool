@@ -707,7 +707,7 @@ impl<'a> PreToolUseInput<'a> {
     ///
     /// Returns an error if the raw tool input JSON cannot be deserialized
     /// into `T`.
-    pub fn parse_tool_input<T: serde::de::Deserialize<'a>>(&self) -> Result<T, serde_json::Error> {
+    pub fn parse_tool_input<T: Deserialize<'a>>(&self) -> Result<T, serde_json::Error> {
         serde_json::from_str(self.tool_input.0.get())
     }
 }
@@ -751,7 +751,7 @@ impl<'a> PostToolUseInput<'a> {
     ///
     /// Returns an error if the raw tool input JSON cannot be deserialized
     /// into `T`.
-    pub fn parse_tool_input<T: serde::de::Deserialize<'a>>(&self) -> Result<T, serde_json::Error> {
+    pub fn parse_tool_input<T: Deserialize<'a>>(&self) -> Result<T, serde_json::Error> {
         serde_json::from_str(self.tool_input.0.get())
     }
 }

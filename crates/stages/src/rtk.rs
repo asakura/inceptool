@@ -32,7 +32,7 @@ use inceptool_protocol::{
 };
 
 use serde_json::Value;
-use std::process::Command;
+use std::process::{Command, Output};
 
 /// Binary invoked to rewrite shell commands.
 const RTK_BINARY: &str = "rtk";
@@ -126,7 +126,7 @@ impl RtkStage {
 
     /// Runs `rtk rewrite <cmd>`, logging and returning `None` if the process
     /// cannot be spawned at all.
-    fn invoke(cmd: &str) -> Option<std::process::Output> {
+    fn invoke(cmd: &str) -> Option<Output> {
         match Command::new(RTK_BINARY)
             .arg(RTK_SUBCOMMAND)
             .arg(cmd)

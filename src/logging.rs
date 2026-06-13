@@ -3,7 +3,9 @@
 use crate::config::project_dirs;
 
 use miette::{IntoDiagnostic, Result};
+use std::fs;
 use std::io;
+use tracing_subscriber::fmt;
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 use tracing_subscriber::prelude::*;
 
@@ -15,7 +17,7 @@ use tracing_subscriber::prelude::*;
 /// `RUST_LOG`/[`EnvFilter::from_default_env`]) if [`project_dirs`] resolves
 /// to a valid location; otherwise file logging is skipped entirely.
 pub fn setup_logging() -> Result<()> {
-    let stderr_layer = tracing_subscriber::fmt::layer()
+    let stderr_layer = fmt::layer()
         .with_writer(io::stderr)
         .with_filter(LevelFilter::ERROR);
 
@@ -23,16 +25,16 @@ pub fn setup_logging() -> Result<()> {
         .map(|dirs| -> Result<_> {
             let cache_dir = dirs.cache_dir();
 
-            std::fs::create_dir_all(cache_dir).into_diagnostic()?;
+            fs::create_dir_all(cache_dir).into_diagnostic()?;
 
             let log_path = cache_dir.join("inceptool.log");
-            let log_file = std::fs::OpenOptions::new()
+            let log_file = fs::OpenOptions::new()
                 .create(true)
                 .append(true)
                 .open(log_path)
                 .into_diagnostic()?;
 
-            Ok(tracing_subscriber::fmt::layer()
+            Ok(fmt::layer()
                 .with_writer(log_file)
                 .with_filter(EnvFilter::from_default_env()))
         })

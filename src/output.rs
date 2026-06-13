@@ -6,6 +6,7 @@ use inceptool_protocol::{Driver, HookOutputEvent};
 
 use miette::{IntoDiagnostic, Result};
 use std::io::{self, Write};
+use std::process;
 
 /// Translates the computed [`HookOutputEvent`] into JSON and issues side effects.
 #[expect(
@@ -44,7 +45,7 @@ pub fn handle_output<D: Driver>(output: Option<HookOutputEvent>, driver: &D) -> 
                 eprintln!("{err}");
             }
 
-            std::process::exit(code);
+            process::exit(code);
         }
     } else {
         // If no hooks modified the output, provide the default allow for Claude/Gemini

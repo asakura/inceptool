@@ -54,6 +54,7 @@
 use crate::{EngineError, Stage};
 
 use inceptool_protocol::{Conn, Decision, HookKind, HookOutputEvent};
+use core::{array, fmt};
 
 /// A registered stage paired with the tool names it runs for.
 struct PipelineEntry {
@@ -61,8 +62,8 @@ struct PipelineEntry {
     stage: Box<dyn Stage>,
 }
 
-impl core::fmt::Debug for PipelineEntry {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl fmt::Debug for PipelineEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PipelineEntry")
             .field("tool_names", &self.tool_names)
             .field("stage", &self.stage.name())
@@ -92,7 +93,7 @@ impl Registry {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            pipelines: core::array::from_fn(|_| Vec::new()),
+            pipelines: array::from_fn(|_| Vec::new()),
         }
     }
 

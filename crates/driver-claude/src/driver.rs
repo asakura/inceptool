@@ -23,6 +23,7 @@ use inceptool_protocol::{
     Conn, Decision, Driver, HookInputEvent, HookKind, HookOutputEvent, ProtocolError, SessionMeta,
     types,
 };
+use serde_json::value::RawValue;
 
 /// Zero-sized [`Driver`] implementation for Claude Code.
 ///
@@ -35,13 +36,13 @@ pub struct ClaudeDriver;
 
 impl Driver for ClaudeDriver {
     type Error = ClaudeDriverError;
-    type InputWire<'a> = &'a serde_json::value::RawValue;
+    type InputWire<'a> = &'a RawValue;
     type OutputWire<'a> = ClaudeOutputWire<'a>;
 
     fn map_input<'a>(&self, wire: Self::InputWire<'a>) -> Result<Conn<'a>, Self::Error> {
         let raw_json = wire.get();
         let meta: ClaudeMeta<'a> = serde_json::from_str(raw_json)?;
-        let raw_value: &'a serde_json::value::RawValue = serde_json::from_str(raw_json)?;
+        let raw_value: &'a RawValue = serde_json::from_str(raw_json)?;
 
         let event = match meta.hook_event_name.as_ref() {
             "PreToolUse" => HookInputEvent::PreToolUse(serde_json::from_str(raw_json)?),

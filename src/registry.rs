@@ -4,6 +4,7 @@ use crate::config::Config;
 
 use inceptool_engine::Registry;
 use inceptool_stages::RtkStage;
+use std::env;
 
 /// Registers the standard stages enabled by `config`.
 pub fn build_registry(config: &Config) -> Registry {
@@ -37,7 +38,7 @@ fn register_mock_stages(registry: &mut Registry) {
     use inceptool_engine::{EngineError, Stage};
     use inceptool_protocol::{Conn, HookKind, HookOutputEvent, WorktreeCreateOutput};
 
-    if std::env::var("INCEPTOOL_TEST_MOCK_WORKTREE").is_ok() {
+    if env::var("INCEPTOOL_TEST_MOCK_WORKTREE").is_ok() {
         struct MockWorktreeStage;
 
         impl Stage for MockWorktreeStage {

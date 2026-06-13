@@ -4,6 +4,7 @@ use crate::error::ProtocolError;
 use crate::input::HookKind;
 use crate::output::HookOutputEvent;
 use crate::session::Conn;
+use std::error::Error as StdError;
 
 /// An abstraction over a specific backend driver (e.g., Claude or Gemini).
 ///
@@ -14,7 +15,7 @@ use crate::session::Conn;
 /// select a stage pipeline.
 pub trait Driver {
     /// The specific error type returned by this driver.
-    type Error: std::error::Error
+    type Error: StdError
         + Send
         + Sync
         + From<ProtocolError>

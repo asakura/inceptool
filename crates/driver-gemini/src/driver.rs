@@ -6,6 +6,7 @@ use crate::types::{GeminiHookSpecificOutput, GeminiMeta, GeminiOutputWire};
 use inceptool_protocol::{
     Conn, Driver, HookInputEvent, HookKind, HookOutputEvent, ProtocolError, SessionMeta,
 };
+use serde_json::value::RawValue;
 
 /// Implements `Driver` for Gemini API.
 #[derive(Debug, Clone, Copy, Default)]
@@ -13,7 +14,7 @@ pub struct GeminiDriver;
 
 impl Driver for GeminiDriver {
     type Error = GeminiDriverError;
-    type InputWire<'a> = &'a serde_json::value::RawValue;
+    type InputWire<'a> = &'a RawValue;
     type OutputWire<'a> = GeminiOutputWire<'a>;
 
     fn map_input<'a>(&self, wire: Self::InputWire<'a>) -> Result<Conn<'a>, Self::Error> {

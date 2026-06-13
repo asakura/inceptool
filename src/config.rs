@@ -3,6 +3,8 @@
 
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::env;
+use std::error::Error as StdError;
 use std::fs;
 use std::path::Path;
 
@@ -57,7 +59,7 @@ impl Config {
         }
 
         // Load from CWD
-        if let Ok(cwd) = std::env::current_dir() {
+        if let Ok(cwd) = env::current_dir() {
             let local_config = cwd.join("inceptool.toml");
 
             if let Ok(c) = Self::from_file(&local_config) {
@@ -68,7 +70,7 @@ impl Config {
         config
     }
 
-    fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+    fn from_file(path: &Path) -> Result<Self, Box<dyn StdError>> {
         let content = fs::read_to_string(path)?;
         let config: Self = toml::from_str(&content)?;
 
