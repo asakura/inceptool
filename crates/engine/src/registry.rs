@@ -53,8 +53,8 @@
 
 use crate::{EngineError, Stage};
 
-use inceptool_protocol::{Conn, Decision, HookKind, HookOutputEvent};
 use core::{array, fmt};
+use inceptool_protocol::{Conn, Decision, HookKind, HookOutputEvent};
 
 /// A registered stage paired with the tool names it runs for.
 struct PipelineEntry {
@@ -411,7 +411,8 @@ mod tests {
             "tool_input": {"command": "ls"},
             "mcp_context": null,
             "original_request_name": null
-        }"#.to_owned()
+        }"#
+        .to_owned()
     }
 
     #[fixture]
@@ -421,7 +422,8 @@ mod tests {
             "tool_input": {"file_path": "/a.txt"},
             "mcp_context": null,
             "original_request_name": null
-        }"#.to_owned()
+        }"#
+        .to_owned()
     }
 
     #[rstest]
@@ -494,9 +496,7 @@ mod tests {
     }
 
     #[rstest]
-    fn run_pipeline_default_registry_has_no_stages(
-        mut conn: Conn<'_>,
-    ) -> Result<(), TestError> {
+    fn run_pipeline_default_registry_has_no_stages(mut conn: Conn<'_>) -> Result<(), TestError> {
         let registry = Registry::default();
 
         assert_matches!(
@@ -628,9 +628,7 @@ mod tests {
     }
 
     #[rstest]
-    fn run_pipeline_halt_flag_stops_remaining_stages(
-        mut conn: Conn<'_>,
-    ) -> Result<(), TestError> {
+    fn run_pipeline_halt_flag_stops_remaining_stages(mut conn: Conn<'_>) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -812,9 +810,7 @@ mod tests {
     }
 
     #[rstest]
-    fn run_pipeline_combines_allow_then_ask_into_ask(
-        mut conn: Conn<'_>,
-    ) -> Result<(), TestError> {
+    fn run_pipeline_combines_allow_then_ask_into_ask(mut conn: Conn<'_>) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
         registry.register(StubStage {

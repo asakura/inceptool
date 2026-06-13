@@ -50,7 +50,10 @@ fn run_with_driver<D>(
     raw_json: &str,
     kind: inceptool_protocol::HookKind,
     registry: &Registry,
-) -> Result<()> where D: Driver {
+) -> Result<()>
+where
+    D: Driver,
+{
     let mut conn = inceptool_protocol::from_wire(driver, raw_json).into_diagnostic()?;
     let final_output = registry.run_pipeline(kind, &mut conn).into_diagnostic()?;
 

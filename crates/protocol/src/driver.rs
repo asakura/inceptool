@@ -15,12 +15,7 @@ use std::error::Error as StdError;
 /// select a stage pipeline.
 pub trait Driver {
     /// The specific error type returned by this driver.
-    type Error: StdError
-        + Send
-        + Sync
-        + From<ProtocolError>
-        + From<serde_json::Error>
-        + 'static;
+    type Error: StdError + Send + Sync + From<ProtocolError> + From<serde_json::Error> + 'static;
 
     /// The wire format representing the incoming data for this driver.
     type InputWire<'a>: serde::Deserialize<'a>;

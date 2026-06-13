@@ -15,7 +15,10 @@ use std::process;
     reason = "terminal hook actions are contractually required to write a message to stderr \
               and exit with a specific code"
 )]
-pub fn handle_output<D>(output: Option<HookOutputEvent>, driver: &D) -> Result<()> where D: Driver {
+pub fn handle_output<D>(output: Option<HookOutputEvent>, driver: &D) -> Result<()>
+where
+    D: Driver,
+{
     if let Some(output) = output {
         // `WorktreeCreate` is special-cased: when invoked as a command hook, Claude Code
         // expects the (possibly modified) worktree path on stdout as plain text rather

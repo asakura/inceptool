@@ -5,8 +5,8 @@ use crate::config::project_dirs;
 use miette::{IntoDiagnostic as _, Result};
 use std::fs;
 use std::io;
-use tracing_subscriber::fmt;
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
+use tracing_subscriber::fmt;
 use tracing_subscriber::prelude::*;
 
 /// Initializes the `tracing` subscriber, writing to standard error and a

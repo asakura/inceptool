@@ -195,7 +195,7 @@ impl HookKind {
     /// correspond to a known `HookKind`.
     pub fn parse(name: &str) -> Result<Self, ProtocolError> {
         name.parse()
-                .map_err(|_ignored| ProtocolError::UnsupportedEvent(name.to_owned()))
+            .map_err(|_ignored| ProtocolError::UnsupportedEvent(name.to_owned()))
     }
 }
 
@@ -792,7 +792,8 @@ mod tests {
             "tool_name": "grep_search",
             "tool_input": {"query": "foo", "path": "/"},
             "original_request_name": "search"
-        }"#.to_owned()
+        }"#
+        .to_owned()
     }
 
     #[rstest]
@@ -1275,9 +1276,7 @@ mod tests {
     }
 
     #[rstest]
-    fn hook_input_event_tool_name_pre_tool_use(
-        grep_search_json: String,
-    ) -> Result<(), TestError> {
+    fn hook_input_event_tool_name_pre_tool_use(grep_search_json: String) -> Result<(), TestError> {
         let input: PreToolUseInput<'_> = serde_json::from_str(&grep_search_json)?;
         let event = HookInputEvent::PreToolUse(input);
 

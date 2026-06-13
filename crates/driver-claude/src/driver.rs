@@ -387,8 +387,7 @@ mod tests {
     }
 
     #[rstest]
-    fn format_output_hook_specific_post_tool_use_updated_tool_output() -> Result<(), TestError>
-    {
+    fn format_output_hook_specific_post_tool_use_updated_tool_output() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::PostToolUse(inceptool_protocol::PostToolUseOutput {
             updated_tool_output: Some(serde_json::json!({"stdout": "ok"})),
@@ -495,8 +494,7 @@ mod tests {
     }
 
     #[rstest]
-    fn format_output_hook_specific_permission_request_with_behavior() -> Result<(), TestError>
-    {
+    fn format_output_hook_specific_permission_request_with_behavior() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output =
             HookOutputEvent::PermissionRequest(inceptool_protocol::PermissionRequestOutput {

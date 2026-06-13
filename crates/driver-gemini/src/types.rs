@@ -14,7 +14,7 @@ use std::borrow::Cow;
 
 /// Metadata associated with a Gemini session payload.
 #[derive(Deserialize)]
-pub(in crate) struct GeminiMeta<'a> {
+pub(crate) struct GeminiMeta<'a> {
     pub session_id: Cow<'a, str>,
     #[serde(default)]
     pub transcript_path: Option<Cow<'a, str>>,

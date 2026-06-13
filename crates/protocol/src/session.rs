@@ -72,7 +72,8 @@ mod tests {
             "cwd": "/tmp",
             "driver": "Gemini",
             "driver_meta": {"some": "data"}
-        }"#.to_owned()
+        }"#
+        .to_owned()
     }
 
     #[fixture]
@@ -84,7 +85,8 @@ mod tests {
             "effort": {"level": "high"},
             "agent_id": "agent-1",
             "agent_type": "explore"
-        }"#.to_owned()
+        }"#
+        .to_owned()
     }
 
     #[rstest]
@@ -102,9 +104,7 @@ mod tests {
     }
 
     #[rstest]
-    fn session_meta_deserialization_driver(
-        session_meta_json: String,
-    ) -> Result<(), TestError> {
+    fn session_meta_deserialization_driver(session_meta_json: String) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
         assert_eq!(session.driver, "Gemini");
         Ok(())
@@ -155,10 +155,7 @@ mod tests {
         session_meta_with_common_fields_json: String,
     ) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;
-        assert_eq!(
-            session.effort.map(|e| e.level),
-            Some(EffortLevel::High)
-        );
+        assert_eq!(session.effort.map(|e| e.level), Some(EffortLevel::High));
         Ok(())
     }
 
