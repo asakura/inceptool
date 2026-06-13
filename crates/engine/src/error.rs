@@ -33,13 +33,13 @@ mod tests {
     }
 
     #[rstest]
-    fn test_engine_error_stage_execution_display() {
+    fn engine_error_stage_execution_display() {
         let err = EngineError::StageExecution("boom".to_string());
         assert_eq!(err.to_string(), "Stage execution failed: boom");
     }
 
     #[rstest]
-    fn test_engine_error_json_parse_from() -> Result<(), TestError> {
+    fn engine_error_json_parse_from() -> Result<(), TestError> {
         let res: Result<serde_json::Value, _> = serde_json::from_str("invalid");
         assert_matches!(res, Err(_));
 

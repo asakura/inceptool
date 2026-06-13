@@ -183,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_wire() -> Result<(), MockError> {
+    fn from_wire_works() -> Result<(), MockError> {
         let driver = MockDriver;
         let conn = from_wire(&driver, r#"{"_ignore":"val"}"#)?;
 
@@ -193,7 +193,7 @@ mod tests {
     }
 
     #[test]
-    fn test_to_wire() -> Result<(), MockError> {
+    fn to_wire_works() -> Result<(), MockError> {
         let driver = MockDriver;
         let event = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Allow),

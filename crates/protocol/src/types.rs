@@ -197,7 +197,7 @@ mod tests {
     #[case(r#""deny""#, Decision::Deny)]
     #[case(r#""ask""#, Decision::Ask)]
     #[case(r#""block""#, Decision::Block)]
-    fn test_decision_deserialization(
+    fn decision_deserialization(
         #[case] input: &str,
         #[case] expected: Decision,
     ) -> Result<(), TestError> {
@@ -211,7 +211,7 @@ mod tests {
     #[case(Decision::Deny, r#""deny""#)]
     #[case(Decision::Ask, r#""ask""#)]
     #[case(Decision::Block, r#""block""#)]
-    fn test_decision_serialization(
+    fn decision_serialization(
         #[case] input: Decision,
         #[case] expected: &str,
     ) -> Result<(), TestError> {
@@ -228,7 +228,7 @@ mod tests {
     #[case(r#""dontAsk""#, PermissionMode::DontAsk)]
     #[case(r#""bypassPermissions""#, PermissionMode::BypassPermissions)]
     #[case(r#""somethingNew""#, PermissionMode::Unknown)]
-    fn test_permission_mode_deserialization(
+    fn permission_mode_deserialization(
         #[case] input: &str,
         #[case] expected: PermissionMode,
     ) -> Result<(), TestError> {
@@ -244,7 +244,7 @@ mod tests {
     #[case(r#""xhigh""#, EffortLevel::Xhigh)]
     #[case(r#""max""#, EffortLevel::Max)]
     #[case(r#""futuristic""#, EffortLevel::Unknown)]
-    fn test_effort_level_deserialization(
+    fn effort_level_deserialization(
         #[case] input: &str,
         #[case] expected: EffortLevel,
     ) -> Result<(), TestError> {
@@ -254,7 +254,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_effort_deserialization() -> Result<(), TestError> {
+    fn effort_deserialization() -> Result<(), TestError> {
         let parsed: Effort = serde_json::from_str(r#"{"level": "high"}"#)?;
         assert_eq!(parsed.level, EffortLevel::High);
         Ok(())
@@ -263,7 +263,7 @@ mod tests {
     #[rstest]
     #[case(PermissionBehavior::Allow, r#""allow""#)]
     #[case(PermissionBehavior::Deny, r#""deny""#)]
-    fn test_permission_behavior_serialization(
+    fn permission_behavior_serialization(
         #[case] input: PermissionBehavior,
         #[case] expected: &str,
     ) -> Result<(), TestError> {
@@ -273,7 +273,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_raw_json_serialization(raw_json_str: String) -> Result<(), TestError> {
+    fn raw_json_serialization(raw_json_str: String) -> Result<(), TestError> {
         #[derive(serde::Deserialize, serde::Serialize)]
         struct Payload<'a> {
             #[serde(borrow)]

@@ -77,7 +77,7 @@ fn inceptool_cmd() -> Result<TestEnv> {
     "tool_name": "run_shell_command",
     "tool_input": {}
 }))]
-fn test_integration_happy_path(
+fn integration_happy_path(
     inceptool_cmd: Result<TestEnv>,
     #[case] test_name: &str,
     #[case] driver: &str,

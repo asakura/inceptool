@@ -241,7 +241,7 @@ mod tests {
     use inceptool_protocol::NotificationOutput;
 
     #[test]
-    fn test_gemini_hook_specific_output_before_tool() {
+    fn gemini_hook_specific_output_before_tool() {
         let o = PreToolUseOutput {
             updated_input: Some(serde_json::json!({})),
             ..Default::default()
@@ -255,7 +255,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gemini_hook_specific_output_after_tool() {
+    fn gemini_hook_specific_output_after_tool() {
         let o = PostToolUseOutput {
             updated_tool_output: Some(serde_json::json!({})),
             ..Default::default()
@@ -269,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gemini_hook_specific_output_before_agent() {
+    fn gemini_hook_specific_output_before_agent() {
         let o = BeforeAgentOutput {
             additional_context: Some("ctx".into()),
             ..Default::default()
@@ -283,7 +283,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gemini_hook_specific_output_after_agent() {
+    fn gemini_hook_specific_output_after_agent() {
         let o = AfterAgentOutput {
             clear_context: Some(true),
             ..Default::default()
@@ -297,7 +297,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gemini_hook_specific_output_before_model() {
+    fn gemini_hook_specific_output_before_model() {
         let o = BeforeModelOutput {
             llm_request: Some(serde_json::json!({})),
             ..Default::default()
@@ -311,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gemini_hook_specific_output_after_model() {
+    fn gemini_hook_specific_output_after_model() {
         let o = AfterModelOutput {
             llm_response: Some(serde_json::json!({})),
             ..Default::default()
@@ -325,7 +325,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gemini_hook_specific_output_before_tool_selection() {
+    fn gemini_hook_specific_output_before_tool_selection() {
         let o = BeforeToolSelectionOutput {
             tool_config: Some(serde_json::json!({})),
         };
@@ -340,7 +340,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gemini_hook_specific_output_session_start() {
+    fn gemini_hook_specific_output_session_start() {
         let o = SessionStartOutput {
             additional_context: Some("ctx".into()),
             ..Default::default()
@@ -354,7 +354,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gemini_hook_specific_output_err() {
+    fn gemini_hook_specific_output_err() {
         let e_err = HookOutputEvent::Notification(NotificationOutput::default());
         assert!(GeminiHookSpecificOutput::try_from(&e_err).is_err());
     }

@@ -36,19 +36,19 @@ mod tests {
     }
 
     #[rstest]
-    fn test_protocol_error_formatting_unsupported() {
+    fn protocol_error_formatting_unsupported() {
         let err1 = ProtocolError::UnsupportedEvent("OnHover".to_string());
         assert_eq!(err1.to_string(), "Unsupported hook event: OnHover");
     }
 
     #[rstest]
-    fn test_protocol_error_formatting_missing() {
+    fn protocol_error_formatting_missing() {
         let err2 = ProtocolError::MissingField("event_type");
         assert_eq!(err2.to_string(), "Missing required field: event_type");
     }
 
     #[rstest]
-    fn test_protocol_error_formatting_json() -> Result<(), TestError> {
+    fn protocol_error_formatting_json() -> Result<(), TestError> {
         let res: Result<serde_json::Value, _> = serde_json::from_str("invalid");
         assert_matches!(res, Err(_));
 

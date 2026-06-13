@@ -775,7 +775,7 @@ mod tests {
     #[case(Some(42), Some("Access Denied".into()))]
     #[case(None, None)]
     #[case(Some(1), None)]
-    fn test_exit_metadata_extraction(
+    fn exit_metadata_extraction(
         block_decision: Decision,
         #[case] code: Option<i32>,
         #[case] reason: Option<Cow<'static, str>>,
@@ -796,7 +796,7 @@ mod tests {
     #[rstest]
     #[case::worktree_remove(HookOutputEvent::WorktreeRemove(EmptyOutput { }))]
     #[case::notification(HookOutputEvent::Notification(NotificationOutput { system_message: Some("hello".into()) }))]
-    fn test_exit_metadata_fallthrough(#[case] output: HookOutputEvent) {
+    fn exit_metadata_fallthrough(#[case] output: HookOutputEvent) {
         let (code, reason) = output.exit_metadata();
 
         assert_eq!(code, None);
@@ -804,7 +804,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_untagged_hook_output_serialization(allow_decision: Decision) -> Result<(), TestError> {
+    fn untagged_hook_output_serialization(allow_decision: Decision) -> Result<(), TestError> {
         let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(allow_decision),
             additional_context: Some("Added context".into()),
@@ -872,7 +872,7 @@ mod tests {
     #[case::post_compact(HookOutputEvent::PostCompact(PostCompactOutput::default()))]
     #[case::elicitation(HookOutputEvent::Elicitation(ElicitationOutput::default()))]
     #[case::elicitation_result(HookOutputEvent::ElicitationResult(EmptyOutput::default()))]
-    fn test_exhaustive_hook_output_serialization_empty(
+    fn exhaustive_hook_output_serialization_empty(
         #[case] out: HookOutputEvent,
     ) -> Result<(), TestError> {
         let serialized = serde_json::to_value(&out)?;
@@ -881,7 +881,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_output_serialization_populated() -> Result<(), TestError> {
+    fn hook_output_serialization_populated() -> Result<(), TestError> {
         let out = HookOutputEvent::SessionStart(SessionStartOutput {
             system_message: Some("hello".to_string()),
             ..Default::default()
@@ -898,7 +898,7 @@ mod tests {
     #[rstest]
     #[case::allow(PermissionBehavior::Allow, "allow")]
     #[case::deny(PermissionBehavior::Deny, "deny")]
-    fn test_permission_request_output_serialization_behavior(
+    fn permission_request_output_serialization_behavior(
         #[case] behavior: PermissionBehavior,
         #[case] expected: &str,
     ) -> Result<(), TestError> {
@@ -920,7 +920,7 @@ mod tests {
     #[case::before_model(HookOutputEvent::BeforeModel(BeforeModelOutput { exit_code: Some(5), ..Default::default() }), 5)]
     #[case::after_model(HookOutputEvent::AfterModel(AfterModelOutput { exit_code: Some(6), ..Default::default() }), 6)]
     #[case::pre_compact(HookOutputEvent::PreCompact(PreCompactOutput { exit_code: Some(7), ..Default::default() }), 7)]
-    fn test_all_exit_metadata_arms(#[case] output: HookOutputEvent, #[case] expected_code: i32) {
+    fn all_exit_metadata_arms(#[case] output: HookOutputEvent, #[case] expected_code: i32) {
         let (code, _) = output.exit_metadata();
         assert_eq!(code, Some(expected_code));
     }
@@ -947,7 +947,7 @@ mod tests {
         HookOutputEvent::SessionStart(SessionStartOutput::default()),
         None
     )]
-    fn test_hook_output_event_decision_accessor_returns_expected_decision(
+    fn hook_output_event_decision_accessor_returns_expected_decision(
         #[case] output: HookOutputEvent,
         #[case] expected: Option<Decision>,
     ) {
@@ -978,13 +978,13 @@ mod tests {
     #[case::task_created(HookOutputEvent::TaskCreated(TaskCreatedOutput::default()))]
     #[case::task_completed(HookOutputEvent::TaskCompleted(TaskCompletedOutput::default()))]
     #[case::teammate_idle(HookOutputEvent::TeammateIdle(TeammateIdleOutput::default()))]
-    fn test_set_decision_overwrites_supported_variants(#[case] mut output: HookOutputEvent) {
+    fn set_decision_overwrites_supported_variants(#[case] mut output: HookOutputEvent) {
         output.set_decision(Decision::Ask);
         assert_eq!(output.decision(), Some(Decision::Ask));
     }
 
     #[rstest]
-    fn test_set_decision_overwrites_existing_decision() {
+    fn set_decision_overwrites_existing_decision() {
         let mut output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Allow),
             ..Default::default()
@@ -1000,7 +1000,7 @@ mod tests {
     #[case::permission_request(HookOutputEvent::PermissionRequest(
         PermissionRequestOutput::default()
     ))]
-    fn test_set_decision_is_noop_for_unsupported_variants(#[case] mut output: HookOutputEvent) {
+    fn set_decision_is_noop_for_unsupported_variants(#[case] mut output: HookOutputEvent) {
         output.set_decision(Decision::Ask);
         assert_eq!(output.decision(), None);
     }
@@ -1030,7 +1030,7 @@ mod tests {
         HookOutputEvent::SessionStart(SessionStartOutput::default()),
         None
     )]
-    fn test_hook_output_event_reason_accessor_returns_expected_reason(
+    fn hook_output_event_reason_accessor_returns_expected_reason(
         #[case] output: HookOutputEvent,
         #[case] expected: Option<&str>,
     ) {
@@ -1048,7 +1048,7 @@ mod tests {
         HookOutputEvent::SessionStart(SessionStartOutput::default()),
         None
     )]
-    fn test_hook_output_event_halt_accessor_returns_expected_halt_flag(
+    fn hook_output_event_halt_accessor_returns_expected_halt_flag(
         #[case] output: HookOutputEvent,
         #[case] expected: Option<bool>,
     ) {
@@ -1065,7 +1065,7 @@ mod tests {
         HookOutputEvent::PreToolUse(PreToolUseOutput::default()),
         None
     )]
-    fn test_hook_output_event_suppress_output_accessor_returns_expected_flag(
+    fn hook_output_event_suppress_output_accessor_returns_expected_flag(
         #[case] output: HookOutputEvent,
         #[case] expected: Option<bool>,
     ) {
@@ -1083,7 +1083,7 @@ mod tests {
         HookOutputEvent::PreToolUse(PreToolUseOutput::default()),
         None
     )]
-    fn test_hook_output_event_system_message_accessor_returns_expected_message(
+    fn hook_output_event_system_message_accessor_returns_expected_message(
         #[case] output: HookOutputEvent,
         #[case] expected: Option<&str>,
     ) {

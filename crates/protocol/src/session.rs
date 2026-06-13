@@ -89,21 +89,21 @@ mod tests {
     }
 
     #[rstest]
-    fn test_session_meta_deserialization_id(session_meta_json: String) -> Result<(), TestError> {
+    fn session_meta_deserialization_id(session_meta_json: String) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
         assert_eq!(session.session_id, "123");
         Ok(())
     }
 
     #[rstest]
-    fn test_session_meta_deserialization_cwd(session_meta_json: String) -> Result<(), TestError> {
+    fn session_meta_deserialization_cwd(session_meta_json: String) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
         assert_eq!(session.cwd.as_deref(), Some("/tmp"));
         Ok(())
     }
 
     #[rstest]
-    fn test_session_meta_deserialization_driver(
+    fn session_meta_deserialization_driver(
         session_meta_json: String,
     ) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
@@ -112,7 +112,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_session_meta_deserialization_driver_meta(
+    fn session_meta_deserialization_driver_meta(
         session_meta_json: String,
     ) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
@@ -128,7 +128,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_session_meta_deserialization_missing_common_fields_default_to_none(
+    fn session_meta_deserialization_missing_common_fields_default_to_none(
         session_meta_json: String,
     ) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_json)?;
@@ -140,7 +140,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_session_meta_deserialization_permission_mode(
+    fn session_meta_deserialization_permission_mode(
         session_meta_with_common_fields_json: String,
     ) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;
@@ -152,7 +152,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_session_meta_deserialization_effort(
+    fn session_meta_deserialization_effort(
         session_meta_with_common_fields_json: String,
     ) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;
@@ -164,7 +164,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_session_meta_deserialization_agent_id(
+    fn session_meta_deserialization_agent_id(
         session_meta_with_common_fields_json: String,
     ) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;
@@ -173,7 +173,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_session_meta_deserialization_agent_type(
+    fn session_meta_deserialization_agent_type(
         session_meta_with_common_fields_json: String,
     ) -> Result<(), TestError> {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;

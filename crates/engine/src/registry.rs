@@ -429,7 +429,7 @@ mod tests {
     #[rstest]
     #[case::block(Decision::Block)]
     #[case::deny(Decision::Deny)]
-    fn test_is_terminal_true_for_deny_or_block_decision(#[case] decision: Decision) {
+    fn is_terminal_true_for_deny_or_block_decision(#[case] decision: Decision) {
         let output = HookOutputEvent::BeforeAgent(BeforeAgentOutput {
             decision: Some(decision),
             ..Default::default()
@@ -441,7 +441,7 @@ mod tests {
     #[rstest]
     #[case::allow(Decision::Allow)]
     #[case::ask(Decision::Ask)]
-    fn test_is_terminal_false_for_allow_or_ask_decision(#[case] decision: Decision) {
+    fn is_terminal_false_for_allow_or_ask_decision(#[case] decision: Decision) {
         let output = HookOutputEvent::BeforeAgent(BeforeAgentOutput {
             decision: Some(decision),
             ..Default::default()
@@ -453,7 +453,7 @@ mod tests {
     #[rstest]
     #[case::halt_false(Some(false))]
     #[case::halt_unset(None)]
-    fn test_is_terminal_false_without_decision_or_explicit_halt(#[case] halt: Option<bool>) {
+    fn is_terminal_false_without_decision_or_explicit_halt(#[case] halt: Option<bool>) {
         let output = HookOutputEvent::BeforeAgent(BeforeAgentOutput {
             halt,
             ..Default::default()
@@ -463,7 +463,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_is_terminal_true_when_halt_true() {
+    fn is_terminal_true_when_halt_true() {
         assert!(is_terminal(&halt_output()));
     }
 
@@ -471,7 +471,7 @@ mod tests {
     #[case::allow(Some(PermissionBehavior::Allow), true)]
     #[case::deny(Some(PermissionBehavior::Deny), true)]
     #[case::undecided(None, false)]
-    fn test_is_terminal_permission_request(
+    fn is_terminal_permission_request(
         #[case] behavior: Option<PermissionBehavior>,
         #[case] expected: bool,
     ) {
@@ -484,7 +484,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_with_no_stages_returns_none(mut conn: Conn<'_>) -> Result<(), TestError> {
+    fn run_pipeline_with_no_stages_returns_none(mut conn: Conn<'_>) -> Result<(), TestError> {
         let registry = Registry::new();
 
         assert_matches!(
@@ -496,7 +496,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_default_registry_has_no_stages(
+    fn run_pipeline_default_registry_has_no_stages(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let registry = Registry::default();
@@ -510,7 +510,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_skips_non_matching_stage(mut conn: Conn<'_>) -> Result<(), TestError> {
+    fn run_pipeline_skips_non_matching_stage(mut conn: Conn<'_>) -> Result<(), TestError> {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -529,7 +529,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_ignores_matching_stage_with_no_output(
+    fn run_pipeline_ignores_matching_stage_with_no_output(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -550,7 +550,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_returns_output_from_matching_stage(
+    fn run_pipeline_returns_output_from_matching_stage(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -572,7 +572,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_non_terminal_output_lets_later_stages_run(
+    fn run_pipeline_non_terminal_output_lets_later_stages_run(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -601,7 +601,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_terminal_decision_stops_remaining_stages(
+    fn run_pipeline_terminal_decision_stops_remaining_stages(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -630,7 +630,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_halt_flag_stops_remaining_stages(
+    fn run_pipeline_halt_flag_stops_remaining_stages(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -659,7 +659,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_permission_request_with_behavior_stops_remaining_stages(
+    fn run_pipeline_permission_request_with_behavior_stops_remaining_stages(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -694,7 +694,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_permission_request_without_behavior_lets_later_stages_run(
+    fn run_pipeline_permission_request_without_behavior_lets_later_stages_run(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -723,7 +723,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_propagates_stage_error(mut conn: Conn<'_>) {
+    fn run_pipeline_propagates_stage_error(mut conn: Conn<'_>) {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -739,7 +739,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_all_allow_decisions_combine_to_allow(
+    fn run_pipeline_all_allow_decisions_combine_to_allow(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -768,7 +768,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_allow_decision_does_not_stop_remaining_stages(mut conn: Conn<'_>) {
+    fn run_pipeline_allow_decision_does_not_stop_remaining_stages(mut conn: Conn<'_>) {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -791,7 +791,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_ask_decision_does_not_stop_remaining_stages(mut conn: Conn<'_>) {
+    fn run_pipeline_ask_decision_does_not_stop_remaining_stages(mut conn: Conn<'_>) {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -814,7 +814,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_combines_allow_then_ask_into_ask(
+    fn run_pipeline_combines_allow_then_ask_into_ask(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -843,7 +843,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_ask_decision_is_not_downgraded_by_later_allow(
+    fn run_pipeline_ask_decision_is_not_downgraded_by_later_allow(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -872,7 +872,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_allow_decision_does_not_suppress_later_deny(
+    fn run_pipeline_allow_decision_does_not_suppress_later_deny(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -901,7 +901,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_ask_decision_does_not_suppress_later_deny(
+    fn run_pipeline_ask_decision_does_not_suppress_later_deny(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -930,7 +930,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_no_decision_from_any_stage_leaves_decision_unset(
+    fn run_pipeline_no_decision_from_any_stage_leaves_decision_unset(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();
@@ -952,7 +952,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_wildcard_tool_names_matches_any_tool(
+    fn run_pipeline_wildcard_tool_names_matches_any_tool(
         pre_tool_use_bash_json: String,
     ) -> Result<(), TestError> {
         let mut conn = pre_tool_use_conn(&pre_tool_use_bash_json)?;
@@ -975,7 +975,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_specific_tool_name_matches(
+    fn run_pipeline_specific_tool_name_matches(
         pre_tool_use_bash_json: String,
     ) -> Result<(), TestError> {
         let mut conn = pre_tool_use_conn(&pre_tool_use_bash_json)?;
@@ -998,7 +998,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_specific_tool_name_does_not_match_skips_stage(
+    fn run_pipeline_specific_tool_name_does_not_match_skips_stage(
         pre_tool_use_read_json: String,
     ) -> Result<(), TestError> {
         let mut conn = pre_tool_use_conn(&pre_tool_use_read_json)?;
@@ -1020,7 +1020,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_non_wildcard_tool_names_never_match_event_without_tool_name(
+    fn run_pipeline_non_wildcard_tool_names_never_match_event_without_tool_name(
         mut conn: Conn<'_>,
     ) -> Result<(), TestError> {
         let mut registry = Registry::new();

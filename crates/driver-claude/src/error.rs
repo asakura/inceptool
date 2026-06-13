@@ -43,7 +43,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_error_formatting() {
+    fn error_formatting() {
         let err = ClaudeDriverError::Protocol(inceptool_protocol::ProtocolError::UnsupportedEvent(
             "foo".into(),
         ));

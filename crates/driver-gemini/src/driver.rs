@@ -132,7 +132,7 @@ mod tests {
     #[case::pre_compress(
         r#"{"session_id": "1", "hook_event_name": "PreCompress", "prompt": "msg", "trigger": "t"}"#
     )]
-    fn test_parse_valid_events(#[case] payload: &str) -> Result<(), TestError> {
+    fn parse_valid_events(#[case] payload: &str) -> Result<(), TestError> {
         let driver = GeminiDriver;
         let conn = inceptool_protocol::from_wire(&driver, payload)?;
 
@@ -143,7 +143,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_parse_invalid_event() {
+    fn parse_invalid_event() {
         let driver = GeminiDriver;
         let result = inceptool_protocol::from_wire(
             &driver,
@@ -159,7 +159,7 @@ mod tests {
     #[case::pre_compress("PreCompress", HookKind::PreCompact)]
     #[case::before_agent("BeforeAgent", HookKind::BeforeAgent)]
     #[case::session_start("SessionStart", HookKind::SessionStart)]
-    fn test_hook_kind_valid(
+    fn hook_kind_valid(
         #[case] raw_name: &str,
         #[case] expected: HookKind,
     ) -> Result<(), TestError> {
@@ -169,13 +169,13 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_kind_invalid() {
+    fn hook_kind_invalid() {
         let driver = GeminiDriver;
         assert!(driver.hook_kind("NotAHook").is_err());
     }
 
     #[rstest]
-    fn test_format_output_decision() -> Result<(), TestError> {
+    fn format_output_decision() -> Result<(), TestError> {
         let driver = GeminiDriver;
         let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Block),
@@ -194,7 +194,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_halt() -> Result<(), TestError> {
+    fn format_output_halt() -> Result<(), TestError> {
         let driver = GeminiDriver;
         let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             halt: Some(true),
@@ -213,7 +213,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_before_tool() -> Result<(), TestError> {
+    fn format_output_hook_specific_before_tool() -> Result<(), TestError> {
         let driver = GeminiDriver;
         let mut input_map = serde_json::Map::new();
 

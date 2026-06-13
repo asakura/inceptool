@@ -66,7 +66,7 @@ mod tests {
     #[rstest]
     #[case::claude("claude", "PreToolUse", DriverKind::Claude, "PreToolUse")]
     #[case::gemini("gemini", "BeforeTool", DriverKind::Gemini, "BeforeTool")]
-    fn test_parse_valid(
+    fn parse_valid(
         #[case] driver_arg: &str,
         #[case] hook_arg: &str,
         #[case] expected_driver: DriverKind,

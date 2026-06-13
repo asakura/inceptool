@@ -201,7 +201,7 @@ mod tests {
     #[case::worktree_remove(
         r#"{"session_id": "1", "hook_event_name": "WorktreeRemove", "worktree_path": "wt"}"#
     )]
-    fn test_parse_valid_events(#[case] payload: &str) -> Result<(), TestError> {
+    fn parse_valid_events(#[case] payload: &str) -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let conn = inceptool_protocol::from_wire(&driver, payload)?;
 
@@ -212,7 +212,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_parse_invalid_event() {
+    fn parse_invalid_event() {
         let driver = ClaudeDriver;
         let result = inceptool_protocol::from_wire(
             &driver,
@@ -227,7 +227,7 @@ mod tests {
     #[case::post_tool_use("PostToolUse", HookKind::PostToolUse)]
     #[case::session_start("SessionStart", HookKind::SessionStart)]
     #[case::worktree_create("WorktreeCreate", HookKind::WorktreeCreate)]
-    fn test_hook_kind_valid(
+    fn hook_kind_valid(
         #[case] raw_name: &str,
         #[case] expected: HookKind,
     ) -> Result<(), TestError> {
@@ -237,13 +237,13 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_kind_invalid() {
+    fn hook_kind_invalid() {
         let driver = ClaudeDriver;
         assert!(driver.hook_kind("NotAHook").is_err());
     }
 
     #[rstest]
-    fn test_format_output_decision_block() -> Result<(), TestError> {
+    fn format_output_decision_block() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Block),
@@ -262,7 +262,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_halt() -> Result<(), TestError> {
+    fn format_output_halt() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             halt: Some(true),
@@ -281,7 +281,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_pre_tool_use() -> Result<(), TestError> {
+    fn format_output_hook_specific_pre_tool_use() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let mut input_map = serde_json::Map::new();
 
@@ -332,7 +332,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_post_tool_use() -> Result<(), TestError> {
+    fn format_output_hook_specific_post_tool_use() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::PostToolUse(inceptool_protocol::PostToolUseOutput {
             additional_context: Some("ctx".into()),
@@ -363,7 +363,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_pre_tool_use_additional_context() -> Result<(), TestError> {
+    fn format_output_hook_specific_pre_tool_use_additional_context() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             additional_context: Some("extra context".into()),
@@ -387,7 +387,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_post_tool_use_updated_tool_output() -> Result<(), TestError>
+    fn format_output_hook_specific_post_tool_use_updated_tool_output() -> Result<(), TestError>
     {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::PostToolUse(inceptool_protocol::PostToolUseOutput {
@@ -413,7 +413,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_session_start() -> Result<(), TestError> {
+    fn format_output_hook_specific_session_start() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::SessionStart(inceptool_protocol::SessionStartOutput {
             additional_context: Some("ctx".into()),
@@ -466,7 +466,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_setup() -> Result<(), TestError> {
+    fn format_output_hook_specific_setup() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::Setup(inceptool_protocol::SetupOutput {
             additional_context: Some("setup ctx".into()),
@@ -495,7 +495,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_permission_request_with_behavior() -> Result<(), TestError>
+    fn format_output_hook_specific_permission_request_with_behavior() -> Result<(), TestError>
     {
         let driver = ClaudeDriver;
         let output =
@@ -522,7 +522,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_permission_request_omits_decision_when_behavior_none()
+    fn format_output_hook_specific_permission_request_omits_decision_when_behavior_none()
     -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::PermissionRequest(
@@ -541,7 +541,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_worktree_create() -> Result<(), TestError> {
+    fn format_output_hook_specific_worktree_create() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::WorktreeCreate(inceptool_protocol::WorktreeCreateOutput {
             worktree_path: Some("/repo/.worktrees/feature".to_string()),
@@ -564,7 +564,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_stop() -> Result<(), TestError> {
+    fn format_output_hook_specific_stop() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::Stop(inceptool_protocol::StopOutput {
             additional_context: Some("keep going".into()),
@@ -588,7 +588,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_user_prompt_expansion() -> Result<(), TestError> {
+    fn format_output_hook_specific_user_prompt_expansion() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output =
             HookOutputEvent::UserPromptExpansion(inceptool_protocol::UserPromptExpansionOutput {
@@ -613,7 +613,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_subagent_start() -> Result<(), TestError> {
+    fn format_output_hook_specific_subagent_start() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::SubagentStart(inceptool_protocol::SubagentStartOutput {
             additional_context: Some("subagent ctx".into()),
@@ -636,7 +636,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_subagent_stop() -> Result<(), TestError> {
+    fn format_output_hook_specific_subagent_stop() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::SubagentStop(inceptool_protocol::SubagentStopOutput {
             additional_context: Some("subagent done".into()),
@@ -660,7 +660,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_permission_denied() -> Result<(), TestError> {
+    fn format_output_hook_specific_permission_denied() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output =
             HookOutputEvent::PermissionDenied(inceptool_protocol::PermissionDeniedOutput {
@@ -684,7 +684,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_message_display() -> Result<(), TestError> {
+    fn format_output_hook_specific_message_display() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::MessageDisplay(inceptool_protocol::MessageDisplayOutput {
             replacement_text: Some("replaced".to_string()),
@@ -707,7 +707,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_format_output_hook_specific_elicitation() -> Result<(), TestError> {
+    fn format_output_hook_specific_elicitation() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::Elicitation(inceptool_protocol::ElicitationOutput {
             response: Some(serde_json::json!({"accepted": true})),

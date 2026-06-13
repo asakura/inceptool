@@ -494,7 +494,7 @@ mod tests {
     use core::assert_matches;
 
     #[test]
-    fn test_claude_hook_specific_output_from_pre_tool_use() {
+    fn claude_hook_specific_output_from_pre_tool_use() {
         let o = PreToolUseOutput {
             decision: Some(Decision::Allow),
             ..Default::default()
@@ -514,7 +514,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claude_hook_specific_output_from_post_tool_use() {
+    fn claude_hook_specific_output_from_post_tool_use() {
         let o = PostToolUseOutput {
             additional_context: Some("ctx".into()),
             ..Default::default()
@@ -534,7 +534,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claude_hook_specific_output_from_user_prompt_submit() {
+    fn claude_hook_specific_output_from_user_prompt_submit() {
         let o = UserPromptSubmitOutput {
             additional_context: Some("ctx".into()),
             ..Default::default()
@@ -554,7 +554,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claude_hook_specific_output_try_from_err() {
+    fn claude_hook_specific_output_try_from_err() {
         let e_err = HookOutputEvent::Notification(NotificationOutput::default());
         assert!(ClaudeHookSpecificOutput::try_from(&e_err).is_err());
     }

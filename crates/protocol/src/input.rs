@@ -795,7 +795,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_pre_tool_use_input_deserialization_tool_name(
+    fn pre_tool_use_input_deserialization_tool_name(
         grep_search_json: String,
     ) -> Result<(), TestError> {
         let input: PreToolUseInput<'_> = serde_json::from_str(&grep_search_json)?;
@@ -804,7 +804,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_pre_tool_use_input_deserialization_original_name(
+    fn pre_tool_use_input_deserialization_original_name(
         grep_search_json: String,
     ) -> Result<(), TestError> {
         let input: PreToolUseInput<'_> = serde_json::from_str(&grep_search_json)?;
@@ -813,7 +813,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_pre_tool_use_input_deserialization_mcp_context(
+    fn pre_tool_use_input_deserialization_mcp_context(
         grep_search_json: String,
     ) -> Result<(), TestError> {
         let input: PreToolUseInput<'_> = serde_json::from_str(&grep_search_json)?;
@@ -822,7 +822,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_pre_tool_use_input_deserialization_payload(
+    fn pre_tool_use_input_deserialization_payload(
         grep_search_json: String,
     ) -> Result<(), TestError> {
         let input: PreToolUseInput<'_> = serde_json::from_str(&grep_search_json)?;
@@ -834,7 +834,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_pre_tool_use_input_parse(raw_tool_input_json: String) -> Result<(), TestError> {
+    fn pre_tool_use_input_parse(raw_tool_input_json: String) -> Result<(), TestError> {
         let raw = serde_json::value::RawValue::from_string(raw_tool_input_json)?;
         let input = PreToolUseInput {
             tool_name: std::borrow::Cow::Borrowed("test"),
@@ -850,7 +850,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_post_tool_use_input_parse(raw_tool_input_json: String) -> Result<(), TestError> {
+    fn post_tool_use_input_parse(raw_tool_input_json: String) -> Result<(), TestError> {
         let raw = serde_json::value::RawValue::from_string(raw_tool_input_json)?;
         let after_input = PostToolUseInput {
             tool_name: std::borrow::Cow::Borrowed("test"),
@@ -868,7 +868,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_post_tool_use_input_deserialization_tool_output_alias() -> Result<(), TestError> {
+    fn post_tool_use_input_deserialization_tool_output_alias() -> Result<(), TestError> {
         let json = r#"{
             "tool_name": "Bash",
             "tool_input": {"command": "ls"},
@@ -886,7 +886,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_post_tool_use_input_deserialization_tool_output_new_name() -> Result<(), TestError> {
+    fn post_tool_use_input_deserialization_tool_output_new_name() -> Result<(), TestError> {
         let json = r#"{
             "tool_name": "Bash",
             "tool_input": {"command": "ls"},
@@ -906,7 +906,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_cwd_changed_input_deserialization_old_cwd_alias() -> Result<(), TestError> {
+    fn cwd_changed_input_deserialization_old_cwd_alias() -> Result<(), TestError> {
         let json = r#"{"previous_cwd": "/old", "new_cwd": "/new"}"#;
         let input: CwdChangedInput<'_> = serde_json::from_str(json)?;
 
@@ -916,7 +916,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_cwd_changed_input_deserialization_old_cwd_new_name() -> Result<(), TestError> {
+    fn cwd_changed_input_deserialization_old_cwd_new_name() -> Result<(), TestError> {
         let json = r#"{"old_cwd": "/old", "new_cwd": "/new"}"#;
         let input: CwdChangedInput<'_> = serde_json::from_str(json)?;
 
@@ -926,7 +926,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_cwd_changed_input_deserialization_change_reason() -> Result<(), TestError> {
+    fn cwd_changed_input_deserialization_change_reason() -> Result<(), TestError> {
         let json = r#"{"old_cwd": "/old", "new_cwd": "/new", "change_reason": "cd command"}"#;
         let input: CwdChangedInput<'_> = serde_json::from_str(json)?;
 
@@ -936,7 +936,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_file_changed_input_deserialization_change_type_alias() -> Result<(), TestError> {
+    fn file_changed_input_deserialization_change_type_alias() -> Result<(), TestError> {
         let json = r#"{"file_path": "/a.txt", "event": "modified"}"#;
         let input: FileChangedInput<'_> = serde_json::from_str(json)?;
 
@@ -946,7 +946,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_file_changed_input_deserialization_change_type_new_name() -> Result<(), TestError> {
+    fn file_changed_input_deserialization_change_type_new_name() -> Result<(), TestError> {
         let json = r#"{"file_path": "/a.txt", "change_type": "created"}"#;
         let input: FileChangedInput<'_> = serde_json::from_str(json)?;
 
@@ -956,7 +956,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_notification_input_deserialization_severity() -> Result<(), TestError> {
+    fn notification_input_deserialization_severity() -> Result<(), TestError> {
         let json = r#"{"message": "disk low", "severity": "warning"}"#;
         let input: NotificationInput<'_> = serde_json::from_str(json)?;
 
@@ -966,7 +966,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_session_start_input_deserialization_session_title() -> Result<(), TestError> {
+    fn session_start_input_deserialization_session_title() -> Result<(), TestError> {
         let json = r#"{"session_title": "Refactor auth module"}"#;
         let input: SessionStartInput<'_> = serde_json::from_str(json)?;
 
@@ -976,7 +976,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_worktree_create_input_deserialization() -> Result<(), TestError> {
+    fn worktree_create_input_deserialization() -> Result<(), TestError> {
         let json = r#"{
             "subagent_name": "explorer",
             "worktree_id": "wt-1",
@@ -996,7 +996,7 @@ mod tests {
     #[rstest]
     #[case::init("init")]
     #[case::maintenance("maintenance")]
-    fn test_setup_input_deserialization_trigger(#[case] trigger: &str) -> Result<(), TestError> {
+    fn setup_input_deserialization_trigger(#[case] trigger: &str) -> Result<(), TestError> {
         let json = format!(r#"{{"trigger": "{trigger}"}}"#);
         let input: SetupInput<'_> = serde_json::from_str(&json)?;
 
@@ -1006,7 +1006,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_user_prompt_expansion_input_deserialization() -> Result<(), TestError> {
+    fn user_prompt_expansion_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"command_name": "/review", "prompt": "Review this PR"}"#;
         let input: UserPromptExpansionInput<'_> = serde_json::from_str(json)?;
 
@@ -1017,7 +1017,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_message_display_input_deserialization() -> Result<(), TestError> {
+    fn message_display_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"lines": ["line one", "line two"]}"#;
         let input: MessageDisplayInput<'_> = serde_json::from_str(json)?;
 
@@ -1027,14 +1027,14 @@ mod tests {
     }
 
     #[rstest]
-    fn test_message_display_input_deserialization_defaults_to_empty() -> Result<(), TestError> {
+    fn message_display_input_deserialization_defaults_to_empty() -> Result<(), TestError> {
         let input: MessageDisplayInput<'_> = serde_json::from_str("{}")?;
         assert!(input.lines.is_empty());
         Ok(())
     }
 
     #[rstest]
-    fn test_permission_request_input_deserialization() -> Result<(), TestError> {
+    fn permission_request_input_deserialization() -> Result<(), TestError> {
         let json = r#"{
             "tool_name": "Bash",
             "tool_input": {"command": "rm -rf /tmp/x"},
@@ -1053,7 +1053,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_post_tool_use_failure_input_deserialization() -> Result<(), TestError> {
+    fn post_tool_use_failure_input_deserialization() -> Result<(), TestError> {
         let json = r#"{
             "tool_name": "Bash",
             "tool_input": {"command": "false"},
@@ -1068,7 +1068,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_post_tool_batch_input_deserialization() -> Result<(), TestError> {
+    fn post_tool_batch_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"tool_calls": [{"tool_name": "Bash"}, {"tool_name": "Read"}]}"#;
         let input: PostToolBatchInput<'_> = serde_json::from_str(json)?;
 
@@ -1082,14 +1082,14 @@ mod tests {
     }
 
     #[rstest]
-    fn test_post_tool_batch_input_deserialization_defaults_to_empty() -> Result<(), TestError> {
+    fn post_tool_batch_input_deserialization_defaults_to_empty() -> Result<(), TestError> {
         let input: PostToolBatchInput<'_> = serde_json::from_str("{}")?;
         assert!(input.tool_calls.is_empty());
         Ok(())
     }
 
     #[rstest]
-    fn test_permission_denied_input_deserialization() -> Result<(), TestError> {
+    fn permission_denied_input_deserialization() -> Result<(), TestError> {
         let json = r#"{
             "tool_name": "Bash",
             "tool_input": {"command": "curl evil.com"},
@@ -1104,7 +1104,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_subagent_start_input_deserialization() -> Result<(), TestError> {
+    fn subagent_start_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"agent_type": "Explore", "prompt": "Find usages of foo"}"#;
         let input: SubagentStartInput<'_> = serde_json::from_str(json)?;
 
@@ -1115,7 +1115,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_subagent_stop_input_deserialization() -> Result<(), TestError> {
+    fn subagent_stop_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"agent_type": "Explore", "result": "Found 3 usages"}"#;
         let input: SubagentStopInput<'_> = serde_json::from_str(json)?;
 
@@ -1126,7 +1126,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_task_created_input_deserialization() -> Result<(), TestError> {
+    fn task_created_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"task": {"id": "task-1", "title": "Write tests"}}"#;
         let input: TaskCreatedInput<'_> = serde_json::from_str(json)?;
 
@@ -1139,7 +1139,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_task_completed_input_deserialization() -> Result<(), TestError> {
+    fn task_completed_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"task": {"id": "task-1", "status": "done"}}"#;
         let input: TaskCompletedInput<'_> = serde_json::from_str(json)?;
 
@@ -1152,7 +1152,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_stop_input_deserialization() -> Result<(), TestError> {
+    fn stop_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"message": "All done"}"#;
         let input: StopInput<'_> = serde_json::from_str(json)?;
 
@@ -1162,7 +1162,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_stop_failure_input_deserialization() -> Result<(), TestError> {
+    fn stop_failure_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"error_type": "rate_limit", "error_message": "Too many requests"}"#;
         let input: StopFailureInput<'_> = serde_json::from_str(json)?;
 
@@ -1173,7 +1173,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_teammate_idle_input_deserialization() -> Result<(), TestError> {
+    fn teammate_idle_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"result": "Implemented feature X"}"#;
         let input: TeammateIdleInput<'_> = serde_json::from_str(json)?;
 
@@ -1183,7 +1183,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_config_change_input_deserialization() -> Result<(), TestError> {
+    fn config_change_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"config_source": "project_settings", "changed_file": "/repo/.claude/settings.json"}"#;
         let input: ConfigChangeInput<'_> = serde_json::from_str(json)?;
 
@@ -1194,7 +1194,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_post_compact_input_deserialization() -> Result<(), TestError> {
+    fn post_compact_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"trigger": "auto", "summary": "Compacted 50 messages"}"#;
         let input: PostCompactInput<'_> = serde_json::from_str(json)?;
 
@@ -1205,7 +1205,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_elicitation_input_deserialization() -> Result<(), TestError> {
+    fn elicitation_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"server_name": "filesystem", "request": {"prompt": "Confirm overwrite?"}}"#;
         let input: ElicitationInput<'_> = serde_json::from_str(json)?;
 
@@ -1219,7 +1219,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_elicitation_result_input_deserialization() -> Result<(), TestError> {
+    fn elicitation_result_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"result": {"accepted": true}}"#;
         let input: ElicitationResultInput<'_> = serde_json::from_str(json)?;
 
@@ -1232,7 +1232,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_input_event_kind_pre_tool_use(grep_search_json: String) -> Result<(), TestError> {
+    fn hook_input_event_kind_pre_tool_use(grep_search_json: String) -> Result<(), TestError> {
         let input: PreToolUseInput<'_> = serde_json::from_str(&grep_search_json)?;
         let event = HookInputEvent::PreToolUse(input);
 
@@ -1242,7 +1242,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_input_event_kind_before_agent() -> Result<(), TestError> {
+    fn hook_input_event_kind_before_agent() -> Result<(), TestError> {
         let input: BeforeAgentInput<'_> = serde_json::from_str(r#"{"prompt": "hello"}"#)?;
         let event = HookInputEvent::BeforeAgent(input);
 
@@ -1252,7 +1252,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_input_event_kind_session_start() -> Result<(), TestError> {
+    fn hook_input_event_kind_session_start() -> Result<(), TestError> {
         let input: SessionStartInput<'_> = serde_json::from_str("{}")?;
         let event = HookInputEvent::SessionStart(input);
 
@@ -1262,7 +1262,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_input_event_kind_elicitation_result() -> Result<(), TestError> {
+    fn hook_input_event_kind_elicitation_result() -> Result<(), TestError> {
         let json = r#"{"result": {"accepted": true}}"#;
         let input: ElicitationResultInput<'_> = serde_json::from_str(json)?;
         let event = HookInputEvent::ElicitationResult(input);
@@ -1273,7 +1273,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_input_event_tool_name_pre_tool_use(
+    fn hook_input_event_tool_name_pre_tool_use(
         grep_search_json: String,
     ) -> Result<(), TestError> {
         let input: PreToolUseInput<'_> = serde_json::from_str(&grep_search_json)?;
@@ -1285,7 +1285,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_input_event_tool_name_permission_denied() -> Result<(), TestError> {
+    fn hook_input_event_tool_name_permission_denied() -> Result<(), TestError> {
         let json = r#"{
             "tool_name": "Bash",
             "tool_input": {"command": "curl evil.com"},
@@ -1300,7 +1300,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_input_event_tool_name_before_agent_is_none() -> Result<(), TestError> {
+    fn hook_input_event_tool_name_before_agent_is_none() -> Result<(), TestError> {
         let input: BeforeAgentInput<'_> = serde_json::from_str(r#"{"prompt": "hello"}"#)?;
         let event = HookInputEvent::BeforeAgent(input);
 
@@ -1310,7 +1310,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_kind_count_matches_variant_count() {
+    fn hook_kind_count_matches_variant_count() {
         assert_eq!(HookKind::ElicitationResult as usize + 1, HookKind::COUNT);
     }
 }
