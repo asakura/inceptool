@@ -342,7 +342,7 @@ pub struct BeforeToolSelectionInput<'a> {
 /// Input payload for the `SessionStart` event.
 #[derive(Debug, Deserialize)]
 pub struct SessionStartInput<'a> {
-    /// The source that triggered the session (e.g., CLI, VSCode).
+    /// The source that triggered the session (e.g., CLI, `VSCode`).
     pub source: Option<Cow<'a, str>>,
     /// The specific model configured for this session.
     pub model: Option<Cow<'a, str>>,
@@ -492,7 +492,7 @@ pub struct MessageDisplayInput<'a> {
 /// Input payload for the `PermissionRequest` event.
 ///
 /// Runs when the user is shown a permission dialog.
-/// Use PermissionRequest decision control to allow or deny on behalf of the user.
+/// Use `PermissionRequest` decision control to allow or deny on behalf of the user.
 #[derive(Debug, Deserialize)]
 pub struct PermissionRequestInput<'a> {
     /// The name of the tool the permission dialog is being shown for.
@@ -533,7 +533,7 @@ pub struct PostToolBatchInput<'a> {
 /// Input payload for the `PermissionDenied` event.
 ///
 /// Runs when the auto mode classifier denies a tool call. This hook only fires in auto mode:
-/// it does not run when you manually deny a permission dialog or when a PreToolUse hook blocks a call.
+/// it does not run when you manually deny a permission dialog or when a `PreToolUse` hook blocks a call.
 /// Use it to log classifier denials, adjust configuration, or tell the model it may retry the tool call.
 #[derive(Debug, Deserialize)]
 pub struct PermissionDeniedInput<'a> {
@@ -570,7 +570,7 @@ pub struct SubagentStopInput<'a> {
 
 /// Input payload for the `TaskCreated` event.
 ///
-/// Runs when a task is being created via the TaskCreate tool. Use this to enforce naming conventions,
+/// Runs when a task is being created via the `TaskCreate` tool. Use this to enforce naming conventions,
 /// require task descriptions, or prevent certain tasks from being created.
 #[derive(Debug, Deserialize)]
 pub struct TaskCreatedInput<'a> {
@@ -582,7 +582,7 @@ pub struct TaskCreatedInput<'a> {
 /// Input payload for the `TaskCompleted` event.
 ///
 /// Runs when a task is being marked as completed. This fires in two situations: when any agent
-/// explicitly marks a task as completed through the TaskUpdate tool, or when an agent team teammate
+/// explicitly marks a task as completed through the `TaskUpdate` tool, or when an agent team teammate
 /// finishes its turn with in-progress tasks.
 #[derive(Debug, Deserialize)]
 pub struct TaskCompletedInput<'a> {
@@ -630,7 +630,7 @@ pub struct TeammateIdleInput<'a> {
 /// enforce security policies, or block unauthorized modifications to configuration files.
 #[derive(Debug, Deserialize)]
 pub struct ConfigChangeInput<'a> {
-    /// The source of the changed configuration (e.g., "user_settings", "project_settings").
+    /// The source of the changed configuration (e.g., "`user_settings`", "`project_settings`").
     pub config_source: Cow<'a, str>,
     /// The path of the configuration file that changed.
     pub changed_file: Cow<'a, str>,
