@@ -1,3 +1,13 @@
+#![allow(
+    clippy::panic_in_result_fn,
+    reason = "rstest cases return Result for `?`-based setup but use assert_eq!/assert_matches! \
+              for assertions per project convention"
+)]
+
+//! End-to-end tests that invoke the built `inceptool` binary as a subprocess,
+//! feeding it driver-specific hook payloads on stdin and asserting on its
+//! stdout/stderr/exit-code contract.
+
 use assert_cmd::Command;
 use miette::{IntoDiagnostic, Result};
 use predicates::prelude::*;
