@@ -52,8 +52,10 @@ impl Cli {
 mod tests {
     use super::*;
 
-    use clap::Parser;
+    use clap::{Parser, error};
     use rstest::rstest;
+
+    use core::assert_matches;
 
     #[derive(thiserror::Error, Debug)]
     enum TestError {
@@ -79,17 +81,26 @@ mod tests {
     }
 
     #[rstest]
-    fn test_parse_missing_driver() {
-        assert!(Cli::try_parse_from(["inceptool"]).is_err());
+    fn parse_missing_driver() {
+        assert_matches!(
+            Cli::try_parse_from(["inceptool"]),
+            Err(err) if err.kind() == error::ErrorKind::MissingRequiredArgument
+        );
     }
 
     #[rstest]
-    fn test_parse_unknown_driver() {
-        assert!(Cli::try_parse_from(["inceptool", "nushell", "PreToolUse"]).is_err());
+    fn parse_unknown_driver() {
+        assert_matches!(
+            Cli::try_parse_from(["inceptool", "nushell", "PreToolUse"]),
+            Err(err) if err.kind() == error::ErrorKind::InvalidValue
+        );
     }
 
     #[rstest]
-    fn test_parse_missing_hook() {
-        assert!(Cli::try_parse_from(["inceptool", "claude"]).is_err());
+    fn parse_missing_hook() {
+        assert_matches!(
+            Cli::try_parse_from(["inceptool", "claude"]),
+            Err(err) if err.kind() == error::ErrorKind::MissingRequiredArgument
+        );
     }
 }
