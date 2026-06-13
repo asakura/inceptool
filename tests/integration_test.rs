@@ -15,6 +15,8 @@ use predicates::prelude::*;
 use rstest::{fixture, rstest};
 use serde_json::Value;
 use std::fs;
+use std::os::unix::fs::PermissionsExt as _;
+use std::process::Command as StdCommand;
 use tempfile::TempDir;
 
 struct TestEnv {
@@ -44,17 +46,17 @@ fn inceptool_cmd() -> Result<TestEnv> {
     fs::create_dir_all(&bin_dir).into_diagnostic()?;
     let dummy_hook = bin_dir.join("inceptool");
     fs::write(&dummy_hook, "#!/bin/sh\nexit 0").into_diagnostic()?;
-    use std::os::unix::fs::PermissionsExt;
     fs::set_permissions(&dummy_hook, fs::Permissions::from_mode(0o755)).into_diagnostic()?;
     let dummy_hook_path = dummy_hook.display().to_string();
 
-    let settings_json = format!(r#"{{
+    let settings_json = format!(
+        r#"{{
   "hooks": {{
     "PreToolUse": [
       {{
         "hooks": [
           {{
-            "command": "{} claude PreToolUse",
+            "command": "{dummy_hook_path} claude PreToolUse",
             "type": "command"
           }}
         ],
@@ -62,14 +64,16 @@ fn inceptool_cmd() -> Result<TestEnv> {
       }}
     ]
   }}
-}}"#, dummy_hook_path);
+}}"#
+    );
     fs::write(claude_dir.join("settings.json"), settings_json).into_diagnostic()?;
 
     // `rtk` also crashes (exit code 3) if run outside of a git repository
-    let _ = std::process::Command::new("git")
+    StdCommand::new("git")
         .arg("init")
         .current_dir(temp_dir.path())
-        .output();
+        .output()
+        .into_diagnostic()?;
 
     let mut cmd = Command::cargo_bin("inceptool").into_diagnostic()?;
 
@@ -133,8 +137,6 @@ fn integration_happy_path(
         .success();
 
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).into_diagnostic()?;
-    let stderr = String::from_utf8(assert.get_output().stderr.clone()).into_diagnostic()?;
-    eprintln!("STDERR:\n{}", stderr);
     let parsed: Value = serde_json::from_str(&stdout).into_diagnostic()?;
 
     insta::with_settings!({ snapshot_suffix => test_name }, {
