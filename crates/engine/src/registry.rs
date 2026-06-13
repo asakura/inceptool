@@ -107,7 +107,7 @@ impl Registry {
         let tool_names = stage.tool_names();
         let kind = stage.hook();
 
-        #[allow(clippy::as_conversions)]
+        #[expect(clippy::as_conversions, reason = "enum discriminant cast is safe")]
         let kind_idx = kind as usize;
 
         if let Some(pipeline) = self.pipelines.get_mut(kind_idx) {
@@ -191,7 +191,10 @@ impl Registry {
         let mut final_output = None;
         let mut combined_decision = None;
 
-        for entry in &self.pipelines[kind as usize] {
+        #[expect(clippy::as_conversions, reason = "enum discriminant cast is safe")]
+        let kind_idx = kind as usize;
+
+        for entry in self.pipelines.get(kind_idx).into_iter().flatten() {
             if !tool_names_match(entry.tool_names, conn.event.tool_name()) {
                 continue;
             }
