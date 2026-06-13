@@ -1,6 +1,6 @@
 # Inceptool Engine
 
-`inceptool-engine` is the runtime core of `inceptool-rs`. It defines the
+`inceptool-engine` is the runtime core of `inceptool`. It defines the
 [`Stage`] trait that pipeline stages implement, and the [`Registry`] that
 builds and executes a pipeline of stages against an incoming
 [`Conn`](../protocol) — Plug-style, but using `&mut Conn` instead of

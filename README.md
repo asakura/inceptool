@@ -2,14 +2,14 @@
 
 [![CI](https://github.com/asakura/inceptool/actions/workflows/ci.yml/badge.svg)](https://github.com/asakura/inceptool/actions/workflows/ci.yml)
 
-`inceptool-rs` is a high-performance, native Rust replacement for the
+`inceptool` is a high-performance, native Rust replacement for the
 Nushell-based "Inceptool". It runs as a hook executor / interceptor proxy
 between an AI coding agent (Claude Code or Gemini CLI) and the operating system,
 orchestrating agent safety, linting, formatting, and context-optimization logic.
 
 ## How It Works
 
-`inceptool-rs` is invoked as `inceptool <driver> <hook>`. It reads a single
+`inceptool` is invoked as `inceptool <driver> <hook>`. It reads a single
 JSON hook payload from stdin, normalizes it into a protocol-level `Conn`, runs
 it through a pipeline of stages, and writes a JSON response to stdout (or
 exits with a code to signal a blocking decision back to the agent).
@@ -17,7 +17,7 @@ exits with a code to signal a blocking decision back to the agent).
 - **Zero-copy & low overhead**: Orchestration is built in Rust using Serde for
   rapid serialization/deserialization. Unlike the Nushell version, which relied
   on spawning external shell processes for basic orchestration (50-100ms
-  cumulative latency hits), `inceptool-rs` handles all routing and core logic
+  cumulative latency hits), `inceptool` handles all routing and core logic
   in-memory.
 - **Modular engine system**: Stages are discrete plugins implementing the
   `Stage` trait. Each stage declares the `HookKind` it runs for and the tool
@@ -74,6 +74,7 @@ Example `inceptool.toml`:
 # leave everything else at its default (enabled).
 [hooks.rtk]
 enabled = false
+```
 
 ## Installation
 
@@ -160,4 +161,3 @@ registration order within that bucket, filtered by its `Stage::tool_names` list.
 
 (tools: `Write`, `Edit`, `MultiEdit`, `write_file`, `replace`, `Read`,
 `view_file`, `cat`, `Bash`, `run_shell_command`)
-

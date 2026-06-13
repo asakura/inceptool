@@ -4,7 +4,7 @@ Claude Code driver implementation for the `inceptool` protocol.
 
 This crate implements the [`Driver`](../protocol/src/driver.rs) trait from
 `inceptool-protocol` for [Claude Code](https://code.claude.com). It is the
-adapter layer that lets the rest of `inceptool-rs` (the engine, stages, and
+adapter layer that lets the rest of `inceptool` (the engine, stages, and
 CLI) speak Claude Code's hook JSON wire format while working internally with
 the protocol's normalized, driver-agnostic types (`Conn`, `HookInputEvent`,
 `HookOutputEvent`).

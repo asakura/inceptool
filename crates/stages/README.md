@@ -2,7 +2,7 @@
 
 `inceptool-stages` (folder: `crates/stages`) provides the built-in
 [`Stage`](../engine) implementations that are registered into the
-`inceptool-engine` `Registry` to form the default `inceptool-rs` pipeline.
+`inceptool-engine` `Registry` to form the default `inceptool` pipeline.
 
 Each stage implements `Stage::hook` (the `HookKind` bucket it runs in),
 `Stage::tool_names` (the tool names it filters on within that bucket), and

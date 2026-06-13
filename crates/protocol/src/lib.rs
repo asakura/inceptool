@@ -7,7 +7,7 @@
     )
 )]
 
-//! This crate defines the canonical protocol for `inceptool-rs`.
+//! This crate defines the canonical protocol for `inceptool`.
 //!
 //! It provides the core data structures used to communicate between the CLI,
 //! hooks, and the underlying driver (e.g., Claude or Gemini).

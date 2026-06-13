@@ -7,7 +7,7 @@
     )
 )]
 
-//! The hook execution engine for `inceptool-rs`.
+//! The hook execution engine for `inceptool`.
 //!
 //! This crate is the runtime core of the project: it defines the [`Stage`] trait
 //! that individual stages conform to, and the [`Registry`] that runs a sequence

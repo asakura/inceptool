@@ -1,6 +1,6 @@
 # Protocol
 
-`protocol` is the canonical communication interface for the `inceptool-rs` project.
+`protocol` is the canonical communication interface for the `inceptool` project.
 
 It provides driver-agnostic data structures to standardize the payloads
 exchanged between the CLI, the hook engine, and specific agent drivers
@@ -20,7 +20,7 @@ exchanged between the CLI, the hook engine, and specific agent drivers
   `PermissionDenied`, `Setup`) — has a fully concrete, zero-copy input and
   output struct. No event payload falls back to an untyped `RawJson` blob.
 - **Driver Abstraction**: Defines the foundational `Driver` trait that any
-  specific agent implementation must implement to integrate with `inceptool-rs`,
+  specific agent implementation must implement to integrate with `inceptool`,
   plus the [`from_wire`](#from_wire--to_wire) / [`to_wire`](#from_wire--to_wire)
   helpers used to drive that trait end-to-end.
 

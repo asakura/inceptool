@@ -5,7 +5,7 @@ defined by [`inceptool-protocol`](../protocol/README.md).
 
 It translates between Gemini CLI's hook JSON wire format and the protocol's
 driver-agnostic `Conn` / `HookInputEvent` / `HookOutputEvent` types, so that the
-rest of `inceptool-rs` (the engine, stages, hooks) never needs to know anything
+rest of `inceptool` (the engine, stages, hooks) never needs to know anything
 about Gemini-specific JSON shapes.
 
 ## Responsibilities

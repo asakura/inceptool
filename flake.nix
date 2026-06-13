@@ -1,5 +1,5 @@
 {
-  description = "inceptool-rs: an extensible LLM agent hook architecture";
+  description = "inceptool: an extensible LLM agent hook architecture";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
