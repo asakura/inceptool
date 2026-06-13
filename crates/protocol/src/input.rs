@@ -195,7 +195,7 @@ impl HookKind {
     /// correspond to a known `HookKind`.
     pub fn parse(name: &str) -> Result<Self, ProtocolError> {
         name.parse()
-            .map_err(|_| ProtocolError::UnsupportedEvent(name.to_string()))
+            .map_err(|_ignored| ProtocolError::UnsupportedEvent(name.to_string()))
     }
 }
 

@@ -145,7 +145,7 @@ impl RtkStage {
 /// existing bytes rather than allocating a new buffer.
 fn trim_in_place(s: &mut String) {
     let trimmed = s.trim();
-    let start = trimmed.as_ptr() as usize - s.as_ptr() as usize;
+    let start = (trimmed.as_ptr() as usize).saturating_sub(s.as_ptr() as usize);
     let end = start + trimmed.len();
 
     s.truncate(end);

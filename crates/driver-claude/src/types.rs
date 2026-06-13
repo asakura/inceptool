@@ -35,7 +35,7 @@ use std::borrow::Cow;
 
 /// Metadata associated with a Claude session payload.
 #[derive(Deserialize)]
-pub(crate) struct ClaudeMeta<'a> {
+pub(in crate) struct ClaudeMeta<'a> {
     /// The Claude Code session this hook event belongs to.
     pub(crate) session_id: Cow<'a, str>,
     /// Path to the session's transcript file, if provided.
