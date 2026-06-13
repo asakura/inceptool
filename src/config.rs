@@ -84,6 +84,6 @@ impl Config {
     /// Whether the named stage (e.g. `"guardrails"`) should be registered.
     /// Defaults to `true` if not explicitly configured.
     pub fn is_hook_enabled(&self, name: &str) -> bool {
-        self.hooks.get(name).map(|h| h.enabled).unwrap_or(true)
+        self.hooks.get(name).is_none_or(|h| h.enabled)
     }
 }
