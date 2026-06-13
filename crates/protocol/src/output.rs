@@ -847,7 +847,7 @@ mod tests {
         UserPromptSubmitOutput::default()
     ))]
     #[case::worktree_create(HookOutputEvent::WorktreeCreate(WorktreeCreateOutput::default()))]
-    #[case::worktree_remove(HookOutputEvent::WorktreeRemove(EmptyOutput::default()))]
+    #[case::worktree_remove(HookOutputEvent::WorktreeRemove(EmptyOutput))]
     #[case::setup(HookOutputEvent::Setup(SetupOutput::default()))]
     #[case::user_prompt_expansion(HookOutputEvent::UserPromptExpansion(
         UserPromptExpansionOutput::default()
@@ -866,12 +866,12 @@ mod tests {
     #[case::task_created(HookOutputEvent::TaskCreated(TaskCreatedOutput::default()))]
     #[case::task_completed(HookOutputEvent::TaskCompleted(TaskCompletedOutput::default()))]
     #[case::stop(HookOutputEvent::Stop(StopOutput::default()))]
-    #[case::stop_failure(HookOutputEvent::StopFailure(EmptyOutput::default()))]
+    #[case::stop_failure(HookOutputEvent::StopFailure(EmptyOutput))]
     #[case::teammate_idle(HookOutputEvent::TeammateIdle(TeammateIdleOutput::default()))]
     #[case::config_change(HookOutputEvent::ConfigChange(ConfigChangeOutput::default()))]
     #[case::post_compact(HookOutputEvent::PostCompact(PostCompactOutput::default()))]
     #[case::elicitation(HookOutputEvent::Elicitation(ElicitationOutput::default()))]
-    #[case::elicitation_result(HookOutputEvent::ElicitationResult(EmptyOutput::default()))]
+    #[case::elicitation_result(HookOutputEvent::ElicitationResult(EmptyOutput))]
     fn exhaustive_hook_output_serialization_empty(
         #[case] out: HookOutputEvent,
     ) -> Result<(), TestError> {
