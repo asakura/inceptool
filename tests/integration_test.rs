@@ -16,10 +16,10 @@ use serde_json::Value;
 use std::fs;
 use tempfile::TempDir;
 
-pub struct TestEnv {
-    pub cmd: Command,
+struct TestEnv {
+    cmd: Command,
     // We hold the TempDir so it isn't dropped (and deleted) until the test finishes
-    pub _temp_dir: TempDir,
+    _temp_dir: TempDir,
 }
 
 #[fixture]
