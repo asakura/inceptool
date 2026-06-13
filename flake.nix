@@ -107,6 +107,7 @@
             nixfmt-rfc-style
             shfmt
             shellcheck
+            rtk
           ];
         };
 
