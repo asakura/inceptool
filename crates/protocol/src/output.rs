@@ -779,7 +779,7 @@ mod tests {
         block_decision: Decision,
         #[case] code: Option<i32>,
         #[case] reason: Option<Cow<'static, str>>,
-    ) -> Result<(), TestError> {
+    ) {
         let output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(block_decision),
             reason: reason.clone(),
@@ -791,20 +791,16 @@ mod tests {
 
         assert_eq!(extracted_code, code);
         assert_eq!(extracted_reason, reason.as_deref());
-
-        Ok(())
     }
 
     #[rstest]
     #[case::worktree_remove(HookOutputEvent::WorktreeRemove(EmptyOutput { }))]
     #[case::notification(HookOutputEvent::Notification(NotificationOutput { system_message: Some("hello".into()) }))]
-    fn test_exit_metadata_fallthrough(#[case] output: HookOutputEvent) -> Result<(), TestError> {
+    fn test_exit_metadata_fallthrough(#[case] output: HookOutputEvent) {
         let (code, reason) = output.exit_metadata();
 
         assert_eq!(code, None);
         assert_eq!(reason, None);
-
-        Ok(())
     }
 
     #[rstest]
@@ -924,13 +920,9 @@ mod tests {
     #[case::before_model(HookOutputEvent::BeforeModel(BeforeModelOutput { exit_code: Some(5), ..Default::default() }), 5)]
     #[case::after_model(HookOutputEvent::AfterModel(AfterModelOutput { exit_code: Some(6), ..Default::default() }), 6)]
     #[case::pre_compact(HookOutputEvent::PreCompact(PreCompactOutput { exit_code: Some(7), ..Default::default() }), 7)]
-    fn test_all_exit_metadata_arms(
-        #[case] output: HookOutputEvent,
-        #[case] expected_code: i32,
-    ) -> Result<(), TestError> {
+    fn test_all_exit_metadata_arms(#[case] output: HookOutputEvent, #[case] expected_code: i32) {
         let (code, _) = output.exit_metadata();
         assert_eq!(code, Some(expected_code));
-        Ok(())
     }
 
     #[rstest]
@@ -958,9 +950,8 @@ mod tests {
     fn test_hook_output_event_decision_accessor_returns_expected_decision(
         #[case] output: HookOutputEvent,
         #[case] expected: Option<Decision>,
-    ) -> Result<(), TestError> {
+    ) {
         assert_eq!(output.decision(), expected);
-        Ok(())
     }
 
     #[rstest]
@@ -987,16 +978,13 @@ mod tests {
     #[case::task_created(HookOutputEvent::TaskCreated(TaskCreatedOutput::default()))]
     #[case::task_completed(HookOutputEvent::TaskCompleted(TaskCompletedOutput::default()))]
     #[case::teammate_idle(HookOutputEvent::TeammateIdle(TeammateIdleOutput::default()))]
-    fn test_set_decision_overwrites_supported_variants(
-        #[case] mut output: HookOutputEvent,
-    ) -> Result<(), TestError> {
+    fn test_set_decision_overwrites_supported_variants(#[case] mut output: HookOutputEvent) {
         output.set_decision(Decision::Ask);
         assert_eq!(output.decision(), Some(Decision::Ask));
-        Ok(())
     }
 
     #[rstest]
-    fn test_set_decision_overwrites_existing_decision() -> Result<(), TestError> {
+    fn test_set_decision_overwrites_existing_decision() {
         let mut output = HookOutputEvent::PreToolUse(PreToolUseOutput {
             decision: Some(Decision::Allow),
             ..Default::default()
@@ -1005,7 +993,6 @@ mod tests {
         output.set_decision(Decision::Deny);
 
         assert_eq!(output.decision(), Some(Decision::Deny));
-        Ok(())
     }
 
     #[rstest]
@@ -1013,12 +1000,9 @@ mod tests {
     #[case::permission_request(HookOutputEvent::PermissionRequest(
         PermissionRequestOutput::default()
     ))]
-    fn test_set_decision_is_noop_for_unsupported_variants(
-        #[case] mut output: HookOutputEvent,
-    ) -> Result<(), TestError> {
+    fn test_set_decision_is_noop_for_unsupported_variants(#[case] mut output: HookOutputEvent) {
         output.set_decision(Decision::Ask);
         assert_eq!(output.decision(), None);
-        Ok(())
     }
 
     #[rstest]
@@ -1049,9 +1033,8 @@ mod tests {
     fn test_hook_output_event_reason_accessor_returns_expected_reason(
         #[case] output: HookOutputEvent,
         #[case] expected: Option<&str>,
-    ) -> Result<(), TestError> {
+    ) {
         assert_eq!(output.reason(), expected);
-        Ok(())
     }
 
     #[rstest]
@@ -1068,9 +1051,8 @@ mod tests {
     fn test_hook_output_event_halt_accessor_returns_expected_halt_flag(
         #[case] output: HookOutputEvent,
         #[case] expected: Option<bool>,
-    ) -> Result<(), TestError> {
+    ) {
         assert_eq!(output.halt(), expected);
-        Ok(())
     }
 
     #[rstest]
@@ -1086,9 +1068,8 @@ mod tests {
     fn test_hook_output_event_suppress_output_accessor_returns_expected_flag(
         #[case] output: HookOutputEvent,
         #[case] expected: Option<bool>,
-    ) -> Result<(), TestError> {
+    ) {
         assert_eq!(output.suppress_output(), expected);
-        Ok(())
     }
 
     #[rstest]
@@ -1105,8 +1086,7 @@ mod tests {
     fn test_hook_output_event_system_message_accessor_returns_expected_message(
         #[case] output: HookOutputEvent,
         #[case] expected: Option<&str>,
-    ) -> Result<(), TestError> {
+    ) {
         assert_eq!(output.system_message(), expected);
-        Ok(())
     }
 }

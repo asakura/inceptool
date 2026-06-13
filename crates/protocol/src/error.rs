@@ -36,17 +36,15 @@ mod tests {
     }
 
     #[rstest]
-    fn test_protocol_error_formatting_unsupported() -> Result<(), TestError> {
+    fn test_protocol_error_formatting_unsupported() {
         let err1 = ProtocolError::UnsupportedEvent("OnHover".to_string());
         assert_eq!(err1.to_string(), "Unsupported hook event: OnHover");
-        Ok(())
     }
 
     #[rstest]
-    fn test_protocol_error_formatting_missing() -> Result<(), TestError> {
+    fn test_protocol_error_formatting_missing() {
         let err2 = ProtocolError::MissingField("event_type");
         assert_eq!(err2.to_string(), "Missing required field: event_type");
-        Ok(())
     }
 
     #[rstest]
