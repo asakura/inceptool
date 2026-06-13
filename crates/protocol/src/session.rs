@@ -52,6 +52,7 @@ pub struct SessionMeta<'a> {
 mod tests {
     use super::*;
     use crate::error::ProtocolError;
+    use crate::types::{EffortLevel, PermissionMode};
     use rstest::{fixture, rstest};
 
     #[derive(thiserror::Error, Debug)]
@@ -144,7 +145,7 @@ mod tests {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;
         assert_eq!(
             session.permission_mode,
-            Some(crate::types::PermissionMode::BypassPermissions)
+            Some(PermissionMode::BypassPermissions)
         );
         Ok(())
     }
@@ -156,7 +157,7 @@ mod tests {
         let session: SessionMeta<'_> = serde_json::from_str(&session_meta_with_common_fields_json)?;
         assert_eq!(
             session.effort.map(|e| e.level),
-            Some(crate::types::EffortLevel::High)
+            Some(EffortLevel::High)
         );
         Ok(())
     }

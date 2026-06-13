@@ -770,6 +770,8 @@ mod tests {
 
     use rstest::{fixture, rstest};
     use serde_json::json;
+    use serde_json::value::RawValue;
+    use std::borrow::Cow;
 
     #[derive(thiserror::Error, Debug)]
     pub enum TestError {
@@ -834,9 +836,9 @@ mod tests {
 
     #[rstest]
     fn pre_tool_use_input_parse(raw_tool_input_json: String) -> Result<(), TestError> {
-        let raw = serde_json::value::RawValue::from_string(raw_tool_input_json)?;
+        let raw = RawValue::from_string(raw_tool_input_json)?;
         let input = PreToolUseInput {
-            tool_name: std::borrow::Cow::Borrowed("test"),
+            tool_name: Cow::Borrowed("test"),
             tool_input: RawJson(&raw),
             mcp_context: None,
             original_request_name: None,
@@ -850,9 +852,9 @@ mod tests {
 
     #[rstest]
     fn post_tool_use_input_parse(raw_tool_input_json: String) -> Result<(), TestError> {
-        let raw = serde_json::value::RawValue::from_string(raw_tool_input_json)?;
+        let raw = RawValue::from_string(raw_tool_input_json)?;
         let after_input = PostToolUseInput {
-            tool_name: std::borrow::Cow::Borrowed("test"),
+            tool_name: Cow::Borrowed("test"),
             tool_input: RawJson(&raw),
             tool_output: RawJson(&raw),
             tool_output_source: None,
