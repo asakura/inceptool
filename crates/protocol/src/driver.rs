@@ -96,11 +96,14 @@ where
 ///
 /// Returns an error if `Driver::map_output` fails, or if the resulting
 /// wire value cannot be serialized to JSON.
-pub fn to_wire<'a, D: Driver>(
+pub fn to_wire<'a, D>(
     driver: &'a D,
     event_name: &'a str,
     output: &'a HookOutputEvent,
-) -> Result<String, D::Error> {
+) -> Result<String, D::Error>
+where
+    D: Driver,
+{
     let wire = driver.map_output(event_name, output)?;
     let serialized = serde_json::to_string(&wire)?;
 
