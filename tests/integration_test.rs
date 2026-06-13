@@ -34,6 +34,7 @@ fn inceptool_cmd() -> Result<TestEnv> {
     fs::write(config_dir.join("inceptool.toml"), "").into_diagnostic()?;
 
     let mut cmd = Command::cargo_bin("inceptool").into_diagnostic()?;
+
     cmd.env("RUST_LOG", "off")
         .env("XDG_CONFIG_HOME", temp_dir.path()) // isolate user config
         .current_dir(temp_dir.path()); // isolate local config and file operations
@@ -131,10 +132,12 @@ fn test_integration_empty_stdin(inceptool_cmd: Result<TestEnv>) -> Result<()> {
         .stderr(predicate::str::is_empty());
 
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).into_diagnostic()?;
-    assert_eq!(
-        stdout, "",
-        "Expected completely empty stdout for empty stdin"
-    );
+
+    if !stdout.is_empty() {
+        return Err(miette::miette!(
+            "Expected completely empty stdout for empty stdin, got: {stdout:?}"
+        ));
+    }
 
     Ok(())
 }
@@ -176,8 +179,13 @@ fn test_integration_worktree_create_special_case(inceptool_cmd: Result<TestEnv>)
         .stderr(predicate::str::is_empty());
 
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).into_diagnostic()?;
+
     // Verify it prints ONLY the raw string path, without any JSON envelope!
-    assert_eq!(stdout, "/mock/worktree/path");
+    if stdout != "/mock/worktree/path" {
+        return Err(miette::miette!(
+            "expected raw worktree path on stdout, got: {stdout:?}"
+        ));
+    }
 
     Ok(())
 }
