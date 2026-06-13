@@ -40,9 +40,9 @@ use inceptool_driver_gemini::GeminiDriver;
 use inceptool_engine::Registry;
 use inceptool_protocol::Driver;
 
-use miette::{IntoDiagnostic, Result};
+use miette::{IntoDiagnostic as _, Result};
 
-use std::io::{self, Read};
+use std::io::{self, Read as _};
 
 /// Executes the payload processing pipeline for the selected driver.
 fn run_with_driver<D: Driver>(

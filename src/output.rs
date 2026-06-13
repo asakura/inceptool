@@ -4,8 +4,8 @@
 
 use inceptool_protocol::{Driver, HookOutputEvent};
 
-use miette::{IntoDiagnostic, Result};
-use std::io::{self, Write};
+use miette::{IntoDiagnostic as _, Result};
+use std::io::{self, Write as _};
 use std::process;
 
 /// Translates the computed [`HookOutputEvent`] into JSON and issues side effects.

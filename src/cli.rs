@@ -3,8 +3,8 @@
 use clap::{Parser, ValueEnum};
 use inceptool_driver_claude::ClaudeDriver;
 use inceptool_driver_gemini::GeminiDriver;
-use inceptool_protocol::{Driver, HookKind};
-use miette::{IntoDiagnostic, Result};
+use inceptool_protocol::{Driver as _, HookKind};
+use miette::{IntoDiagnostic as _, Result};
 
 /// Which agent's wire format to parse stdin as and format stdout as.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -52,7 +52,7 @@ impl Cli {
 mod tests {
     use super::*;
 
-    use clap::{Parser, error};
+    use clap::error;
     use rstest::rstest;
 
     use core::assert_matches;

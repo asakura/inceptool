@@ -10,7 +10,7 @@
 //! stdout/stderr/exit-code contract.
 
 use assert_cmd::Command;
-use miette::{IntoDiagnostic, Result};
+use miette::{IntoDiagnostic as _, Result};
 use predicates::prelude::*;
 use rstest::{fixture, rstest};
 use serde_json::Value;

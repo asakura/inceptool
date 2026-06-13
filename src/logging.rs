@@ -2,7 +2,7 @@
 
 use crate::config::project_dirs;
 
-use miette::{IntoDiagnostic, Result};
+use miette::{IntoDiagnostic as _, Result};
 use std::fs;
 use std::io;
 use tracing_subscriber::fmt;
