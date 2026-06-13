@@ -45,12 +45,12 @@ use miette::{IntoDiagnostic as _, Result};
 use std::io::{self, Read as _};
 
 /// Executes the payload processing pipeline for the selected driver.
-fn run_with_driver<D: Driver>(
+fn run_with_driver<D>(
     driver: &D,
     raw_json: &str,
     kind: inceptool_protocol::HookKind,
     registry: &Registry,
-) -> Result<()> {
+) -> Result<()> where D: Driver {
     let mut conn = inceptool_protocol::from_wire(driver, raw_json).into_diagnostic()?;
     let final_output = registry.run_pipeline(kind, &mut conn).into_diagnostic()?;
 

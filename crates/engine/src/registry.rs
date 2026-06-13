@@ -100,7 +100,10 @@ impl Registry {
     /// Registers a stage into the pipeline for its [`Stage::hook`].
     ///
     /// Stages run in the order they are registered within that pipeline.
-    pub fn register<S: Stage + 'static>(&mut self, stage: S) {
+    pub fn register<S>(&mut self, stage: S)
+    where
+        S: Stage + 'static,
+    {
         let tool_names = stage.tool_names();
         let kind = stage.hook();
 

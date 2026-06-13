@@ -76,7 +76,10 @@ pub trait Driver {
 ///
 /// Returns an error if `raw_json` cannot be deserialized into
 /// `D::InputWire`, or if `Driver::map_input` fails.
-pub fn from_wire<'a, D: Driver>(driver: &D, raw_json: &'a str) -> Result<Conn<'a>, D::Error> {
+pub fn from_wire<'a, D>(driver: &D, raw_json: &'a str) -> Result<Conn<'a>, D::Error>
+where
+    D: Driver,
+{
     let wire = serde_json::from_str::<D::InputWire<'a>>(raw_json)?;
 
     driver.map_input(wire)
