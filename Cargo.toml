@@ -68,3 +68,73 @@ insta = { version = "1.48", features = ["json", "redactions"] }
 predicates = "3.1"
 rstest.workspace = true
 tempfile = "3.27"
+
+[workspace.lints.rust]
+# Safety — forbid means even #![allow(...)] can't override
+unsafe_code = "forbid"
+non_ascii_idents = "forbid"
+
+# Quality enforcement
+warnings = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+future_incompatible = { level = "deny", priority = -1 }
+nonstandard_style = { level = "deny", priority = -1 }
+
+# Documentation enforcement
+missing_docs = "deny"
+missing_debug_implementations = "deny"
+missing_copy_implementations = "deny"
+unfulfilled_lint_expectations = "deny"
+
+[workspace.lints.rustdoc]
+all = { level = "deny", priority = -1 }
+
+[workspace.lints.clippy]
+# All lint groups
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+cargo = { level = "deny", priority = -1 }
+
+# Guardrails
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+panic_in_result_fn = "deny"
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+missing_const_for_fn = "deny"
+
+# Code hygiene
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+
+# Async safety
+await_holding_lock = "deny"
+large_futures = "deny"
+
+# Process and memory safety
+exit = "deny"
+mem_forget = "deny"
+
+# Performance
+large_stack_arrays = "deny"
+large_types_passed_by_value = "deny"
+
+# Minimal relaxations
+multiple_crate_versions = "allow"   # unavoidable with transitive deps
+
+# Cast lints — too many false positives even for strict projects
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+cast_possible_wrap = "allow"
+
+# Nursery lints that have too many false positives
+cognitive_complexity = "allow"      # use clippy.toml threshold instead
+
+[lints]
+workspace = true
