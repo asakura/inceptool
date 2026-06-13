@@ -79,6 +79,7 @@ warnings = "deny"
 rust_2018_idioms = { level = "deny", priority = -1 }
 future_incompatible = { level = "deny", priority = -1 }
 nonstandard_style = { level = "deny", priority = -1 }
+unknown_lints = "allow"
 
 # Documentation enforcement
 missing_docs = "deny"
@@ -156,7 +157,7 @@ std_instead_of_alloc = "allow"
 std_instead_of_core = "allow"
 min_ident_chars = "allow"
 iter_over_hash_type = "allow"
-
+inline_modules = "allow"
 pub_with_shorthand = "allow"
 separated_literal_suffix = "allow"
 assertions_on_result_states = "allow"
@@ -172,7 +173,7 @@ indexing_slicing = "deny"
 tests_outside_test_module = "deny"
 redundant_test_prefix = "deny"
 pattern_type_mismatch = "allow"
-
+inline_trait_bounds = "deny"
 field_scoped_visibility_modifiers = "deny"
 as_conversions = "deny"
 unused_trait_names = "deny"
