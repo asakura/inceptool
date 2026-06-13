@@ -694,7 +694,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_propagates_stage_error(mut conn: Conn) -> Result<(), TestError> {
+    fn test_run_pipeline_propagates_stage_error(mut conn: Conn<'_>) {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -707,8 +707,6 @@ mod tests {
         let result = registry.run_pipeline(HookKind::BeforeAgent, &mut conn);
 
         assert_matches!(result, Err(EngineError::StageExecution(_)));
-
-        Ok(())
     }
 
     #[rstest]
@@ -741,9 +739,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_run_pipeline_allow_decision_does_not_stop_remaining_stages(
-        mut conn: Conn,
-    ) -> Result<(), TestError> {
+    fn test_run_pipeline_allow_decision_does_not_stop_remaining_stages(mut conn: Conn<'_>) {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -763,14 +759,10 @@ mod tests {
         let result = registry.run_pipeline(HookKind::BeforeAgent, &mut conn);
 
         assert_matches!(result, Err(EngineError::StageExecution(_)));
-
-        Ok(())
     }
 
     #[rstest]
-    fn test_run_pipeline_ask_decision_does_not_stop_remaining_stages(
-        mut conn: Conn,
-    ) -> Result<(), TestError> {
+    fn test_run_pipeline_ask_decision_does_not_stop_remaining_stages(mut conn: Conn<'_>) {
         let mut registry = Registry::new();
 
         registry.register(StubStage {
@@ -790,8 +782,6 @@ mod tests {
         let result = registry.run_pipeline(HookKind::BeforeAgent, &mut conn);
 
         assert_matches!(result, Err(EngineError::StageExecution(_)));
-
-        Ok(())
     }
 
     #[rstest]

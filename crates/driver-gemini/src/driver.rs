@@ -142,7 +142,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_parse_invalid_event() -> Result<(), TestError> {
+    fn test_parse_invalid_event() {
         let driver = GeminiDriver;
         let result = inceptool_protocol::from_wire(
             &driver,
@@ -150,8 +150,6 @@ mod tests {
         );
 
         assert!(result.is_err());
-
-        Ok(())
     }
 
     #[rstest]
@@ -170,10 +168,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_hook_kind_invalid() -> Result<(), TestError> {
+    fn test_hook_kind_invalid() {
         let driver = GeminiDriver;
         assert!(driver.hook_kind("NotAHook").is_err());
-        Ok(())
     }
 
     #[rstest]
