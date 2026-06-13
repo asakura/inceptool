@@ -119,7 +119,7 @@ mod tests {
         assert_eq!(
             session
                 .driver_meta
-                .ok_or(TestError::Failure("missing driver_meta".into()))?
+                .ok_or_else(|| TestError::Failure("missing driver_meta".into()))?
                 .0
                 .get(),
             r#"{"some": "data"}"#

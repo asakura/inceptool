@@ -280,7 +280,7 @@ mod tests {
             data: RawJson<'a>,
         }
 
-        let full_json = format!(r#"{{"data": {}}}"#, raw_json_str);
+        let full_json = format!(r#"{{"data": {raw_json_str}}}"#);
         let parsed: Payload<'_> = serde_json::from_str(&full_json)?;
 
         let serialized = serde_json::to_string(&parsed)?;

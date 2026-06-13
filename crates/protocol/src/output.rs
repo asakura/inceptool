@@ -569,7 +569,7 @@ pub struct ElicitationOutput {
 }
 
 /// A generic empty hook output for events that do not process return fields.
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Clone, Copy, Serialize)]
 pub struct EmptyOutput {}
 
 impl HookOutputEvent {

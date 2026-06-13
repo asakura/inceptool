@@ -166,7 +166,7 @@ mod tests {
             output: &'a HookOutputEvent,
         ) -> Result<Self::OutputWire<'a>, Self::Error> {
             Ok(MockOutput {
-                decision: output.decision().map(|d| format!("{:?}", d)),
+                decision: output.decision().map(|d| format!("{d:?}")),
             })
         }
 
