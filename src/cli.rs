@@ -55,6 +55,12 @@ mod tests {
     use clap::Parser;
     use rstest::rstest;
 
+    #[derive(thiserror::Error, Debug)]
+    enum TestError {
+        #[error(transparent)]
+        Clap(#[from] clap::Error),
+    }
+
     #[rstest]
     #[case::claude("claude", "PreToolUse", DriverKind::Claude, "PreToolUse")]
     #[case::gemini("gemini", "BeforeTool", DriverKind::Gemini, "BeforeTool")]
@@ -63,11 +69,13 @@ mod tests {
         #[case] hook_arg: &str,
         #[case] expected_driver: DriverKind,
         #[case] expected_hook: &str,
-    ) {
-        let cli = Cli::try_parse_from(["inceptool", driver_arg, hook_arg]).unwrap();
+    ) -> Result<(), TestError> {
+        let cli = Cli::try_parse_from(["inceptool", driver_arg, hook_arg])?;
 
         assert_eq!(cli.driver, expected_driver);
         assert_eq!(cli.hook, expected_hook);
+
+        Ok(())
     }
 
     #[rstest]
