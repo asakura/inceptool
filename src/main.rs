@@ -46,15 +46,15 @@ use std::io::{self, Read};
 
 /// Executes the payload processing pipeline for the selected driver.
 fn run_with_driver<D: Driver>(
-    driver: D,
+    driver: &D,
     raw_json: &str,
     kind: inceptool_protocol::HookKind,
-    registry: Registry,
+    registry: &Registry,
 ) -> Result<()> {
-    let mut conn = inceptool_protocol::from_wire(&driver, raw_json).into_diagnostic()?;
+    let mut conn = inceptool_protocol::from_wire(driver, raw_json).into_diagnostic()?;
     let final_output = registry.run_pipeline(kind, &mut conn).into_diagnostic()?;
 
-    output::handle_output(final_output, &driver)
+    output::handle_output(final_output, driver)
 }
 
 fn main() -> Result<()> {
@@ -78,7 +78,7 @@ fn main() -> Result<()> {
     let registry = registry::build_registry(&config);
 
     match cli.driver {
-        DriverKind::Claude => run_with_driver(ClaudeDriver, trimmed_json, hook_kind, registry),
-        DriverKind::Gemini => run_with_driver(GeminiDriver, trimmed_json, hook_kind, registry),
+        DriverKind::Claude => run_with_driver(&ClaudeDriver, trimmed_json, hook_kind, &registry),
+        DriverKind::Gemini => run_with_driver(&GeminiDriver, trimmed_json, hook_kind, &registry),
     }
 }
