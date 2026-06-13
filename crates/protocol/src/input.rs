@@ -1069,6 +1069,7 @@ mod tests {
     }
 
     #[rstest]
+    #[expect(clippy::indexing_slicing, reason = "indexing is safe in tests")]
     fn post_tool_batch_input_deserialization() -> Result<(), TestError> {
         let json = r#"{"tool_calls": [{"tool_name": "Bash"}, {"tool_name": "Read"}]}"#;
         let input: PostToolBatchInput<'_> = serde_json::from_str(json)?;
@@ -1311,6 +1312,11 @@ mod tests {
     }
 
     #[rstest]
+    #[expect(
+        clippy::arithmetic_side_effects,
+        clippy::as_conversions,
+        reason = "test assertions are safe"
+    )]
     fn hook_kind_count_matches_variant_count() {
         assert_eq!(HookKind::ElicitationResult as usize + 1, HookKind::COUNT);
     }
