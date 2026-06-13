@@ -15,14 +15,14 @@ use std::borrow::Cow;
 /// Metadata associated with a Gemini session payload.
 #[derive(Deserialize)]
 pub(in crate) struct GeminiMeta<'a> {
-    pub(crate) session_id: Cow<'a, str>,
+    pub session_id: Cow<'a, str>,
     #[serde(default)]
-    pub(crate) transcript_path: Option<Cow<'a, str>>,
+    pub transcript_path: Option<Cow<'a, str>>,
     #[serde(default)]
-    pub(crate) cwd: Option<Cow<'a, str>>,
-    pub(crate) hook_event_name: Cow<'a, str>,
+    pub cwd: Option<Cow<'a, str>>,
+    pub hook_event_name: Cow<'a, str>,
     #[serde(default)]
-    pub(crate) timestamp: Option<Cow<'a, str>>,
+    pub timestamp: Option<Cow<'a, str>>,
 }
 
 /// The output wire format for the Gemini driver.

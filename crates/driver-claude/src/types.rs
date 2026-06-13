@@ -37,28 +37,28 @@ use std::borrow::Cow;
 #[derive(Deserialize)]
 pub(in crate) struct ClaudeMeta<'a> {
     /// The Claude Code session this hook event belongs to.
-    pub(crate) session_id: Cow<'a, str>,
+    pub session_id: Cow<'a, str>,
     /// Path to the session's transcript file, if provided.
     #[serde(default)]
-    pub(crate) transcript_path: Option<Cow<'a, str>>,
+    pub transcript_path: Option<Cow<'a, str>>,
     /// The working directory the session is running in, if provided.
     #[serde(default)]
-    pub(crate) cwd: Option<Cow<'a, str>>,
+    pub cwd: Option<Cow<'a, str>>,
     /// The Claude hook name (e.g. `"PreToolUse"`), used to select which
     /// `HookInputEvent` variant to deserialize the payload into.
-    pub(crate) hook_event_name: Cow<'a, str>,
+    pub hook_event_name: Cow<'a, str>,
     /// The permission mode active for the session, if known.
     #[serde(default)]
-    pub(crate) permission_mode: Option<PermissionMode>,
+    pub permission_mode: Option<PermissionMode>,
     /// The reasoning effort configured for the session, if known.
     #[serde(default)]
-    pub(crate) effort: Option<Effort>,
+    pub effort: Option<Effort>,
     /// The identifier of the agent handling this session, if applicable.
     #[serde(default)]
-    pub(crate) agent_id: Option<Cow<'a, str>>,
+    pub agent_id: Option<Cow<'a, str>>,
     /// The type of agent handling this session, if applicable.
     #[serde(default)]
-    pub(crate) agent_type: Option<Cow<'a, str>>,
+    pub agent_type: Option<Cow<'a, str>>,
 }
 
 /// The top-level JSON object [`ClaudeDriver::map_output`](crate::driver::ClaudeDriver)
