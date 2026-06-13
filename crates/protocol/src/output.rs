@@ -883,7 +883,7 @@ mod tests {
     #[rstest]
     fn hook_output_serialization_populated() -> Result<(), TestError> {
         let out = HookOutputEvent::SessionStart(SessionStartOutput {
-            system_message: Some("hello".to_string()),
+            system_message: Some("hello".to_owned()),
             ..Default::default()
         });
 

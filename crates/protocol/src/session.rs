@@ -71,8 +71,7 @@ mod tests {
             "cwd": "/tmp",
             "driver": "Gemini",
             "driver_meta": {"some": "data"}
-        }"#
-        .to_string()
+        }"#.to_owned()
     }
 
     #[fixture]
@@ -84,8 +83,7 @@ mod tests {
             "effort": {"level": "high"},
             "agent_id": "agent-1",
             "agent_type": "explore"
-        }"#
-        .to_string()
+        }"#.to_owned()
     }
 
     #[rstest]

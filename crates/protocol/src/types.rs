@@ -189,7 +189,7 @@ mod tests {
 
     #[fixture]
     fn raw_json_str() -> String {
-        r#"{"key": "value", "nested": [1, 2, 3]}"#.to_string()
+        r#"{"key": "value", "nested": [1, 2, 3]}"#.to_owned()
     }
 
     #[rstest]

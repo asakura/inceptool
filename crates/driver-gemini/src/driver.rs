@@ -217,7 +217,7 @@ mod tests {
         let driver = GeminiDriver;
         let mut input_map = serde_json::Map::new();
 
-        input_map.insert("key".to_string(), serde_json::json!("val"));
+        input_map.insert("key".to_owned(), serde_json::json!("val"));
 
         let updated_input = serde_json::Value::Object(input_map);
         let output = HookOutputEvent::PreToolUse(PreToolUseOutput {

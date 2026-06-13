@@ -781,7 +781,7 @@ mod tests {
 
     #[fixture]
     fn raw_tool_input_json() -> String {
-        r#"{"key": "value"}"#.to_string()
+        r#"{"key": "value"}"#.to_owned()
     }
 
     #[fixture]
@@ -790,8 +790,7 @@ mod tests {
             "tool_name": "grep_search",
             "tool_input": {"query": "foo", "path": "/"},
             "original_request_name": "search"
-        }"#
-        .to_string()
+        }"#.to_owned()
     }
 
     #[rstest]

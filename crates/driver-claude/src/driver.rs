@@ -285,7 +285,7 @@ mod tests {
         let driver = ClaudeDriver;
         let mut input_map = serde_json::Map::new();
 
-        input_map.insert("key".to_string(), serde_json::json!("val"));
+        input_map.insert("key".to_owned(), serde_json::json!("val"));
 
         let updated_input = serde_json::Value::Object(input_map);
 
@@ -417,9 +417,9 @@ mod tests {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::SessionStart(inceptool_protocol::SessionStartOutput {
             additional_context: Some("ctx".into()),
-            initial_user_message: Some("hello".to_string()),
-            session_title: Some("My Session".to_string()),
-            watch_paths: Some(vec!["/repo/src".to_string()]),
+            initial_user_message: Some("hello".to_owned()),
+            session_title: Some("My Session".to_owned()),
+            watch_paths: Some(vec!["/repo/src".to_owned()]),
             reload_skills: Some(true),
             ..Default::default()
         });
@@ -544,7 +544,7 @@ mod tests {
     fn format_output_hook_specific_worktree_create() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::WorktreeCreate(inceptool_protocol::WorktreeCreateOutput {
-            worktree_path: Some("/repo/.worktrees/feature".to_string()),
+            worktree_path: Some("/repo/.worktrees/feature".to_owned()),
         });
 
         let formatted = inceptool_protocol::to_wire(&driver, "WorktreeCreate", &output)?;
@@ -687,7 +687,7 @@ mod tests {
     fn format_output_hook_specific_message_display() -> Result<(), TestError> {
         let driver = ClaudeDriver;
         let output = HookOutputEvent::MessageDisplay(inceptool_protocol::MessageDisplayOutput {
-            replacement_text: Some("replaced".to_string()),
+            replacement_text: Some("replaced".to_owned()),
         });
 
         let formatted = inceptool_protocol::to_wire(&driver, "MessageDisplay", &output)?;

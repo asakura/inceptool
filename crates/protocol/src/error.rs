@@ -37,7 +37,7 @@ mod tests {
 
     #[rstest]
     fn protocol_error_formatting_unsupported() {
-        let err1 = ProtocolError::UnsupportedEvent("OnHover".to_string());
+        let err1 = ProtocolError::UnsupportedEvent("OnHover".to_owned());
         assert_eq!(err1.to_string(), "Unsupported hook event: OnHover");
     }
 

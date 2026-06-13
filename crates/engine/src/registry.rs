@@ -311,7 +311,7 @@ mod tests {
             match self.outcome {
                 StubOutcome::None => Ok(None),
                 StubOutcome::Output(build) => Ok(Some(build())),
-                StubOutcome::Error => Err(EngineError::StageExecution(self.name.to_string())),
+                StubOutcome::Error => Err(EngineError::StageExecution(self.name.to_owned())),
             }
         }
     }
@@ -411,8 +411,7 @@ mod tests {
             "tool_input": {"command": "ls"},
             "mcp_context": null,
             "original_request_name": null
-        }"#
-        .to_string()
+        }"#.to_owned()
     }
 
     #[fixture]
@@ -422,8 +421,7 @@ mod tests {
             "tool_input": {"file_path": "/a.txt"},
             "mcp_context": null,
             "original_request_name": null
-        }"#
-        .to_string()
+        }"#.to_owned()
     }
 
     #[rstest]

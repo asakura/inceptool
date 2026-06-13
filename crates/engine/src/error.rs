@@ -34,7 +34,7 @@ mod tests {
 
     #[rstest]
     fn engine_error_stage_execution_display() {
-        let err = EngineError::StageExecution("boom".to_string());
+        let err = EngineError::StageExecution("boom".to_owned());
         assert_eq!(err.to_string(), "Stage execution failed: boom");
     }
 
