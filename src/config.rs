@@ -45,7 +45,7 @@ impl Config {
     /// precedence). Missing or invalid files are silently ignored, yielding
     /// [`Config::default`].
     pub fn load() -> Self {
-        let mut config = Config::default();
+        let mut config = Self::default();
 
         // Load from XDG_CONFIG_HOME
         if let Some(dirs) = project_dirs() {
@@ -70,12 +70,12 @@ impl Config {
 
     fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         let content = fs::read_to_string(path)?;
-        let config: Config = toml::from_str(&content)?;
+        let config: Self = toml::from_str(&content)?;
 
         Ok(config)
     }
 
-    fn merge(&mut self, other: Config) {
+    fn merge(&mut self, other: Self) {
         for (k, v) in other.hooks {
             self.hooks.insert(k, v);
         }
