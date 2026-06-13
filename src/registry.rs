@@ -4,6 +4,8 @@ use crate::config::Config;
 
 use inceptool_engine::Registry;
 use inceptool_stages::RtkStage;
+
+#[cfg(debug_assertions)]
 use std::env;
 
 /// Registers the standard stages enabled by `config`.
