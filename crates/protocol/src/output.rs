@@ -597,13 +597,13 @@ impl HookOutputEvent {
     #[must_use]
     pub fn exit_metadata(&self) -> (Option<i32>, Option<&str>) {
         match self {
-            HookOutputEvent::PreToolUse(o) => (o.exit_code, o.reason.as_deref()),
-            HookOutputEvent::PostToolUse(o) => (o.exit_code, o.reason.as_deref()),
-            HookOutputEvent::BeforeAgent(o) => (o.exit_code, o.reason.as_deref()),
-            HookOutputEvent::AfterAgent(o) => (o.exit_code, o.reason.as_deref()),
-            HookOutputEvent::BeforeModel(o) => (o.exit_code, o.reason.as_deref()),
-            HookOutputEvent::AfterModel(o) => (o.exit_code, o.reason.as_deref()),
-            HookOutputEvent::PreCompact(o) => (o.exit_code, o.reason.as_deref()),
+            Self::PreToolUse(o) => (o.exit_code, o.reason.as_deref()),
+            Self::PostToolUse(o) => (o.exit_code, o.reason.as_deref()),
+            Self::BeforeAgent(o) => (o.exit_code, o.reason.as_deref()),
+            Self::AfterAgent(o) => (o.exit_code, o.reason.as_deref()),
+            Self::BeforeModel(o) => (o.exit_code, o.reason.as_deref()),
+            Self::AfterModel(o) => (o.exit_code, o.reason.as_deref()),
+            Self::PreCompact(o) => (o.exit_code, o.reason.as_deref()),
             _ => (None, None),
         }
     }
@@ -615,23 +615,23 @@ impl HookOutputEvent {
     #[must_use]
     pub const fn decision(&self) -> Option<Decision> {
         match self {
-            HookOutputEvent::PreToolUse(o) => o.decision,
-            HookOutputEvent::PostToolUse(o) => o.decision,
-            HookOutputEvent::BeforeAgent(o) => o.decision,
-            HookOutputEvent::AfterAgent(o) => o.decision,
-            HookOutputEvent::BeforeModel(o) => o.decision,
-            HookOutputEvent::AfterModel(o) => o.decision,
-            HookOutputEvent::PreCompact(o) => o.decision,
-            HookOutputEvent::UserPromptSubmit(o) => o.decision,
-            HookOutputEvent::PostToolUseFailure(o) => o.decision,
-            HookOutputEvent::PostToolBatch(o) => o.decision,
-            HookOutputEvent::ConfigChange(o) => o.decision,
-            HookOutputEvent::Stop(o) => o.decision,
-            HookOutputEvent::UserPromptExpansion(o) => o.decision,
-            HookOutputEvent::SubagentStop(o) => o.decision,
-            HookOutputEvent::TaskCreated(o) => o.decision,
-            HookOutputEvent::TaskCompleted(o) => o.decision,
-            HookOutputEvent::TeammateIdle(o) => o.decision,
+            Self::PreToolUse(o) => o.decision,
+            Self::PostToolUse(o) => o.decision,
+            Self::BeforeAgent(o) => o.decision,
+            Self::AfterAgent(o) => o.decision,
+            Self::BeforeModel(o) => o.decision,
+            Self::AfterModel(o) => o.decision,
+            Self::PreCompact(o) => o.decision,
+            Self::UserPromptSubmit(o) => o.decision,
+            Self::PostToolUseFailure(o) => o.decision,
+            Self::PostToolBatch(o) => o.decision,
+            Self::ConfigChange(o) => o.decision,
+            Self::Stop(o) => o.decision,
+            Self::UserPromptExpansion(o) => o.decision,
+            Self::SubagentStop(o) => o.decision,
+            Self::TaskCreated(o) => o.decision,
+            Self::TaskCompleted(o) => o.decision,
+            Self::TeammateIdle(o) => o.decision,
             _ => None,
         }
     }
@@ -643,23 +643,23 @@ impl HookOutputEvent {
     /// instead) are left unchanged.
     pub const fn set_decision(&mut self, decision: Decision) {
         match self {
-            HookOutputEvent::PreToolUse(o) => o.decision = Some(decision),
-            HookOutputEvent::PostToolUse(o) => o.decision = Some(decision),
-            HookOutputEvent::BeforeAgent(o) => o.decision = Some(decision),
-            HookOutputEvent::AfterAgent(o) => o.decision = Some(decision),
-            HookOutputEvent::BeforeModel(o) => o.decision = Some(decision),
-            HookOutputEvent::AfterModel(o) => o.decision = Some(decision),
-            HookOutputEvent::PreCompact(o) => o.decision = Some(decision),
-            HookOutputEvent::UserPromptSubmit(o) => o.decision = Some(decision),
-            HookOutputEvent::PostToolUseFailure(o) => o.decision = Some(decision),
-            HookOutputEvent::PostToolBatch(o) => o.decision = Some(decision),
-            HookOutputEvent::ConfigChange(o) => o.decision = Some(decision),
-            HookOutputEvent::Stop(o) => o.decision = Some(decision),
-            HookOutputEvent::UserPromptExpansion(o) => o.decision = Some(decision),
-            HookOutputEvent::SubagentStop(o) => o.decision = Some(decision),
-            HookOutputEvent::TaskCreated(o) => o.decision = Some(decision),
-            HookOutputEvent::TaskCompleted(o) => o.decision = Some(decision),
-            HookOutputEvent::TeammateIdle(o) => o.decision = Some(decision),
+            Self::PreToolUse(o) => o.decision = Some(decision),
+            Self::PostToolUse(o) => o.decision = Some(decision),
+            Self::BeforeAgent(o) => o.decision = Some(decision),
+            Self::AfterAgent(o) => o.decision = Some(decision),
+            Self::BeforeModel(o) => o.decision = Some(decision),
+            Self::AfterModel(o) => o.decision = Some(decision),
+            Self::PreCompact(o) => o.decision = Some(decision),
+            Self::UserPromptSubmit(o) => o.decision = Some(decision),
+            Self::PostToolUseFailure(o) => o.decision = Some(decision),
+            Self::PostToolBatch(o) => o.decision = Some(decision),
+            Self::ConfigChange(o) => o.decision = Some(decision),
+            Self::Stop(o) => o.decision = Some(decision),
+            Self::UserPromptExpansion(o) => o.decision = Some(decision),
+            Self::SubagentStop(o) => o.decision = Some(decision),
+            Self::TaskCreated(o) => o.decision = Some(decision),
+            Self::TaskCompleted(o) => o.decision = Some(decision),
+            Self::TeammateIdle(o) => o.decision = Some(decision),
             _ => {}
         }
     }
@@ -671,22 +671,22 @@ impl HookOutputEvent {
     #[must_use]
     pub fn reason(&self) -> Option<&str> {
         match self {
-            HookOutputEvent::PreToolUse(o) => o.reason.as_deref(),
-            HookOutputEvent::PostToolUse(o) => o.reason.as_deref(),
-            HookOutputEvent::BeforeAgent(o) => o.reason.as_deref(),
-            HookOutputEvent::AfterAgent(o) => o.reason.as_deref(),
-            HookOutputEvent::BeforeModel(o) => o.reason.as_deref(),
-            HookOutputEvent::AfterModel(o) => o.reason.as_deref(),
-            HookOutputEvent::PreCompact(o) => o.reason.as_deref(),
-            HookOutputEvent::UserPromptSubmit(o) => o.reason.as_deref(),
-            HookOutputEvent::PostToolUseFailure(o) => o.reason.as_deref(),
-            HookOutputEvent::PostToolBatch(o) => o.reason.as_deref(),
-            HookOutputEvent::ConfigChange(o) => o.reason.as_deref(),
-            HookOutputEvent::UserPromptExpansion(o) => o.reason.as_deref(),
-            HookOutputEvent::SubagentStop(o) => o.reason.as_deref(),
-            HookOutputEvent::TaskCreated(o) => o.reason.as_deref(),
-            HookOutputEvent::TaskCompleted(o) => o.reason.as_deref(),
-            HookOutputEvent::TeammateIdle(o) => o.reason.as_deref(),
+            Self::PreToolUse(o) => o.reason.as_deref(),
+            Self::PostToolUse(o) => o.reason.as_deref(),
+            Self::BeforeAgent(o) => o.reason.as_deref(),
+            Self::AfterAgent(o) => o.reason.as_deref(),
+            Self::BeforeModel(o) => o.reason.as_deref(),
+            Self::AfterModel(o) => o.reason.as_deref(),
+            Self::PreCompact(o) => o.reason.as_deref(),
+            Self::UserPromptSubmit(o) => o.reason.as_deref(),
+            Self::PostToolUseFailure(o) => o.reason.as_deref(),
+            Self::PostToolBatch(o) => o.reason.as_deref(),
+            Self::ConfigChange(o) => o.reason.as_deref(),
+            Self::UserPromptExpansion(o) => o.reason.as_deref(),
+            Self::SubagentStop(o) => o.reason.as_deref(),
+            Self::TaskCreated(o) => o.reason.as_deref(),
+            Self::TaskCompleted(o) => o.reason.as_deref(),
+            Self::TeammateIdle(o) => o.reason.as_deref(),
             _ => None,
         }
     }
@@ -700,12 +700,12 @@ impl HookOutputEvent {
     #[must_use]
     pub const fn halt(&self) -> Option<bool> {
         match self {
-            HookOutputEvent::PreToolUse(o) => o.halt,
-            HookOutputEvent::PostToolUse(o) => o.halt,
-            HookOutputEvent::BeforeAgent(o) => o.halt,
-            HookOutputEvent::AfterAgent(o) => o.halt,
-            HookOutputEvent::BeforeModel(o) => o.halt,
-            HookOutputEvent::AfterModel(o) => o.halt,
+            Self::PreToolUse(o) => o.halt,
+            Self::PostToolUse(o) => o.halt,
+            Self::BeforeAgent(o) => o.halt,
+            Self::AfterAgent(o) => o.halt,
+            Self::BeforeModel(o) => o.halt,
+            Self::AfterModel(o) => o.halt,
             _ => None,
         }
     }
@@ -717,7 +717,7 @@ impl HookOutputEvent {
     #[must_use]
     pub const fn suppress_output(&self) -> Option<bool> {
         match self {
-            HookOutputEvent::PostToolUse(o) => o.suppress_output,
+            Self::PostToolUse(o) => o.suppress_output,
             _ => None,
         }
     }
@@ -732,12 +732,12 @@ impl HookOutputEvent {
     #[must_use]
     pub fn system_message(&self) -> Option<&str> {
         match self {
-            HookOutputEvent::SessionStart(o) => o.system_message.as_deref(),
-            HookOutputEvent::SessionEnd(o) => o.system_message.as_deref(),
-            HookOutputEvent::Notification(o) => o.system_message.as_deref(),
-            HookOutputEvent::PreCompact(o) => o.system_message.as_deref(),
-            HookOutputEvent::InstructionsLoaded(o) => o.system_message.as_deref(),
-            HookOutputEvent::PostCompact(o) => o.system_message.as_deref(),
+            Self::SessionStart(o) => o.system_message.as_deref(),
+            Self::SessionEnd(o) => o.system_message.as_deref(),
+            Self::Notification(o) => o.system_message.as_deref(),
+            Self::PreCompact(o) => o.system_message.as_deref(),
+            Self::InstructionsLoaded(o) => o.system_message.as_deref(),
+            Self::PostCompact(o) => o.system_message.as_deref(),
             _ => None,
         }
     }
