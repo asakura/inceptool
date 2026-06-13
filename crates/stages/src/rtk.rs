@@ -44,6 +44,7 @@ const RTK_SUBCOMMAND: &str = "rewrite";
 const REWRITE_REASON: &str = "RTK auto-rewrite";
 
 /// Stage that intercepts shell commands and uses `rtk rewrite` to enforce standard practices.
+#[derive(Debug, Clone, Copy, Default)]
 pub struct RtkStage;
 
 impl Stage for RtkStage {

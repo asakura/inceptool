@@ -61,12 +61,22 @@ struct PipelineEntry {
     stage: Box<dyn Stage>,
 }
 
+impl core::fmt::Debug for PipelineEntry {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("PipelineEntry")
+            .field("tool_names", &self.tool_names)
+            .field("stage", &self.stage.name())
+            .finish()
+    }
+}
+
 /// Manages registration and execution of stages.
 ///
 /// Stages are bucketed into one pipeline per [`HookKind`], built once at
 /// construction time from [`Registry::register`] calls.
 /// [`Registry::run_pipeline`] only considers the bucket for the [`HookKind`]
 /// passed to it.
+#[derive(Debug)]
 pub struct Registry {
     pipelines: [Vec<PipelineEntry>; HookKind::COUNT],
 }
@@ -79,6 +89,7 @@ impl Default for Registry {
 
 impl Registry {
     /// Creates an empty registry with no stages registered.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             pipelines: core::array::from_fn(|_| Vec::new()),
@@ -159,6 +170,10 @@ impl Registry {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EngineError`] if any matching stage fails to process the connection.
     pub fn run_pipeline(
         &self,
         kind: HookKind,
@@ -224,10 +239,8 @@ fn is_terminal(output: &HookOutputEvent) -> bool {
         return o.behavior.is_some();
     }
 
-    matches!(
-        output.decision(),
-        Some(Decision::Deny) | Some(Decision::Block)
-    ) || output.halt() == Some(true)
+    matches!(output.decision(), Some(Decision::Deny | Decision::Block))
+        || output.halt() == Some(true)
 }
 
 #[cfg(test)]
