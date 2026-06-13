@@ -196,7 +196,7 @@ impl HookKind {
 
 impl<'a> HookInputEvent<'a> {
     /// Returns the [`HookKind`] discriminant for this event.
-    pub fn kind(&self) -> HookKind {
+    pub const fn kind(&self) -> HookKind {
         match self {
             HookInputEvent::PreToolUse(_) => HookKind::PreToolUse,
             HookInputEvent::PostToolUse(_) => HookKind::PostToolUse,

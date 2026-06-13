@@ -611,7 +611,7 @@ impl HookOutputEvent {
     ///
     /// See [`HookOutputEvent::set_decision`] for the full list of variants
     /// that carry a `decision` field; all other variants return `None`.
-    pub fn decision(&self) -> Option<Decision> {
+    pub const fn decision(&self) -> Option<Decision> {
         match self {
             HookOutputEvent::PreToolUse(o) => o.decision,
             HookOutputEvent::PostToolUse(o) => o.decision,
@@ -639,7 +639,7 @@ impl HookOutputEvent {
     /// Variants without a `decision` field (e.g. [`HookOutputEvent::SessionStart`] or
     /// [`HookOutputEvent::PermissionRequest`], which conveys its outcome via `behavior`
     /// instead) are left unchanged.
-    pub fn set_decision(&mut self, decision: Decision) {
+    pub const fn set_decision(&mut self, decision: Decision) {
         match self {
             HookOutputEvent::PreToolUse(o) => o.decision = Some(decision),
             HookOutputEvent::PostToolUse(o) => o.decision = Some(decision),
@@ -694,7 +694,7 @@ impl HookOutputEvent {
     /// [`HookOutputEvent::BeforeAgent`], [`HookOutputEvent::AfterAgent`],
     /// [`HookOutputEvent::BeforeModel`], and [`HookOutputEvent::AfterModel`]
     /// carry a `halt` field; all other variants return `None`.
-    pub fn halt(&self) -> Option<bool> {
+    pub const fn halt(&self) -> Option<bool> {
         match self {
             HookOutputEvent::PreToolUse(o) => o.halt,
             HookOutputEvent::PostToolUse(o) => o.halt,
@@ -710,7 +710,7 @@ impl HookOutputEvent {
     ///
     /// Only [`HookOutputEvent::PostToolUse`] carries a `suppress_output`
     /// field; all other variants return `None`.
-    pub fn suppress_output(&self) -> Option<bool> {
+    pub const fn suppress_output(&self) -> Option<bool> {
         match self {
             HookOutputEvent::PostToolUse(o) => o.suppress_output,
             _ => None,

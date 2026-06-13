@@ -35,7 +35,7 @@ pub struct HookConfig {
     pub enabled: bool,
 }
 
-fn default_true() -> bool {
+const fn default_true() -> bool {
     true
 }
 
