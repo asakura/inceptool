@@ -2,15 +2,19 @@
 [workspace]
 changelog_config = "cliff.toml"
 changelog_update = true
-git_release_enable = true
-git_tag_enable = true
+git_release_enable = false
+git_tag_enable = false
 pr_labels = ["release"]
 
-# `inceptool` is the user-facing CLI release artifact. Give it a clean
-# `vX.Y.Z` tag/release name (release-binaries.yml matches on this) instead of
-# release-plz's default `inceptool-vX.Y.Z`. The library crates keep their
-# default `{{ package }}-v{{ version }}` tags.
+# `inceptool` is the only package that gets a git tag / GitHub release - one
+# release per version for the whole project, carrying the source archive
+# (GitHub's automatic zip/tarball) plus the binaries that
+# release-binaries.yml attaches on `release: published`. Library crates still
+# get version bumps + CHANGELOG entries and are published to crates.io, but
+# don't get their own tags/releases.
 [[package]]
 name = "inceptool"
 git_tag_name = "v{{ version }}"
 git_release_name = "v{{ version }}"
+git_release_enable = true
+git_tag_enable = true
