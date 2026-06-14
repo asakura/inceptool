@@ -45,9 +45,10 @@ thiserror = "2.0"
 toml = "1.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+zerovec = { version = "0.11", features = ["serde", "alloc"] }
 
 [dependencies]
-clap = { version = "4.6.1", features = ["derive"] }
+clap = { version = "4.6", features = ["derive"] }
 directories.workspace = true
 inceptool_driver-claude.workspace = true
 inceptool_driver-gemini.workspace = true
