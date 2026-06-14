@@ -1,0 +1,67 @@
+name: Update Cargo.lock
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update-cargo-lock:
+    if: github.repository_owner == 'asakura'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/nix-installer-action@v22
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: dps
+
+      - name: Run cargo update and check what changed
+        id: cargo_update
+        run: |
+          # 1. Get the list of all direct dependencies across the workspace
+          # We run this inside the nix dev shell so `cargo` and `jq` are available.
+          DIRECT_DEPS=$(nix develop -c bash -c "cargo metadata --format-version 1 | jq -r '
+            .workspace_members as \$members |
+            .packages[] | select(.id | IN(\$members[])).dependencies[].name
+          ' | sort -u")
+
+          # 2. Run cargo update and capture output
+          nix develop -c bash -c "cargo update 2>&1" | tee update_output.txt
+
+          # 3. Extract the names of updated crates
+          UPDATED_PACKAGES=$(grep -E '^\s*(Updating|Adding|Removing|Downgrading)\s+' update_output.txt | awk '{print $2}' | sort -u)
+
+          # 4. Check if any direct dependency was updated
+          DIRECT_DEP_UPDATED=false
+          for pkg in $UPDATED_PACKAGES; do
+            if echo "$DIRECT_DEPS" | grep -qx "$pkg"; then
+              echo "Direct dependency updated: $pkg"
+              DIRECT_DEP_UPDATED=true
+            fi
+          done
+
+          if [ "$DIRECT_DEP_UPDATED" = true ]; then
+            echo "A direct dependency was updated. Dependabot will handle this! Skipping custom PR."
+            # Revert the lockfile so `create-pull-request` sees a clean tree
+            git checkout Cargo.lock
+          else
+            echo "Only transitive dependencies were updated. Proceeding."
+          fi
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        continue-on-error: true
+        with:
+          title: "chore(cargo): update transitive dependencies in Cargo.lock"
+          commit-message: "chore(cargo): update transitive dependencies in Cargo.lock"
+          branch: "chore/update-cargo-lock"
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
