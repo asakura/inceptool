@@ -26,5 +26,6 @@ libCrane.buildPackage (
     inherit cargoArtifacts;
     pname = "inceptool";
     doCheck = false;
+    meta.mainProgram = "inceptool";
   }
 )

@@ -90,6 +90,27 @@ Alternatively, install from crates.io:
 cargo install inceptool
 ```
 
+### NixOS / Home Manager
+
+You can consume the flake directly in your downstream `flake.nix`. The package exposes overrideable arguments for the Rust toolchain and crane library:
+
+```nix
+# Inside a downstream flake.nix
+outputs = { nixpkgs, inceptool-flake, ... }: {
+  packages.x86_64-linux.default = inceptool-flake.packages.x86_64-linux.default.override {
+
+    # To use the default rustc/cargo from standard nixpkgs (ignore rust-overlay):
+    rustToolchain = null;
+
+    # OR, to use a specific rust version:
+    # rustToolchain = pkgs.rust-bin.nightly.latest.default;
+
+    # OR, to provide a heavily customized craneLib:
+    # craneLib = myCustomCraneLib;
+  };
+};
+```
+
 ## Development
 
 This project uses [Nix flakes](https://nixos.wiki/wiki/Flakes) to provide
