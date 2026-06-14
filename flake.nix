@@ -39,14 +39,7 @@
 
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-        inceptool = craneLib.buildPackage (
-          commonArgs
-          // {
-            inherit cargoArtifacts;
-            pname = "inceptool";
-            doCheck = false;
-          }
-        );
+        inceptool = pkgs.callPackage ./package.nix { inherit crane; };
 
         # Static, fully self-contained Linux binaries for release artifacts.
         # The *build* platform stays the normal glibc x86_64-linux toolchain;
