@@ -6,15 +6,28 @@
 [graph]
 all-features = false
 no-default-features = false
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+]
 
 # https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
 [advisories]
+unsound = "all"
+unmaintained = "all"
+yanked = "warn"
+maximum-db-staleness = "P30D"
+unused-ignored-advisory = "warn"
+
 ignore = [
     # `atty` is unmaintained, pulled in transitively via `flash` (the same
     # GPL-3.0-or-later dependency already exempted below for licensing). No
     # safe upgrade is available upstream - resolve alongside the `flash`
     # licensing issue before/at crates.io publication.
     "RUSTSEC-2024-0375",
+    "RUSTSEC-2021-0145"
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
@@ -23,15 +36,21 @@ allow = [
     "0BSD",
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
+    # allowed, but no matching crates yet
+    # "BSD-2-Clause",
+    # "BSD-3-Clause",
     "BSL-1.0",
+    # "CC0-1.0",
     "ISC",
     "MIT",
-    "MPL-2.0",
     "Unicode-3.0",
     "Unlicense",
     "Zlib",
+    "MPL-2.0"
 ]
 confidence-threshold = 0.8
+include-dev = true
+unused-allowed-license = "warn"
 
 # `flash` (the bash AST parser `inceptool-stages` uses for guardrails) is
 # GPL-3.0-or-later, which is otherwise incompatible with this workspace's
@@ -45,15 +64,20 @@ crate = "flash"
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 multiple-versions = "warn"
+multiple-versions-include-dev = true
 wildcards = "deny"
+highlight = "all"
+workspace-default-features = "allow"
+external-default-features = "allow"
+
 skip = [
-    { crate = "getrandom" },
     { crate = "unicode-width" },
-    { crate = "wit-bindgen" },
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+required-git-spec = "rev"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+unused-allowed-source = "warn"
