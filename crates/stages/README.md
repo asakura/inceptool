@@ -52,12 +52,16 @@ see the project's `~/.claude/settings.json`.
 - **Tools**: `Bash`, `run_shell_command`
 
 Extracts the `command` from the tool input and pipes it through the external
-`rtk rewrite <command>` binary. If `rtk` succeeds and produces a different,
-non-empty command string, the stage rewrites the tool input's `command` field
-and returns `Decision::Allow` with `reason: "RTK auto-rewrite"` and the
-updated input. If `rtk` is missing, errors, or returns the same/empty output,
-the stage is a no-op (`Ok(None)`) — failures to invoke `rtk` are only logged
-via `tracing::error!`, never surfaced to the agent.
+`rtk rewrite <command>` binary. If `rtk` produces a different, non-empty
+command string on `stdout`, the stage rewrites the tool input's `command`
+field and returns `Decision::Allow` with `reason: "RTK auto-rewrite"` and the
+updated input — regardless of `rtk`'s exit code, since `rtk rewrite` exits `3`
+(not `0`) for a rewritten *compound* command (one joined by `&&`, `;`, or
+`||`), while still printing the rewrite to `stdout`. If `rtk` is missing, or
+exits non-zero with no usable `stdout` (and that exit code isn't the
+documented `1` for "no RTK equivalent"), the stage is a no-op (`Ok(None)`) —
+these failures are only logged via `tracing::error!`, never surfaced to the
+agent.
 
 Note: the actual rewrite logic (e.g. preferring `rtk`-flavored `ls`/`tree`
 equivalents) lives entirely in the external `rtk` binary; this stage is a thin

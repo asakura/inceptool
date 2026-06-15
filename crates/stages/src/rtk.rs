@@ -20,11 +20,14 @@
 //!    via [`std::process::Command`].
 //! 4. **Diff Checking**: Compares the rewritten output against the original
 //!    command.
-//! 5. **Response Generation**: If `rtk` produced a different, non-empty command,
-//!    returns `Decision::Allow` with the rewritten `command` and reason
-//!    `REWRITE_REASON`. Otherwise returns `Ok(None)` — failures to invoke
-//!    `rtk` (missing binary, non-zero exit, etc.) are only logged via
-//!    `tracing::error!`, never surfaced to the agent.
+//! 5. **Response Generation**: If `rtk` produced a different, non-empty command
+//!    on `stdout` - regardless of exit code, since `rtk rewrite` exits `3`
+//!    rather than `0` for rewritten compound commands (joined by `&&`, `;`,
+//!    or `||`) - returns `Decision::Allow` with the rewritten `command` and
+//!    reason `REWRITE_REASON`. Otherwise returns `Ok(None)` — failures to
+//!    invoke `rtk` (missing binary, unexpected non-zero exit with no usable
+//!    output) are only logged via `tracing::error!`, never surfaced to the
+//!    agent.
 
 use inceptool_engine::{EngineError, Stage};
 use inceptool_protocol::{
@@ -97,14 +100,35 @@ impl Stage for RtkStage {
 impl RtkStage {
     /// Pipes `cmd` through `rtk rewrite` and returns the rewritten command.
     ///
-    /// Returns `None` if `rtk` is missing, fails to execute, exits with a
-    /// non-zero status, or returns the same/empty output. In the failure
-    /// cases, details are logged via `tracing::error!` rather than surfaced
-    /// to the agent.
+    /// Returns `None` if `rtk` is missing, fails to execute, or returns the
+    /// same/empty output. In the failure cases, details are logged via
+    /// `tracing::error!` rather than surfaced to the agent.
     fn rewrite(cmd: &str) -> Option<String> {
         let output = Self::invoke(cmd)?;
 
-        if !output.status.success() {
+        Self::interpret(cmd, output)
+    }
+
+    /// Extracts a rewritten command from `rtk rewrite`'s `output`, if any.
+    ///
+    /// `rtk rewrite` exits `0` for a single rewritten command, `1` with empty
+    /// output when `cmd` has no RTK equivalent, and `3` for a rewritten
+    /// compound command (e.g. one joined by `&&`, `;`, or `||`) - in all
+    /// three cases `stdout` is the authoritative signal, so this only
+    /// inspects `output.status` to decide whether an empty/unchanged `stdout`
+    /// is the documented "no equivalent" case (exit `1`) or an unexpected
+    /// failure worth logging.
+    fn interpret(cmd: &str, output: Output) -> Option<String> {
+        let Ok(mut rewritten) = String::from_utf8(output.stdout) else {
+            return None;
+        };
+        trim_in_place(&mut rewritten);
+
+        if !rewritten.is_empty() && rewritten != cmd {
+            return Some(rewritten);
+        }
+
+        if !output.status.success() && output.status.code() != Some(1_i32) {
             let stderr = String::from_utf8_lossy(&output.stderr);
 
             tracing::error!(
@@ -112,20 +136,9 @@ impl RtkStage {
                 output.status,
                 stderr.trim()
             );
-
-            return None;
         }
 
-        let Ok(mut rewritten) = String::from_utf8(output.stdout) else {
-            return None;
-        };
-        trim_in_place(&mut rewritten);
-
-        if rewritten.is_empty() || rewritten == cmd {
-            None
-        } else {
-            Some(rewritten)
-        }
+        None
     }
 
     /// Runs `rtk rewrite <cmd>`, logging and returning `None` if the process
@@ -156,5 +169,56 @@ fn trim_in_place(s: &mut String) {
 
     if start > 0 {
         s.drain(..start);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::os::unix::process::ExitStatusExt as _;
+    use std::process::ExitStatus;
+
+    use rstest::rstest;
+
+    /// Builds a synthetic `rtk rewrite` [`Output`] as if the process exited
+    /// normally with `code`, writing `stdout`/`stderr`.
+    fn output(code: i32, stdout: &str, stderr: &str) -> Output {
+        Output {
+            status: ExitStatus::from_raw(code << 8),
+            stdout: stdout.as_bytes().to_vec(),
+            stderr: stderr.as_bytes().to_vec(),
+        }
+    }
+
+    #[rstest]
+    // Exit 0: a single command was rewritten.
+    #[case::single_command_rewritten(
+        "git status",
+        output(0, "rtk git status", ""),
+        Some("rtk git status")
+    )]
+    // Exit 1 with empty stdout: the documented "no RTK equivalent" case.
+    #[case::no_equivalent("foobarbaz qux", output(1, "", ""), None)]
+    // Exit 3: rtk's signal for a rewritten *compound* command - still a
+    // usable rewrite, not a failure.
+    #[case::compound_command_rewritten(
+        "git status && git log",
+        output(3, "rtk git status && rtk git log", ""),
+        Some("rtk git status && rtk git log")
+    )]
+    // Exit 0 but stdout echoes the input unchanged: treated as no rewrite.
+    #[case::unchanged_output_is_not_a_rewrite("git status", output(0, "git status", ""), None)]
+    // Unexpected non-zero exit with no usable stdout: no rewrite.
+    #[case::unexpected_failure("git status", output(2, "", "boom"), None)]
+    fn interpret_extracts_rewrite_from_output(
+        #[case] cmd: &str,
+        #[case] output: Output,
+        #[case] expected: Option<&str>,
+    ) {
+        assert_eq!(
+            RtkStage::interpret(cmd, output),
+            expected.map(str::to_owned)
+        );
     }
 }

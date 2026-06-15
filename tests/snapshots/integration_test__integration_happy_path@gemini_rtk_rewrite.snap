@@ -2,4 +2,12 @@
 source: tests/integration_test.rs
 expression: parsed
 ---
-{}
+{
+  "decision": "allow",
+  "hookSpecificOutput": {
+    "tool_input": {
+      "command": "rtk ls"
+    }
+  },
+  "reason": "RTK auto-rewrite"
+}
