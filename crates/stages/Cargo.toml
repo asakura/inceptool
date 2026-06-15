@@ -12,6 +12,7 @@ categories = ["development-tools"]
 
 [dependencies]
 flash.workspace = true
+gix.workspace = true
 inceptool_engine.workspace = true
 inceptool_protocol.workspace = true
 regex.workspace = true
@@ -19,6 +20,11 @@ serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true
