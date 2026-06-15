@@ -12,6 +12,9 @@
 //! This crate contains all the built-in stages used by the engine to augment
 //! and enforce agent behavior during execution.
 
+pub mod flake_lock;
+pub use flake_lock::FlakeLockSummarizationStage;
+
 /// Intercepts and rewrites bash commands for the RTK suite.
 pub mod rtk;
 pub use rtk::RtkStage;
