@@ -11,13 +11,14 @@
 //! agent only needs to know the names of the inputs, their sources, and
 //! whether they have changed relative to the git repository's `HEAD`.
 //!
-//! This stage intercepts `Read` operations targeting `flake.lock`. It parses
-//! the file and optionally compares it against the last committed version
-//! (`HEAD`). It then completely suppresses the raw JSON output and replaces
-//! it with a highly condensed, line-by-line summary.
+//! This stage intercepts `Read` operations targeting `flake.lock` *before*
+//! they execute. It parses the file directly from disk and optionally
+//! compares it against the last committed version (`HEAD`), then denies the
+//! read and returns a highly condensed, line-by-line summary as the denial
+//! reason — the agent never sees the raw JSON.
 //!
 //! ## Flow
-//! 1. **Event Filtering**: Triggers on `PostToolUse` for tools: `Read`,
+//! 1. **Event Filtering**: Triggers on `PreToolUse` for tools: `Read`,
 //!    `view_file`, `cat`, etc., when the target is named `flake.lock`.
 //! 2. **Current State**: Deserializes the current `flake.lock` from the
 //!    filesystem into `FlakeLock`, which borrows field values directly from
@@ -30,22 +31,21 @@
 //!    `HEAD` and the current file.
 //! 5. **Formatting**: Generates a compact summary, e.g.
 //!    `nixpkgs: NixOS/nixpkgs@abcdef1 -> 1234567`.
-//! 6. **Suppression**: Returns `Decision::Allow` but sets
-//!    `suppress_output = true` and injects the summary via
-//!    `additional_context`.
+//! 6. **Denial**: Returns `Decision::Deny` with the summary as `reason`,
+//!    blocking the read before the raw JSON ever reaches the agent.
 //!
 //! ## Edge Cases
 //!
 //! If the file can't be read, isn't valid JSON, or has no nodes worth
 //! summarizing (an empty `nodes` map, or only the `root` node), the stage is
-//! a no-op (`Ok(None)`), leaving the original output untouched. If `HEAD`
-//! can't be determined (not a git repository, the file is untracked, no
-//! commits yet, etc.), the summary is still produced, but every entry is
-//! shown as unchanged (no `->` diff).
+//! a no-op (`Ok(None)`), letting the read proceed normally. If `HEAD` can't
+//! be determined (not a git repository, the file is untracked, no commits
+//! yet, etc.), the summary is still produced, but every entry is shown as
+//! unchanged (no `->` diff).
 
 use inceptool_engine::{EngineError, Stage};
 use inceptool_protocol::{
-    Conn, Decision, HookInputEvent, HookKind, HookOutputEvent, PostToolUseOutput,
+    Conn, Decision, HookInputEvent, HookKind, HookOutputEvent, PreToolUseOutput,
 };
 
 use serde::Deserialize;
@@ -66,8 +66,9 @@ const ROOT_NODE_NAME: &str = "root";
 /// Number of leading characters of a revision hash shown in summaries.
 const SHORT_REV_LEN: usize = 7;
 
-/// Stage that suppresses raw `flake.lock` reads and replaces them with a
-/// condensed per-input summary, diffed against `HEAD` where possible.
+/// Stage that denies raw `flake.lock` reads, returning a condensed
+/// per-input summary - diffed against `HEAD` where possible - as the denial
+/// reason.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FlakeLockSummarizationStage;
 
@@ -145,7 +146,7 @@ impl Stage for FlakeLockSummarizationStage {
     }
 
     fn hook(&self) -> HookKind {
-        HookKind::PostToolUse
+        HookKind::PreToolUse
     }
 
     fn tool_names(&self) -> &'static [&'static str] {
@@ -153,7 +154,7 @@ impl Stage for FlakeLockSummarizationStage {
     }
 
     fn run(&self, conn: &mut Conn<'_>) -> Result<Option<HookOutputEvent>, EngineError> {
-        if let HookInputEvent::PostToolUse(input) = &conn.event {
+        if let HookInputEvent::PreToolUse(input) = &conn.event {
             let parsed: Value = input.parse_tool_input()?;
 
             let file_path = parsed
@@ -196,10 +197,9 @@ impl Stage for FlakeLockSummarizationStage {
 
             let summary = Summary(&entries).to_string();
 
-            return Ok(Some(HookOutputEvent::PostToolUse(PostToolUseOutput {
-                decision: Some(Decision::Allow),
-                additional_context: Some(summary.into()),
-                suppress_output: Some(true),
+            return Ok(Some(HookOutputEvent::PreToolUse(PreToolUseOutput {
+                decision: Some(Decision::Deny),
+                reason: Some(summary.into()),
                 ..Default::default()
             })));
         }
@@ -311,20 +311,22 @@ fn get_head_content(file_path: &str) -> Option<String> {
 }
 
 impl fmt::Display for Summary<'_> {
-    /// Renders the header line (`flake.lock — N inputs[, M changed vs HEAD]:`)
-    /// followed by one line per entry, formatted via [`SummaryEntry`]'s
-    /// `Display` impl.
+    /// Renders the header line (`flake.lock read blocked — use this summary
+    /// instead (N inputs[, M changed vs HEAD]):`) followed by one line per
+    /// entry, formatted via [`SummaryEntry`]'s `Display` impl.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let total = self.0.len();
         let changed_count = self.0.iter().filter(|e| e.changed).count();
 
+        write!(
+            f,
+            "flake.lock read blocked \u{2014} use this summary instead ("
+        )?;
+
         if changed_count > 0 {
-            write!(
-                f,
-                "flake.lock \u{2014} {total} inputs, {changed_count} changed vs HEAD:"
-            )?;
+            write!(f, "{total} inputs, {changed_count} changed vs HEAD):")?;
         } else {
-            write!(f, "flake.lock \u{2014} {total} inputs:")?;
+            write!(f, "{total} inputs):")?;
         }
 
         for entry in self.0 {
@@ -339,7 +341,7 @@ impl fmt::Display for Summary<'_> {
 mod tests {
     use super::*;
 
-    use inceptool_protocol::{PostToolUseInput, RawJson, SessionMeta};
+    use inceptool_protocol::{PreToolUseInput, RawJson, SessionMeta};
 
     use rstest::{fixture, rstest};
     use serde_json::json;
@@ -418,14 +420,13 @@ mod tests {
 
         use std::process::Command;
 
-        /// Runs [`FlakeLockSummarizationStage`] against a synthetic `PostToolUse` `Read` of
+        /// Runs [`FlakeLockSummarizationStage`] against a synthetic `PreToolUse` `Read` of
         /// `tool_input_json` (e.g. `{"file_path": "/tmp/x/flake.lock"}`).
         fn run_stage_with_tool_input(
             tool_input_json: &str,
         ) -> Result<Option<HookOutputEvent>, TestError> {
             let stage = FlakeLockSummarizationStage;
             let tool_input = RawValue::from_string(tool_input_json.to_owned())?;
-            let tool_output = RawValue::from_string("{}".to_owned())?;
 
             let mut conn = Conn {
                 session: SessionMeta {
@@ -440,11 +441,9 @@ mod tests {
                     agent_id: None,
                     agent_type: None,
                 },
-                event: HookInputEvent::PostToolUse(PostToolUseInput {
+                event: HookInputEvent::PreToolUse(PreToolUseInput {
                     tool_name: Cow::Borrowed("Read"),
                     tool_input: RawJson(&tool_input),
-                    tool_output: RawJson(&tool_output),
-                    tool_output_source: None,
                     mcp_context: None,
                     original_request_name: None,
                 }),
@@ -453,7 +452,7 @@ mod tests {
             Ok(stage.run(&mut conn)?)
         }
 
-        /// Runs [`FlakeLockSummarizationStage`] against a synthetic `PostToolUse` `Read` of `file_path`.
+        /// Runs [`FlakeLockSummarizationStage`] against a synthetic `PreToolUse` `Read` of `file_path`.
         fn run_stage(file_path: &str) -> Result<Option<HookOutputEvent>, TestError> {
             run_stage_with_tool_input(&json!({"file_path": file_path}).to_string())
         }
@@ -496,28 +495,27 @@ mod tests {
         }
 
         #[rstest]
-        fn summarizes_and_suppresses_flake_lock_read(
-            flake_lock_json: String,
-        ) -> Result<(), TestError> {
+        fn denies_flake_lock_read_with_summary(flake_lock_json: String) -> Result<(), TestError> {
             let dir = tempfile::tempdir()?;
             let file_path = write_flake_lock(dir.path(), &flake_lock_json)?;
 
             let output = run_stage(&file_path)?
                 .ok_or_else(|| TestError::Failure("expected a hook output".into()))?;
 
-            let HookOutputEvent::PostToolUse(post) = output else {
-                return Err(TestError::Failure("expected a PostToolUse output".into()));
+            let HookOutputEvent::PreToolUse(pre) = output else {
+                return Err(TestError::Failure("expected a PreToolUse output".into()));
             };
 
-            assert_eq!(post.decision, Some(Decision::Allow));
-            assert_eq!(post.suppress_output, Some(true));
+            assert_eq!(pre.decision, Some(Decision::Deny));
 
-            let context = post
-                .additional_context
-                .ok_or_else(|| TestError::Failure("missing additional_context".into()))?;
+            let reason = pre
+                .reason
+                .ok_or_else(|| TestError::Failure("missing reason".into()))?;
 
-            assert!(context.starts_with("flake.lock \u{2014} 1 inputs:"));
-            assert!(context.contains("nixpkgs: NixOS/nixpkgs@abc1234"));
+            assert!(reason.starts_with(
+                "flake.lock read blocked \u{2014} use this summary instead (1 inputs):"
+            ));
+            assert!(reason.contains("nixpkgs: NixOS/nixpkgs@abc1234"));
 
             Ok(())
         }
@@ -579,16 +577,18 @@ mod tests {
             let output = run_stage(&file_path)?
                 .ok_or_else(|| TestError::Failure("expected a hook output".into()))?;
 
-            let HookOutputEvent::PostToolUse(post) = output else {
-                return Err(TestError::Failure("expected a PostToolUse output".into()));
+            let HookOutputEvent::PreToolUse(pre) = output else {
+                return Err(TestError::Failure("expected a PreToolUse output".into()));
             };
 
-            let context = post
-                .additional_context
-                .ok_or_else(|| TestError::Failure("missing additional_context".into()))?;
+            let reason = pre
+                .reason
+                .ok_or_else(|| TestError::Failure("missing reason".into()))?;
 
-            assert!(context.starts_with("flake.lock \u{2014} 1 inputs, 1 changed vs HEAD:"));
-            assert!(context.contains("nixpkgs: NixOS/nixpkgs@1111111 -> 2222222"));
+            assert!(reason.starts_with(
+                "flake.lock read blocked \u{2014} use this summary instead (1 inputs, 1 changed vs HEAD):"
+            ));
+            assert!(reason.contains("nixpkgs: NixOS/nixpkgs@1111111 -> 2222222"));
 
             Ok(())
         }
@@ -770,7 +770,7 @@ mod tests {
 
             assert_eq!(
                 Summary(&entries).to_string(),
-                "flake.lock \u{2014} 1 inputs:\n  nixpkgs: NixOS/nixpkgs@abc1234"
+                "flake.lock read blocked \u{2014} use this summary instead (1 inputs):\n  nixpkgs: NixOS/nixpkgs@abc1234"
             );
         }
 
@@ -786,7 +786,7 @@ mod tests {
 
             assert_eq!(
                 Summary(&entries).to_string(),
-                "flake.lock \u{2014} 1 inputs, 1 changed vs HEAD:\n  nixpkgs: NixOS/nixpkgs@1111111 -> 2222222"
+                "flake.lock read blocked \u{2014} use this summary instead (1 inputs, 1 changed vs HEAD):\n  nixpkgs: NixOS/nixpkgs@1111111 -> 2222222"
             );
         }
     }
