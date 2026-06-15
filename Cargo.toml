@@ -1,6 +1,6 @@
 [package]
 name = "inceptool"
-version = "0.1.2"
+version = "0.3.0"
 edition.workspace = true
 authors.workspace = true
 description = "An extensible LLM agent hook architecture"
@@ -53,7 +53,7 @@ inceptool_driver-claude = { version = "0.9", package = "inceptool-driver-claude"
 inceptool_driver-gemini = { version = "0.9", package = "inceptool-driver-gemini", path = "crates/driver-gemini" }
 inceptool_engine = { version = "0.1", package = "inceptool-engine", path = "crates/engine" }
 inceptool_protocol = { version = "0.1", package = "inceptool-protocol", path = "crates/protocol" }
-inceptool_stages = { version = "0.2", package = "inceptool-stages", path = "crates/stages" }
+inceptool_stages = { version = "0.3", package = "inceptool-stages", path = "crates/stages" }
 insta = { version = "1.48", default-features = false, features = ["json", "redactions"] }
 miette = { version = "7.0", default-features = false, features = ["fancy"] }
 predicates = { version = "3.1", default-features = false }
