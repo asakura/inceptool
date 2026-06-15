@@ -1032,7 +1032,7 @@ checksum = "3d3067d79b975e8844ca9eb072e16b31c3c1c36928edf9c6789548c524d0d954"
 
 [[package]]
 name = "inceptool"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -1057,7 +1057,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-driver-claude"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "inceptool-protocol",
  "rstest",
@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-driver-gemini"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "inceptool-protocol",
  "rstest",
@@ -1079,7 +1079,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-engine"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "inceptool-protocol",
  "rstest",
@@ -1090,7 +1090,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-protocol"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rstest",
  "serde",
@@ -1104,7 +1104,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-stages"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "flash",
  "gix",
