@@ -46,6 +46,39 @@ This stage only fires if Claude Code's `PreToolUse` hook matcher covers
 `Read`/`view_file`/`cat` (the default `inceptool` config only wires `Bash`) —
 see the project's `~/.claude/settings.json`.
 
+### `ReadWriteGuardStage` (`read-write-guard`)
+
+- **Hook**: `PreToolUse`
+- **Tools**: `Write`, `Edit`, `MultiEdit`, `write_file`, `replace`, `Read`,
+  `view_file`, `cat`
+
+Triggers when the tool input's `file_path`/`path`/`AbsolutePath` points at a
+file matching a known ecosystem lockfile/manifest: `flake.lock`,
+`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock`, `bun.lockb`,
+`Cargo.lock`, `poetry.lock`, `Pipfile.lock`, `uv.lock`, `go.sum`,
+`Gemfile.lock`, `composer.lock`, `mix.lock`, `pubspec.lock`, and
+`.terraform.lock.hcl`.
+
+For modifying tools (`Write`, `Edit`, `MultiEdit`, `write_file`, `replace`),
+the stage returns `Decision::Deny` with a `reason` pointing at the correct
+ecosystem-native command (e.g. `nix flake update`, `cargo update`,
+`npm install`) plus a note about its blast radius (e.g. "updates ALL Rust
+dependencies").
+
+For reading tools (`Read`, `view_file`, `cat`), the stage also returns
+`Decision::Deny`, but with a generic reason noting that the file is
+machine-generated noise and suggesting `git diff <file>` to see what changed.
+
+Since `Decision::Deny` is terminal and stages run in registration order,
+`FlakeLockSummarizationStage` (registered first) still wins for `flake.lock`
+reads when it has a useful diff summary — this stage's generic read-deny is
+the fallback for everything else (and for `flake.lock` when
+`FlakeLockSummarizationStage` is a no-op).
+
+The read-deny path only fires if Claude Code's `PreToolUse` hook matcher
+covers `Read`/`view_file`/`cat` (the default `inceptool` config only wires
+`Bash`) — see the project's `~/.claude/settings.json`.
+
 ### `RtkStage` (`rtk`)
 
 - **Hook**: `PreToolUse`

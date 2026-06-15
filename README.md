@@ -65,7 +65,7 @@ Entries from the local (CWD) config override entries from the user-level config
 on a per-hook basis.
 
 The valid hook names correspond to the stages above: `rtk`, `guardrails`,
-`write-guard`, `format`, `lint`, `flake-lock-summarization`, and
+`read-write-guard`, `format`, `lint`, `flake-lock-summarization`, and
 `pre-commit-summarization`.
 
 Example `inceptool.toml`:
@@ -179,6 +179,9 @@ registration order within that bucket, filtered by its `Stage::tool_names` list.
 
 1. **RtkStage** (`rtk`) - rewrites `ls` and `tree` invocations to their `rtk`
    equivalents.
+2. **ReadWriteGuardStage** (`read-write-guard`) - denies direct reads/edits of
+   ecosystem lockfiles (`flake.lock`, `Cargo.lock`, `package-lock.json`, etc.),
+   redirecting to the correct tool (`nix flake update`, `cargo update`, etc.).
 
 ### PostToolUse
 
