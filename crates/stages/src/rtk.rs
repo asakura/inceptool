@@ -22,7 +22,7 @@
 //!    command.
 //! 5. **Response Generation**: If `rtk` produced a different, non-empty command,
 //!    returns `Decision::Allow` with the rewritten `command` and reason
-//!    [`REWRITE_REASON`]. Otherwise returns `Ok(None)` — failures to invoke
+//!    `REWRITE_REASON`. Otherwise returns `Ok(None)` — failures to invoke
 //!    `rtk` (missing binary, non-zero exit, etc.) are only logged via
 //!    `tracing::error!`, never surfaced to the agent.
 
