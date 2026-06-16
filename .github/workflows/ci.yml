@@ -37,8 +37,20 @@ jobs:
       - name: cargo fmt
         run: nix develop -c cargo fmt --check
 
+      - name: no stale markers
+        run: |
+          if grep -rn --include="*.rs" -E "TODO|FIXME|HACK|XXX" .; then
+            echo "Stale markers found — resolve before merging" >&2
+            exit 1
+          fi
+
       - name: cargo clippy
         run: nix develop -c cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo doc
+        run: nix develop -c cargo doc --no-deps --workspace
+        env:
+          RUSTDOCFLAGS: "-D warnings"
 
       # Runs outside the sandbox (network + .git access) inside the pinned devShell.
       - name: cargo test --workspace
