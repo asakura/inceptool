@@ -9,6 +9,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     crane.url = "github:ipetkov/crane";
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -17,6 +21,7 @@
       flake-utils,
       rust-overlay,
       crane,
+      git-hooks,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -40,6 +45,28 @@
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
         inceptool = pkgs.callPackage ./package.nix { inherit crane; };
+
+        gitHooksCheck = git-hooks.lib.${system}.run {
+          src = ./.;
+          package = pkgs.prek;
+          hooks = {
+            cargo-check.enable = true;
+            cargo-sort.enable = true;
+            clippy.enable = true;
+            rustfmt.enable = true;
+            taplo.enable = true;
+            nixfmt.enable = true;
+            shfmt.enable = true;
+            shellcheck.enable = true;
+
+            cargo-deny = {
+              enable = true;
+              entry = "${pkgs.cargo-deny}/bin/cargo-deny check";
+              files = "(Cargo\\.lock|deny\\.toml)$";
+              pass_filenames = false;
+            };
+          };
+        };
 
         # Static, fully self-contained Linux binaries for release artifacts.
         # The *build* platform stays the normal glibc x86_64-linux toolchain;
@@ -85,27 +112,30 @@
               cargoClippyExtraArgs = "--workspace --all-targets -- -D warnings";
             }
           );
+          git-hooks = gitHooksCheck;
         };
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [ inceptool ];
           RUSTFLAGS = "";
+          shellHook = ''
+            ${gitHooksCheck.shellHook}
+          '';
           packages = with pkgs; [
             rustToolchain
             git
-            pre-commit
             cargo-deny
             cargo-llvm-cov
             cargo-nextest
             git-cliff
-            nixfmt-rfc-style
+            nixfmt
             shfmt
             shellcheck
             rtk
           ];
         };
 
-        formatter = pkgs.nixfmt-rfc-style;
+        formatter = pkgs.nixfmt-tree;
       }
     );
 }

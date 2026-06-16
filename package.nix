@@ -6,10 +6,7 @@
 }:
 let
   libCrane =
-    if rustToolchain != null then
-      craneLib.overrideToolchain (_: rustToolchain)
-    else
-      craneLib;
+    if rustToolchain != null then craneLib.overrideToolchain (_: rustToolchain) else craneLib;
 
   src = libCrane.cleanCargoSource ./.;
 

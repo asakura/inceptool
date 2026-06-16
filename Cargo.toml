@@ -10,90 +10,79 @@ readme = "README.md"
 keywords = ["llm", "agents", "hooks", "ai"]
 categories = ["development-tools"]
 
+[workspace]
+members = [
+  "crates/driver-claude",
+  "crates/driver-gemini",
+  "crates/engine",
+  "crates/protocol",
+  "crates/stages",
+]
+
 [workspace.package]
 edition = "2024"
 authors = ["Mikalai Seva"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/asakura/inceptool"
 
-[workspace]
-members = [
-    "crates/driver-claude",
-    "crates/driver-gemini",
-    "crates/engine",
-    "crates/protocol",
-    "crates/stages",
-]
-
-[profile.dev]
-split-debuginfo = "unpacked"
-debug = 1
-overflow-checks = true
-
-[profile.dev.package."*"]
-opt-level = 3
-debug = false
-
-[profile.dev.build-override]
-opt-level = 3
-
-[profile.release]
-opt-level = 3
-lto = "fat"
-codegen-units = 1
-strip = "symbols"
-panic = "abort"
-
 [workspace.dependencies]
 assert_cmd = { version = "2.2", default-features = false }
-clap = { version = "4.6", default-features = false, features = ["derive", "std", "help", "usage", "error-context"] }
+clap = { version = "4.6", default-features = false, features = [
+  "derive",
+  "std",
+  "help",
+  "usage",
+  "error-context",
+] }
 directories = { version = "6.0", default-features = false }
 flash = { version = "0.0", default-features = false }
-gix = { version = "0.84", default-features = false, features = [ "sha1", "zlib-rs" ] }
+gix = { version = "0.84", default-features = false, features = [
+  "sha1",
+  "zlib-rs",
+] }
 inceptool_driver-claude = { version = "0.9", package = "inceptool-driver-claude", path = "crates/driver-claude" }
 inceptool_driver-gemini = { version = "0.9", package = "inceptool-driver-gemini", path = "crates/driver-gemini" }
 inceptool_engine = { version = "0.1", package = "inceptool-engine", path = "crates/engine" }
 inceptool_protocol = { version = "0.1", package = "inceptool-protocol", path = "crates/protocol" }
 inceptool_stages = { version = "0.3", package = "inceptool-stages", path = "crates/stages" }
-insta = { version = "1.48", default-features = false, features = ["json", "redactions"] }
+insta = { version = "1.48", default-features = false, features = [
+  "json",
+  "redactions",
+] }
 miette = { version = "7.0", default-features = false, features = ["fancy"] }
 predicates = { version = "3.1", default-features = false }
 regex = { version = "1.10", default-features = false }
 rstest = { version = "0.26", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
-serde_json = { version = "1.0", default-features = false, features = ["raw_value", "std"] }
+serde_json = { version = "1.0", default-features = false, features = [
+  "raw_value",
+  "std",
+] }
 serde_yaml = { version = "0.9", default-features = false }
 strum = { version = "0.28", default-features = false }
 strum_macros = { version = "0.28", default-features = false }
 tempfile = { version = "3.27", default-features = false }
 thiserror = { version = "2.0", default-features = false }
-toml = { version = "1.1", default-features = false, features = ["parse", "serde", "display"] }
-tracing = { version = "0.1", default-features = false, features = ["attributes"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["json", "env-filter", "fmt", "std", "registry", "ansi"] }
-zerovec = { version = "0.11", default-features = false, features = ["serde", "alloc"] }
-
-[dependencies]
-clap.workspace = true
-directories.workspace = true
-inceptool_driver-claude.workspace = true
-inceptool_driver-gemini.workspace = true
-inceptool_engine.workspace = true
-inceptool_protocol.workspace = true
-inceptool_stages.workspace = true
-miette.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-thiserror.workspace = true
-toml.workspace = true
-tracing-subscriber.workspace = true
-tracing.workspace = true
-
-[dev-dependencies]
-assert_cmd.workspace = true
-insta.workspace = true
-predicates.workspace = true
-rstest.workspace = true
-tempfile.workspace = true
+toml = { version = "1.1", default-features = false, features = [
+  "parse",
+  "serde",
+  "display",
+] }
+tracing = { version = "0.1", default-features = false, features = [
+  "attributes",
+] }
+tracing-subscriber = { version = "0.3", default-features = false, features = [
+  "json",
+  "env-filter",
+  "fmt",
+  "std",
+  "registry",
+  "ansi",
+] }
+zerovec = { version = "0.11", default-features = false, features = [
+  "serde",
+  "alloc",
+] }
 
 [workspace.lints.rust]
 # Safety — forbid means even #![allow(...)] can't override
@@ -155,7 +144,7 @@ large_stack_arrays = "deny"
 large_types_passed_by_value = "deny"
 
 # Minimal relaxations
-multiple_crate_versions = "allow"   # unavoidable with transitive deps
+multiple_crate_versions = "allow" # unavoidable with transitive deps
 
 # Cast lints — too many false positives even for strict projects
 cast_possible_truncation = "allow"
@@ -164,7 +153,7 @@ cast_precision_loss = "allow"
 cast_possible_wrap = "allow"
 
 # Nursery lints that have too many false positives
-cognitive_complexity = "allow"      # use clippy.toml threshold instead
+cognitive_complexity = "allow" # use clippy.toml threshold instead
 
 # Allowed restriction lints
 implicit_return = "allow"
@@ -204,6 +193,48 @@ inline_trait_bounds = "deny"
 field_scoped_visibility_modifiers = "deny"
 as_conversions = "deny"
 unused_trait_names = "deny"
+
+[dependencies]
+clap.workspace = true
+directories.workspace = true
+inceptool_driver-claude.workspace = true
+inceptool_driver-gemini.workspace = true
+inceptool_engine.workspace = true
+inceptool_protocol.workspace = true
+inceptool_stages.workspace = true
+miette.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+assert_cmd.workspace = true
+insta.workspace = true
+predicates.workspace = true
+rstest.workspace = true
+tempfile.workspace = true
+
+[profile.dev]
+split-debuginfo = "unpacked"
+debug = 1
+overflow-checks = true
+
+[profile.dev.package."*"]
+opt-level = 3
+debug = false
+
+[profile.dev.build-override]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
 
 [lints]
 workspace = true
