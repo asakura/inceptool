@@ -28,6 +28,7 @@ members = [
 [profile.dev]
 split-debuginfo = "unpacked"
 debug = 1
+overflow-checks = true
 
 [profile.dev.package."*"]
 opt-level = 3
@@ -139,6 +140,7 @@ todo = "deny"
 unimplemented = "deny"
 print_stdout = "deny"
 print_stderr = "deny"
+format_collect = "deny"
 
 # Async safety
 await_holding_lock = "deny"
