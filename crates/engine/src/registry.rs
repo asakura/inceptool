@@ -1,17 +1,17 @@
 //! [`Registry`] runs a sequence of [`Stage`]s against an incoming
-//! [`Conn`](inceptool_protocol::Conn), Plug-style.
+//! [`Conn`], Plug-style.
 //!
 //! ## Pipeline semantics
 //!
 //! [`Registry`] holds one pipeline per
-//! [`HookKind`](inceptool_protocol::HookKind) — a fixed-size array of stage
+//! [`HookKind`] — a fixed-size array of stage
 //! buckets built once at construction time from [`Registry::register`] calls.
-//! [`Registry::run_pipeline`] takes the [`HookKind`](inceptool_protocol::HookKind)
+//! [`Registry::run_pipeline`] takes the [`HookKind`]
 //! to dispatch on as an explicit argument (the caller determines it via
 //! [`Driver::hook_kind`](inceptool_protocol::Driver::hook_kind) from the CLI
 //! invocation, not by inspecting `conn`), then:
 //!
-//! 1. Selects the bucket for that [`HookKind`](inceptool_protocol::HookKind)
+//! 1. Selects the bucket for that [`HookKind`]
 //!    and iterates its stages in registration order.
 //! 2. Within that bucket, a stage only runs if its [`Stage::tool_names`] matches
 //!    `conn.event`'s tool name (via
@@ -19,13 +19,13 @@
 //!    `"*"` matches any tool name, including events that carry none at all.
 //! 3. If [`Stage::run`] returns `Some(output)`, that output replaces the pipeline's
 //!    running result.
-//! 4. If the output is *terminal* (see [`is_terminal`]), the pipeline stops
+//! 4. If the output is *terminal* (see `is_terminal`), the pipeline stops
 //!    immediately and that output is returned as-is. Otherwise execution
 //!    continues, allowing later stages to add context or override the result.
 //!
 //! ## Decision combination
 //!
-//! A [`Decision`](inceptool_protocol::Decision) of [`Deny`](inceptool_protocol::Decision::Deny)
+//! A [`Decision`] of [`Deny`](inceptool_protocol::Decision::Deny)
 //! or [`Block`](inceptool_protocol::Decision::Block) is terminal: it halts the pipeline
 //! immediately and is returned as the final output, regardless of what earlier stages
 //! decided.

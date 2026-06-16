@@ -21,7 +21,7 @@
 //!
 //! - **[`cli`]**: Parses `<driver> <hook>` into a [`cli::Cli`].
 //! - **[`config`]**: Loads `inceptool.toml` user configuration.
-//! - **[`error`]**: CLI-specific error types.
+//! - **`error`**: CLI-specific error types.
 //! - **[`logging`]**: Initializes the `tracing` subscriber.
 //! - **[`registry`]**: Builds the stage [`inceptool_engine::Registry`] from configuration.
 //! - **[`output`]**: Formats the engine's output and writes it to stdout.

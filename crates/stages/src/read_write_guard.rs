@@ -32,11 +32,11 @@
 //!
 //! 1. **Target Identification**: Filters `PreToolUse` events for both
 //!    modifying tools (`Write`, `Edit`, `MultiEdit`, `write_file`, `replace`)
-//!    and reading tools ([`READ_TOOLS`]).
-//! 2. **Path Matching**: Looks up the target file's name in [`RuleSet`], a
-//!    `BTreeMap`-backed index of [`Rule`]s (one per guarded filename) — no
+//!    and reading tools (`READ_TOOLS`).
+//! 2. **Path Matching**: Looks up the target file's name in `RuleSet`, a
+//!    `BTreeMap`-backed index of `Rule`s (one per guarded filename) — no
 //!    linear scan over the supported ecosystems.
-//! 3. **Response Generation**: Each [`Rule`] carries an [`Access`] policy
+//! 3. **Response Generation**: Each `Rule` carries an [`Access`] policy
 //!    that determines, per tool kind, whether the action is denied and what
 //!    the denial reason looks like — modifying tools get a targeted hint
 //!    containing the correct terminal command to use instead; reading tools
