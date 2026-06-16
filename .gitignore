@@ -5,3 +5,4 @@
 /result-*
 .direnv/
 /*.patch
+/.pre-commit-config.yaml
