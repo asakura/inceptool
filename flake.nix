@@ -65,7 +65,7 @@
             };
             clippy = {
               enable = true;
-              entry = "env ${cargoHookEnv} ${rustToolchain}/bin/cargo clippy --offline --";
+              entry = "env ${cargoHookEnv} ${rustToolchain}/bin/cargo clippy --";
               pass_filenames = false;
             };
             rustfmt.enable = true;
