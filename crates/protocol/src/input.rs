@@ -194,7 +194,11 @@ impl HookKind {
     ///
     /// Returns `ProtocolError::UnsupportedEvent` if `name` does not
     /// correspond to a known `HookKind`.
-    pub fn parse(name: &str) -> Result<Self, ProtocolError> {
+    pub fn parse<S>(name: S) -> Result<Self, ProtocolError>
+    where
+        S: AsRef<str>,
+    {
+        let name = name.as_ref();
         name.parse()
             .map_err(|_ignored| ProtocolError::UnsupportedEvent(name.to_owned()))
     }

@@ -39,7 +39,7 @@ pub trait Driver {
     /// backend-specific wire format.
     fn map_output<'a>(
         &self,
-        event_name: &'a str,
+        event_name: impl AsRef<str>,
         output: &'a HookOutputEvent,
     ) -> Result<Self::OutputWire<'a>, Self::Error>;
 
@@ -56,7 +56,7 @@ pub trait Driver {
     ///
     /// Returns `Self::Error` if `raw_name` does not correspond to a known
     /// `HookKind`.
-    fn hook_kind(&self, raw_name: &str) -> Result<HookKind, Self::Error>;
+    fn hook_kind(&self, raw_name: impl AsRef<str>) -> Result<HookKind, Self::Error>;
 }
 
 /// Deserializes a driver's wire-format input from a raw JSON string and maps
@@ -102,14 +102,15 @@ where
 ///
 /// Returns an error if `Driver::map_output` fails, or if the resulting
 /// wire value cannot be serialized to JSON.
-#[tracing::instrument(level = "debug", skip_all, fields(event_name = %event_name, kind = %output.as_ref()), err)]
-pub fn to_wire<'a, D>(
-    driver: &'a D,
-    event_name: &'a str,
-    output: &'a HookOutputEvent,
+#[tracing::instrument(level = "debug", skip_all, fields(event_name = %event_name.as_ref(), kind = %output.as_ref()), err)]
+pub fn to_wire<D, S>(
+    driver: &D,
+    event_name: S,
+    output: &HookOutputEvent,
 ) -> Result<String, D::Error>
 where
     D: Driver,
+    S: AsRef<str>,
 {
     tracing::debug!("protocol_out:\n{:#?}", output);
     let wire = driver.map_output(event_name, output)?;
@@ -178,7 +179,7 @@ mod tests {
 
         fn map_output<'a>(
             &self,
-            _event_name: &'a str,
+            _event_name: impl AsRef<str>,
             output: &'a HookOutputEvent,
         ) -> Result<Self::OutputWire<'a>, Self::Error> {
             Ok(MockOutput {
@@ -186,7 +187,7 @@ mod tests {
             })
         }
 
-        fn hook_kind(&self, raw_name: &str) -> Result<HookKind, Self::Error> {
+        fn hook_kind(&self, raw_name: impl AsRef<str>) -> Result<HookKind, Self::Error> {
             Ok(HookKind::parse(raw_name)?)
         }
     }

@@ -111,7 +111,7 @@ impl Driver for ClaudeDriver {
 
     fn map_output<'a>(
         &self,
-        _event_name: &'a str,
+        _event_name: impl AsRef<str>,
         output: &'a HookOutputEvent,
     ) -> Result<Self::OutputWire<'a>, Self::Error> {
         let hook_specific_output = ClaudeHookSpecificOutput::try_from(output).ok();
@@ -133,7 +133,7 @@ impl Driver for ClaudeDriver {
         Ok(wire)
     }
 
-    fn hook_kind(&self, raw_name: &str) -> Result<HookKind, Self::Error> {
+    fn hook_kind(&self, raw_name: impl AsRef<str>) -> Result<HookKind, Self::Error> {
         Ok(HookKind::parse(raw_name)?)
     }
 }
