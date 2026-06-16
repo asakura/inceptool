@@ -38,6 +38,7 @@ zst      = "derive(Debug,Clone,Copy,Default); #[must_use] on every pure construc
 must_use = "#[must_use] on: every pure free fn and method whose return value callers must not silently discard (constructors, builders, pure transformations, predicates returning bool); omit only when the primary purpose is a side-effect (e.g. a fn that writes to a file and also returns bytes-written); add a reason string: #[must_use = \"returns the transformed value; original is unchanged\"]"
 copy     = "every pub type that can be Copy (no heap, no Drop) must derive it; when unsure attempt #[derive(Copy,Clone)] — compiler decides"
 const    = "named const for every magic literal (string sentinel, numeric limit, binary name, subcommand); group before first use"
+generics = "free fns + inherent methods: fn f<S>(x: S) where S: Bound — no impl Trait in params (impl_trait_in_params active), no inline bounds fn f<S: Bound> (inline_trait_bounds active); trait methods: impl Trait in params OK (lint exempts them)"
 
 [stage] # XxxStage
 run     = "①match hook_event type+tool_name→Ok(None) if not this stage's concern ②parse conn.input→Err(StageError) on malformed JSON (stage owns the event after ①; parse failure is an error, not a skip) ③guard preconditions→Ok(None) if conditions unmet ④work ⑤Ok(Some(HookOutputEvent::…{..Default::default()}))"
