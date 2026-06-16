@@ -85,10 +85,6 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
   "registry",
   "ansi",
 ] }
-zerovec = { version = "0.11", default-features = false, features = [
-  "serde",
-  "alloc",
-] }
 
 [workspace.lints.rust]
 # Safety — forbid means even #![allow(...)] can't override

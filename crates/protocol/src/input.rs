@@ -4,46 +4,9 @@ use crate::error::ProtocolError;
 use crate::types::RawJson;
 
 use serde::Deserialize;
+use serde_json::value::RawValue;
 
 use std::borrow::Cow;
-
-/// Helper to deserialize a JSON array of strings into a `VarZeroVec<'de, str>`.
-///
-/// While `VarZeroVec` can natively deserialize from sequences if `zerovec/alloc` is enabled,
-/// this helper ensures we can borrow from the JSON string directly by first parsing into
-/// `Cow<'de, str>` before constructing the `VarZeroVec`, smoothing out issues across formats.
-pub(crate) fn deserialize_var_zero_vec_str<'de, D>(
-    deserializer: D,
-) -> Result<zerovec::VarZeroVec<'de, str>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let vec = Vec::<Cow<'de, str>>::deserialize(deserializer)?;
-    let strings: Vec<&str> = vec.iter().map(AsRef::as_ref).collect();
-    let v: zerovec::VarZeroVec<'static, str> = zerovec::VarZeroVec::from(&strings);
-
-    Ok(v)
-}
-
-/// Helper to deserialize a JSON array of objects into a `VarZeroVec<'de, str>`.
-///
-/// The payload provides an array of JSON objects (e.g. `[{"tool_name": "Bash"}]`), but
-/// `VarZeroVec<'de, str>` strictly expects strings. This function uses `RawValue` to extract
-/// each JSON object as an unparsed raw JSON string slice (e.g., `{"tool_name": "Bash"}`)
-/// and constructs the zero-copy vector from those captured string slices.
-pub(crate) fn deserialize_var_zero_vec_raw_json<'de, D>(
-    deserializer: D,
-) -> Result<zerovec::VarZeroVec<'de, str>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    use serde_json::value::RawValue;
-    let vec = Vec::<&'de RawValue>::deserialize(deserializer)?;
-    let strings: Vec<&str> = vec.into_iter().map(RawValue::get).collect();
-    let v: zerovec::VarZeroVec<'static, str> = zerovec::VarZeroVec::from(&strings);
-
-    Ok(v)
-}
 
 /// Represents the various events that can trigger a hook.
 ///
@@ -457,8 +420,8 @@ pub struct InstructionsLoadedInput<'a> {
     /// Reason why these instructions were loaded.
     pub load_reason: Cow<'a, str>,
     /// A list of glob patterns relevant to these instructions.
-    #[serde(borrow, default, deserialize_with = "deserialize_var_zero_vec_str")]
-    pub globs: zerovec::VarZeroVec<'a, str>,
+    #[serde(borrow, default)]
+    pub globs: Vec<Cow<'a, str>>,
     /// The path to the file that triggered loading these instructions.
     pub trigger_file_path: Option<Cow<'a, str>>,
     /// The path to a parent file, if applicable.
@@ -523,8 +486,8 @@ pub struct UserPromptExpansionInput<'a> {
 #[derive(Debug, Deserialize)]
 pub struct MessageDisplayInput<'a> {
     /// The batch of newly completed lines ready to render.
-    #[serde(borrow, default, deserialize_with = "deserialize_var_zero_vec_str")]
-    pub lines: zerovec::VarZeroVec<'a, str>,
+    #[serde(borrow, default)]
+    pub lines: Vec<Cow<'a, str>>,
 }
 
 /// Input payload for the `PermissionRequest` event.
@@ -564,12 +527,8 @@ pub struct PostToolUseFailureInput<'a> {
 #[derive(Debug, Deserialize)]
 pub struct PostToolBatchInput<'a> {
     /// The raw JSON details of each tool call resolved in this batch.
-    #[serde(
-        borrow,
-        default,
-        deserialize_with = "deserialize_var_zero_vec_raw_json"
-    )]
-    pub tool_calls: zerovec::VarZeroVec<'a, str>,
+    #[serde(borrow, default)]
+    pub tool_calls: Vec<&'a RawValue>,
 }
 
 /// Input payload for the `PermissionDenied` event.
@@ -1066,7 +1025,7 @@ mod tests {
         let input: MessageDisplayInput<'_> = serde_json::from_str(json)?;
 
         assert_eq!(
-            input.lines.iter().collect::<Vec<_>>(),
+            input.lines.iter().map(AsRef::as_ref).collect::<Vec<&str>>(),
             vec!["line one", "line two"]
         );
 
@@ -1121,7 +1080,7 @@ mod tests {
 
         assert_eq!(input.tool_calls.len(), 2);
 
-        let first_call = input.tool_calls.get(0).unwrap_or("");
+        let first_call = input.tool_calls.first().map_or("", |r| r.get());
 
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(first_call)?,
