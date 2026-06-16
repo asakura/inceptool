@@ -6,10 +6,10 @@ too-many-lines-threshold = 100
 # Domain terms that shouldn't trigger spelling warnings in docs
 # Add your own domain-specific terms here
 doc-valid-idents = [
-    "LLM",      # Large Language Model
-    "API",      # Application Programming Interface
-    "CLI",      # Command Line Interface
-    "MCP",      # Model Context Protocol
-    "JSON",     # JavaScript Object Notation
-    "HTTP",     # HyperText Transfer Protocol
+  "LLM",  # Large Language Model
+  "API",  # Application Programming Interface
+  "CLI",  # Command Line Interface
+  "MCP",  # Model Context Protocol
+  "JSON", # JavaScript Object Notation
+  "HTTP", # HyperText Transfer Protocol
 ]

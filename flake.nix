@@ -51,7 +51,6 @@
           package = pkgs.prek;
           hooks = {
             cargo-check.enable = true;
-            cargo-sort.enable = true;
             clippy.enable = true;
             rustfmt.enable = true;
             taplo.enable = true;

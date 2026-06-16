@@ -48,32 +48,30 @@ filter_unconventional = true
 split_commits = false
 
 # Pre-process commit messages before parsing (e.g., removing PR numbers from titles).
-commit_preprocessors = [
-    { pattern = '\((\w+\s)?#([0-9]+)\)', replace = "" },
-]
+commit_preprocessors = [{ pattern = '\((\w+\s)?#([0-9]+)\)', replace = "" }]
 
 # This is the most important section! It maps conventional commit types
 # (feat, fix, chore, etc.) to the section headers in the changelog.
 # The HTML comments (e.g. <!-- 0 -->) are used for sorting the sections.
 commit_parsers = [
-    { message = "^feat", group = "<!-- 0 -->[ADD] Features" },
-    { message = "^fix", group = "<!-- 1 -->[FIX] Bug Fixes" },
-    { message = "^refactor", group = "<!-- 2 -->[MOD] Refactor" },
-    { message = "^doc", group = "<!-- 3 -->[DOC] Documentation" },
-    { message = "^perf", group = "<!-- 4 -->[PWR] Performance" },
-    { message = "^style", group = "<!-- 5 -->[UI_] Styling" },
-    { message = "^test", group = "<!-- 6 -->[CHK] Testing" },
+  { message = "^feat", group = "<!-- 0 -->[ADD] Features" },
+  { message = "^fix", group = "<!-- 1 -->[FIX] Bug Fixes" },
+  { message = "^refactor", group = "<!-- 2 -->[MOD] Refactor" },
+  { message = "^doc", group = "<!-- 3 -->[DOC] Documentation" },
+  { message = "^perf", group = "<!-- 4 -->[PWR] Performance" },
+  { message = "^style", group = "<!-- 5 -->[UI_] Styling" },
+  { message = "^test", group = "<!-- 6 -->[CHK] Testing" },
 
-    # Skip noisy automated commits or specific chores you don't want in the changelog
-    { message = "^chore\\(release\\): prepare for", skip = true },
-    { message = "^chore\\(deps.*\\)", skip = true },
-    { message = "^chore\\(pr\\)", skip = true },
-    { message = "^chore\\(pull\\)", skip = true },
+  # Skip noisy automated commits or specific chores you don't want in the changelog
+  { message = "^chore\\(release\\): prepare for", skip = true },
+  { message = "^chore\\(deps.*\\)", skip = true },
+  { message = "^chore\\(pr\\)", skip = true },
+  { message = "^chore\\(pull\\)", skip = true },
 
-    # Group remaining chores and CI updates into a Miscellaneous category
-    { message = "^chore|^ci", group = "<!-- 7 -->[SYS] Miscellaneous Tasks" },
-    { body = ".*security", group = "<!-- 8 -->[SEC] Security" },
-    { message = "^revert", group = "<!-- 9 -->[RVT] Revert" },
+  # Group remaining chores and CI updates into a Miscellaneous category
+  { message = "^chore|^ci", group = "<!-- 7 -->[SYS] Miscellaneous Tasks" },
+  { body = ".*security", group = "<!-- 8 -->[SEC] Security" },
+  { message = "^revert", group = "<!-- 9 -->[RVT] Revert" },
 ]
 
 # Allow breaking commits to appear in the changelog even if they match a skip rule.
