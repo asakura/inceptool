@@ -13,7 +13,7 @@
 //! ## Flow
 //!
 //! 1. **Event Filtering**: Intercepts `PreToolUse` events for the `Bash` or
-//!   `run_shell_command` tools.
+//!    `run_shell_command` tools.
 //! 2. **Command Extraction**: Reads the `command` field from the tool input;
 //!    bails out if it is absent or empty.
 //! 3. **Rewrite Invocation**: Pipes the command through `rtk rewrite <command>`

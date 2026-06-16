@@ -11,14 +11,15 @@ keywords = ["stages", "hooks", "ai"]
 categories = ["development-tools"]
 
 [dependencies]
+fancy-regex.workspace = true
 flash.workspace = true
 gix.workspace = true
 inceptool_engine.workspace = true
 inceptool_protocol.workspace = true
 regex.workspace = true
 serde.workspace = true
+serde-saphyr.workspace = true
 serde_json.workspace = true
-serde_yaml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

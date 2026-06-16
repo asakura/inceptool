@@ -38,8 +38,8 @@ allow = [
   "Apache-2.0 WITH LLVM-exception",
   # allowed, but no matching crates yet
   # "BSD-2-Clause",
-  # "BSD-3-Clause",
-  "BSL-1.0",
+  "BSD-3-Clause",
+  # "BSL-1.0",
   # "CC0-1.0",
   "ISC",
   "MIT",
@@ -70,7 +70,14 @@ highlight = "all"
 workspace-default-features = "allow"
 external-default-features = "allow"
 
-skip = [{ crate = "unicode-width" }]
+# - `unicode-width` v0.1 is pulled directly by `miette`, while v0.2 is pulled by `textwrap` (also via `miette`) and `annotate-snippets`
+# - `getrandom` v0.4 and v0.3 are pulled in by `tempfile` and `ahash` respectively
+# - `hashbrown` v0.17 and v0.16 are pulled in by different `gix` ecosystem crates
+skip = [
+  { crate = "unicode-width" },
+  { crate = "getrandom" },
+  { crate = "hashbrown" },
+]
 
 # https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
 [sources]

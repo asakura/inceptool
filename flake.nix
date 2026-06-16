@@ -46,12 +46,28 @@
 
         inceptool = pkgs.callPackage ./package.nix { inherit crane; };
 
+        # Env prefix that prevents ~/.cargo/config.toml from leaking into hook
+        # invocations. CARGO_ENCODED_RUSTFLAGS (tier 1 in cargo's 3-tier
+        # precedence) beats config-level [target.xxx].rustflags (tier 3),
+        # neutralising nightly-only -Z flags.  The explicit linker overrides
+        # the config-level [target.xxx].linker, avoiding pinned store paths or
+        # absent system binaries.
+        cargoHookEnv = "CARGO_ENCODED_RUSTFLAGS='' CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=${pkgs.stdenv.cc}/bin/cc";
+
         gitHooksCheck = git-hooks.lib.${system}.run {
           src = ./.;
           package = pkgs.prek;
           hooks = {
-            cargo-check.enable = true;
-            clippy.enable = true;
+            cargo-check = {
+              enable = true;
+              entry = "env ${cargoHookEnv} ${rustToolchain}/bin/cargo check";
+              pass_filenames = false;
+            };
+            clippy = {
+              enable = true;
+              entry = "env ${cargoHookEnv} ${rustToolchain}/bin/cargo clippy --offline --";
+              pass_filenames = false;
+            };
             rustfmt.enable = true;
             taplo.enable = true;
             nixfmt.enable = true;

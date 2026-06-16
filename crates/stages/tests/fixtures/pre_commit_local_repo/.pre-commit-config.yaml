@@ -1,0 +1,12 @@
+default_stages:
+  - pre-commit
+repos:
+  - repo: local
+    hooks:
+      - id: cargo-check
+        name: cargo-check
+        language: system
+        entry: cargo check
+        files: \.rs$
+        always_run: false
+        pass_filenames: false
