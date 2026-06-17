@@ -20,13 +20,10 @@
 //!   machine-generated noise, pointing the agent at `git diff` instead.
 //!
 //! ## Supported Ecosystems
-//! * **Nix**: `flake.lock`
-//! * **Node.js**: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`,
-//!   `bun.lock`, `bun.lockb`
-//! * **Rust**: `Cargo.lock`
-//! * **Python**: `poetry.lock`, `Pipfile.lock`, `uv.lock`
-//! * **Go**: `go.sum`
-//! * **Other**: `Gemfile.lock`, `composer.lock`, `mix.lock`, `pubspec.lock`, `.terraform.lock.hcl`
+//!
+//! This crate itself has no notion of "built-in" rules — the guarded-file
+//! list (Nix, Node.js, Rust, Python, Go, and others) lives in the binary's
+//! default config, `src/config/base.toml`; see [Configuration](#configuration).
 //!
 //! ## Implementation Details
 //!

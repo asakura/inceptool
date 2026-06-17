@@ -43,6 +43,19 @@ filename = "bun.lockb"
 hint = "Run `bun install` to update it."
 note = "(NOTE: this updates ALL node packages)"
 
+[[read-write-guard.rules]]
+filename = "npm-shrinkwrap.json"
+[read-write-guard.rules.access.no]
+hint = "Run `npm install` to update it."
+note = "(NOTE: this updates ALL node packages)"
+
+# Deno
+[[read-write-guard.rules]]
+filename = "deno.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `deno cache --reload` to update it."
+note = "(NOTE: this updates ALL cached imports)"
+
 # Rust
 [[read-write-guard.rules]]
 filename = "Cargo.lock"
@@ -69,12 +82,140 @@ filename = "uv.lock"
 hint = "Run `uv lock` to update it."
 note = "(NOTE: this updates ALL Python packages)"
 
+[[read-write-guard.rules]]
+filename = "pdm.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `pdm lock` to update it."
+note = "(NOTE: this updates ALL Python packages)"
+
 # Go
 [[read-write-guard.rules]]
 filename = "go.sum"
 [read-write-guard.rules.access.no]
 hint = "Run `go mod tidy` to update it."
 note = "(NOTE: this updates ALL Go modules — use `go get <module>@<ver>` for one)"
+
+# .NET
+[[read-write-guard.rules]]
+filename = "packages.lock.json"
+[read-write-guard.rules.access.no]
+hint = "Run `dotnet restore --force-evaluate` to update it."
+note = "(NOTE: this updates ALL NuGet package locks)"
+
+# Swift
+[[read-write-guard.rules]]
+filename = "Package.resolved"
+[read-write-guard.rules.access.no]
+hint = "Run `swift package update` to update it."
+note = "(NOTE: this updates ALL Swift package dependencies — use `swift package update <package>` for one)"
+
+[[read-write-guard.rules]]
+filename = "Podfile.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `pod update` to update it."
+note = "(NOTE: this updates ALL CocoaPods dependencies — use `pod update <pod>` for one)"
+
+[[read-write-guard.rules]]
+filename = "Cartfile.resolved"
+[read-write-guard.rules.access.no]
+hint = "Run `carthage update` to update it."
+note = "(NOTE: this updates ALL Carthage dependencies — use `carthage update <dependency>` for one)"
+
+# Julia
+[[read-write-guard.rules]]
+filename = "Manifest.toml"
+[read-write-guard.rules.access.no]
+hint = "Run `julia -e 'using Pkg; Pkg.update()'` to update it."
+note = "(NOTE: this updates ALL Julia package dependencies)"
+
+# R
+[[read-write-guard.rules]]
+filename = "renv.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `R -e 'renv::update()'` to update it."
+note = "(NOTE: this updates ALL R package dependencies)"
+
+# Haskell
+[[read-write-guard.rules]]
+filename = "stack.yaml.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `stack update` to update it."
+note = "(NOTE: this updates ALL Stackage package indices)"
+
+[[read-write-guard.rules]]
+filename = "cabal.project.freeze"
+[read-write-guard.rules.access.no]
+hint = "Run `cabal freeze` to update it."
+note = "(NOTE: this updates ALL frozen package versions)"
+
+# Crystal
+[[read-write-guard.rules]]
+filename = "shard.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `shards update` to update it."
+note = "(NOTE: this updates ALL Crystal shards — use `shards update <shard>` for one)"
+
+# Conda
+[[read-write-guard.rules]]
+filename = "conda-lock.yml"
+[read-write-guard.rules.access.no]
+hint = "Run `conda-lock` to update it."
+note = "(NOTE: this updates ALL conda environment dependencies)"
+
+# Pixi
+[[read-write-guard.rules]]
+filename = "pixi.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `pixi update` to update it."
+note = "(NOTE: this updates ALL Pixi environment dependencies — use `pixi update <package>` for one)"
+
+# Helm
+[[read-write-guard.rules]]
+filename = "Chart.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `helm dependency update` to update it."
+note = "(NOTE: this updates ALL Helm chart dependencies)"
+
+# Java / Kotlin (Gradle)
+[[read-write-guard.rules]]
+filename = "gradle.lockfile"
+[read-write-guard.rules.access.no]
+hint = "Run `./gradlew dependencies --write-locks` to update it."
+note = "(NOTE: this updates ALL locked configurations — use `--update-locks <module>` for one)"
+
+[[read-write-guard.rules]]
+filename = "buildscript-gradle.lockfile"
+[read-write-guard.rules.access.no]
+hint = "Run `./gradlew dependencies --write-locks` to update it."
+note = "(NOTE: this updates ALL locked configurations — use `--update-locks <module>` for one)"
+
+# Bazel
+[[read-write-guard.rules]]
+filename = "MODULE.bazel.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `bazel mod deps --lockfile_mode=update` to update it."
+note = "(NOTE: this updates ALL Bzlmod module dependencies)"
+
+# C / C++ (Conan)
+[[read-write-guard.rules]]
+filename = "conan.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `conan lock create .` to update it."
+note = "(NOTE: this updates ALL Conan package dependencies)"
+
+# Erlang
+[[read-write-guard.rules]]
+filename = "rebar.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `rebar3 upgrade` to update it."
+note = "(NOTE: this updates ALL rebar3 dependencies — use `rebar3 upgrade <app>` for one)"
+
+# Perl
+[[read-write-guard.rules]]
+filename = "cpanfile.snapshot"
+[read-write-guard.rules.access.no]
+hint = "Run `carton install` to update it."
+note = "(NOTE: this updates ALL Carton-managed Perl dependencies)"
 
 # Other
 [[read-write-guard.rules]]
@@ -106,3 +247,57 @@ filename = ".terraform.lock.hcl"
 [read-write-guard.rules.access.no]
 hint = "Run `terraform init -upgrade` to update it."
 note = "(NOTE: this updates ALL dependencies at once)"
+
+# Terraform state (generated, writes-only — reads aren't noise the way
+# lockfiles are; agents may legitimately need to inspect current state)
+[[read-write-guard.rules]]
+filename = "terraform.tfstate"
+[read-write-guard.rules.access.write]
+hint = "Run `terraform apply`/`terraform plan`, or `terraform state` subcommands, instead of editing it directly."
+note = "(NOTE: hand-editing state can desync it from real infrastructure and cause `terraform apply` to destroy or orphan resources)"
+
+[[read-write-guard.rules]]
+filename = "terraform.tfstate.backup"
+[read-write-guard.rules.access.write]
+hint = "This is an automatic backup written by Terraform itself — use `terraform state` subcommands to fix state issues."
+note = "(NOTE: it should never be restored or edited by hand)"
+
+# Go workspaces
+[[read-write-guard.rules]]
+filename = "go.work.sum"
+[read-write-guard.rules.access.write]
+hint = "Run `go build`/`go test` in the workspace (or `go work sync`) to update it."
+note = "(NOTE: this is the workspace-level companion to `go.sum`)"
+
+# Prisma
+[[read-write-guard.rules]]
+filename = "migration_lock.toml"
+[read-write-guard.rules.access.write]
+hint = "Run `prisma migrate dev` to update it."
+note = "(NOTE: it just records the migrations provider — edit `schema.prisma` and regenerate instead)"
+
+# Android
+[[read-write-guard.rules]]
+filename = "local.properties"
+[read-write-guard.rules.access.write]
+hint = "This is written locally by Android Studio/Gradle with machine-specific SDK paths."
+note = "(NOTE: it's not meant to be committed or hand-edited — let the IDE/Gradle regenerate it)"
+
+[[read-write-guard.rules]]
+filename = "R.java"
+[read-write-guard.rules.access.write]
+hint = "This is regenerated by the Android build system from your resources on every build."
+note = "(NOTE: edit the resource XML files instead — hand edits are overwritten immediately)"
+
+[[read-write-guard.rules]]
+filename = "BuildConfig.java"
+[read-write-guard.rules.access.write]
+hint = "This is regenerated by the Android Gradle plugin from your build config on every build."
+note = "(NOTE: edit `build.gradle`/`build.gradle.kts` instead — hand edits are overwritten immediately)"
+
+# Django
+[[read-write-guard.rules]]
+filename = "db.sqlite3"
+[read-write-guard.rules.access.write]
+hint = "Run `python manage.py migrate`, or use the `sqlite3` CLI/ORM, instead of editing the file directly."
+note = "(NOTE: it's a binary SQLite database — direct text edits will corrupt it)"

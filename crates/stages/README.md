@@ -55,13 +55,11 @@ see the project's `~/.claude/settings.json`.
 This crate has no notion of "built-in" guarded files — `ReadWriteGuardStage`
 is constructed from a fully resolved `RuleSet` (`ReadWriteGuardStage::new`)
 that the binary's `src/config` layer assembles from its embedded base config
-(built-in defaults for the usual ecosystem lockfile/manifests: `flake.lock`,
-`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock`, `bun.lockb`,
-`Cargo.lock`, `poetry.lock`, `Pipfile.lock`, `uv.lock`, `go.sum`,
-`Gemfile.lock`, `composer.lock`, `mix.lock`, `pubspec.lock`, and
-`.terraform.lock.hcl`) merged with any user-supplied
-`[[read-write-guard.rules]]` overrides from `inceptool.toml` — see the
-top-level `README.md` for the override syntax.
+(built-in defaults for the usual ecosystem lockfile/manifests, e.g.
+`flake.lock`, `package-lock.json`, `Cargo.lock` — see `src/config/base.toml`
+for the full list) merged with any user-supplied `[[read-write-guard.rules]]`
+overrides from `inceptool.toml` — see the top-level `README.md` for the
+override syntax.
 
 Triggers when the tool input's `file_path`/`path`/`AbsolutePath` points at a
 filename present in that `RuleSet`.
