@@ -255,7 +255,7 @@ mod tests {
 
             let config = Config::try_from(raw)?;
 
-            let rule = config
+            let (rule, _) = config
                 .read_write_guard_rules()
                 .get("Cargo.lock")
                 .ok_or_else(|| TestError::Failure("expected Cargo.lock rule".into()))?;
@@ -280,6 +280,19 @@ mod tests {
 
             assert!(config.read_write_guard_rules().get("custom.lock").is_some());
             assert!(config.read_write_guard_rules().get("Cargo.lock").is_some());
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case::generated_go_protobuf("/repo/api/service.pb.go")]
+        #[case::generated_python_protobuf("/repo/api/service_pb2.py")]
+        #[case::node_modules_anywhere("/repo/node_modules/lodash/index.js")]
+        #[case::git_internals_anywhere("/repo/.git/HEAD")]
+        fn built_in_glob_patterns_are_present(#[case] file_path: &str) -> Result<(), TestError> {
+            let config = Config::try_from(RawConfig::parse_base_config()?)?;
+
+            assert!(config.read_write_guard_rules().get(file_path).is_some());
 
             Ok(())
         }

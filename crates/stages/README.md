@@ -56,13 +56,15 @@ This crate has no notion of "built-in" guarded files — `ReadWriteGuardStage`
 is constructed from a fully resolved `RuleSet` (`ReadWriteGuardStage::new`)
 that the binary's `src/config` layer assembles from its embedded base config
 (built-in defaults for the usual ecosystem lockfile/manifests, e.g.
-`flake.lock`, `package-lock.json`, `Cargo.lock` — see `src/config/base.toml`
-for the full list) merged with any user-supplied `[[read-write-guard.rules]]`
-overrides from `inceptool.toml` — see the top-level `README.md` for the
-override syntax.
+`flake.lock`, `package-lock.json`, `Cargo.lock`, plus glob/path patterns like
+`*.pb.go` and `**/node_modules/**` — see `src/config/base.toml` for the full
+list) merged with any user-supplied `[[read-write-guard.rules]]` overrides
+from `inceptool.toml` — see the top-level `README.md` for the override
+syntax, including how glob/path patterns are matched.
 
-Triggers when the tool input's `file_path`/`path`/`AbsolutePath` points at a
-filename present in that `RuleSet`.
+Triggers when the tool input's `file_path`/`path`/`AbsolutePath` matches a
+rule in that `RuleSet` — an exact basename, a basename glob, or a full-path
+glob.
 
 For modifying tools (`Write`, `Edit`, `MultiEdit`, `write_file`, `replace`),
 the stage returns `Decision::Deny` with a `reason` pointing at the correct

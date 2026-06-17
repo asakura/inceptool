@@ -45,6 +45,7 @@ gix = { version = "0.84", default-features = false, features = [
   "zlib-rs",
   "blob-diff",
 ] }
+glob = { version = "0.3", default-features = false }
 inceptool_driver-claude = { version = "0.9", package = "inceptool-driver-claude", path = "crates/driver-claude" }
 inceptool_driver-gemini = { version = "0.9", package = "inceptool-driver-gemini", path = "crates/driver-gemini" }
 inceptool_engine = { version = "0.1", package = "inceptool-engine", path = "crates/engine" }

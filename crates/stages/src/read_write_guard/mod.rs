@@ -30,9 +30,13 @@
 //! 1. **Target Identification**: Filters `PreToolUse` events for both
 //!    modifying tools (`Write`, `Edit`, `MultiEdit`, `write_file`, `replace`)
 //!    and reading tools (`READ_TOOLS`).
-//! 2. **Path Matching**: Looks up the target file's name in [`types::RuleSet`],
-//!    a `BTreeMap`-backed index of [`types::Rule`]s (one per guarded
-//!    filename) — no linear scan over the supported ecosystems.
+//! 2. **Path Matching**: Looks up the target path in [`types::RuleSet`]. Each
+//!    [`types::Rule`]'s pattern is one of three forms: an exact basename
+//!    (`Cargo.lock`, checked first via a `BTreeMap` — `O(log n)`, no linear
+//!    scan), a basename glob (`*.pb.go`), or — if it contains `/` — a
+//!    full-path glob (`**/node_modules/**`, gitignore-style: a leading
+//!    `**/` matches at any depth). Glob/path patterns are compiled once and
+//!    checked in a fallback linear scan only when the exact lookup misses.
 //! 3. **Response Generation**: Each [`types::Rule`] carries an
 //!    [`types::Access`] policy that determines, per tool kind, whether the
 //!    action is denied and what the denial reason looks like — modifying
@@ -109,15 +113,13 @@ impl Stage for ReadWriteGuardStage {
                 return Ok(None);
             };
 
-            let file_name = file_path.split('/').next_back().unwrap_or(file_path);
-
-            let Some(rule) = self.rules.get(file_name) else {
+            let Some((rule, display_name)) = self.rules.get(file_path) else {
                 return Ok(None);
             };
 
             let is_read_tool = READ_TOOLS.contains(&input.tool_name.as_ref());
 
-            let Some(output) = dispatch(file_name, rule, is_read_tool) else {
+            let Some(output) = dispatch(display_name, rule, is_read_tool) else {
                 return Ok(None);
             };
 
@@ -138,27 +140,30 @@ impl ReadWriteGuardStage {
 
 /// Dispatches a guarded-file access: returns the [`Decision::Deny`] response
 /// for `rule`'s policy and the current tool kind, or `None` if `rule.access`
-/// allows this operation to pass through untouched.
-fn dispatch(file_name: &str, rule: &Rule, is_read_tool: bool) -> Option<PreToolUseOutput> {
+/// allows this operation to pass through untouched. `display_name` is what
+/// [`RuleSet::get`] returned alongside the rule — the basename for
+/// exact/basename-glob matches, the full path for path-glob matches.
+fn dispatch(display_name: &str, rule: &Rule, is_read_tool: bool) -> Option<PreToolUseOutput> {
     match (rule.access(), is_read_tool) {
         (Access::Write { .. }, true) | (Access::Read, false) => None,
-        (_, true) => Some(deny_read(file_name)),
+        (_, true) => Some(deny_read(display_name)),
         (
             Access::No { hint, note } | Access::Diff { hint, note } | Access::Write { hint, note },
             false,
-        ) => Some(deny_write(file_name, hint, note)),
+        ) => Some(deny_write(display_name, hint, note)),
     }
 }
 
-/// Builds the [`Decision::Deny`] response for a denied read of `file_name`.
-fn deny_read(file_name: &str) -> PreToolUseOutput {
+/// Builds the [`Decision::Deny`] response for a denied read of
+/// `display_name`.
+fn deny_read(display_name: &str) -> PreToolUseOutput {
     PreToolUseOutput {
         decision: Some(Decision::Deny),
         reason: Some(
             format!(
-                "Reading {file_name} directly wastes context \u{2014} it's a \
-                 machine-generated lockfile with little useful signal. Run \
-                 `git diff {file_name}` to see what changed."
+                "Reading {display_name} directly wastes context \u{2014} it's \
+                 machine-generated or otherwise low-signal. Run `git diff \
+                 {display_name}` to see what changed."
             )
             .into(),
         ),
@@ -166,12 +171,12 @@ fn deny_read(file_name: &str) -> PreToolUseOutput {
     }
 }
 
-/// Builds the [`Decision::Deny`] response for a denied write of `file_name`,
-/// using the matched [`Access`] variant's `hint` and `note`.
-fn deny_write(file_name: &str, hint: &str, note: &str) -> PreToolUseOutput {
+/// Builds the [`Decision::Deny`] response for a denied write of
+/// `display_name`, using the matched [`Access`] variant's `hint` and `note`.
+fn deny_write(display_name: &str, hint: &str, note: &str) -> PreToolUseOutput {
     PreToolUseOutput {
         decision: Some(Decision::Deny),
-        reason: Some(format!("Writing to {file_name} is not allowed. {hint} {note}").into()),
+        reason: Some(format!("Writing to {display_name} is not allowed. {hint} {note}").into()),
         ..Default::default()
     }
 }
@@ -418,5 +423,73 @@ mod tests {
     ) {
         let rule = rule_with_access(access);
         assert!(dispatch("test.lock", &rule, is_read_tool).is_none());
+    }
+
+    mod glob_patterns {
+        use super::*;
+
+        /// A [`RuleSet`] mixing a basename glob and a path glob, for
+        /// exercising the stage end-to-end through non-exact matches.
+        fn glob_rules() -> RuleSet {
+            [
+                Rule::new(
+                    Cow::Borrowed("*.pb.go"),
+                    Access::Write {
+                        hint: Cow::Borrowed("Regenerate from the .proto file."),
+                        note: Cow::Borrowed("(NOTE: fully regenerated on every protoc run)"),
+                    },
+                ),
+                Rule::new(
+                    Cow::Borrowed("**/node_modules/**"),
+                    Access::No {
+                        hint: Cow::Borrowed("Run `npm install` to manage dependencies."),
+                        note: Cow::Borrowed("(NOTE: regenerated entirely by the package manager)"),
+                    },
+                ),
+            ]
+            .into_iter()
+            .collect()
+        }
+
+        /// Same as [`run_stage`], but against [`glob_rules`] instead of
+        /// [`test_rules`].
+        fn run_glob_stage(
+            tool_name: &str,
+            file_path: &str,
+        ) -> Result<Option<HookOutputEvent>, TestError> {
+            let stage = ReadWriteGuardStage::new(glob_rules());
+            let tool_input_json = json!({"file_path": file_path}).to_string();
+            let tool_input = RawValue::from_string(tool_input_json)?;
+
+            let mut conn = conn_with_event(HookInputEvent::PreToolUse(PreToolUseInput {
+                tool_name: Cow::Borrowed(tool_name),
+                tool_input: RawJson(&tool_input),
+                mcp_context: None,
+                original_request_name: None,
+            }));
+
+            Ok(stage.run(&mut conn)?)
+        }
+
+        #[rstest]
+        fn denies_write_for_basename_glob_match() -> Result<(), TestError> {
+            let reason = deny_reason(run_glob_stage("Edit", "/repo/api/service.pb.go")?)?;
+
+            assert!(reason.starts_with("Writing to service.pb.go is not allowed."));
+            assert!(reason.contains("Regenerate from the .proto file."));
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn denies_read_for_path_glob_match_with_full_path_in_reason() -> Result<(), TestError> {
+            let path = "/repo/node_modules/lodash/index.js";
+            let reason = deny_reason(run_glob_stage("Read", path)?)?;
+
+            assert!(reason.starts_with(&format!("Reading {path} directly wastes context")));
+            assert!(reason.contains(&format!("git diff {path}")));
+
+            Ok(())
+        }
     }
 }

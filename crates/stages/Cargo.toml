@@ -12,6 +12,7 @@ categories = ["development-tools"]
 
 [dependencies]
 gix.workspace = true
+glob.workspace = true
 inceptool_engine.workspace = true
 inceptool_parsers.workspace = true
 inceptool_protocol.workspace = true

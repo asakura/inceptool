@@ -75,8 +75,8 @@ enabled = false
 
 `read-write-guard`'s guarded-file rules can be extended or overridden the
 same way, via a `[[read-write-guard.rules]]` array: a rule whose `filename`
-matches a built-in (e.g. `Cargo.lock`) replaces it; any other filename is
-added alongside the built-ins.
+matches a built-in (exactly, as a string — see below) replaces it; any other
+filename is added alongside the built-ins.
 
 ```toml
 [[read-write-guard.rules]]
@@ -90,6 +90,31 @@ filename = "my-tool.lock"
 [read-write-guard.rules.access.no]
 hint = "Run `my-tool lock` to update it."
 note = "(NOTE: this updates ALL my-tool dependencies)"
+```
+
+`filename` doesn't have to be an exact name — it supports glob/path patterns
+too, matched in this order:
+
+1. **Exact basename** (no `/`, no glob characters), e.g. `Cargo.lock` —
+   matches a file with that exact name in any directory.
+2. **Basename glob** (no `/`, has `*`/`?`/`[`), e.g. `*.pb.go` — matches by
+   basename, e.g. `api/service.pb.go`.
+3. **Full-path glob** (contains `/`), e.g. `**/node_modules/**` — matched
+   against the full path given by the tool call. Use a leading `**/` to
+   match at any depth, gitignore-style.
+
+```toml
+[[read-write-guard.rules]]
+filename = "*.pb.go"
+[read-write-guard.rules.access.write]
+hint = "Edit the `.proto` file and regenerate with `protoc-gen-go` instead."
+note = "(NOTE: this file is fully regenerated on every protoc run)"
+
+[[read-write-guard.rules]]
+filename = "**/node_modules/**"
+[read-write-guard.rules.access.no]
+hint = "Run `npm install` to manage dependencies — never hand-edit installed packages."
+note = "(NOTE: regenerated entirely by the package manager)"
 ```
 
 ## Installation
