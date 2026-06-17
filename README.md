@@ -73,6 +73,25 @@ everything else at its default:
 enabled = false
 ```
 
+`read-write-guard`'s guarded-file rules can be extended or overridden the
+same way, via a `[[read-write-guard.rules]]` array: a rule whose `filename`
+matches a built-in (e.g. `Cargo.lock`) replaces it; any other filename is
+added alongside the built-ins.
+
+```toml
+[[read-write-guard.rules]]
+filename = "Cargo.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `cargo update` to update it, then review the diff before committing."
+note = "(NOTE: overridden by project config)"
+
+[[read-write-guard.rules]]
+filename = "my-tool.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `my-tool lock` to update it."
+note = "(NOTE: this updates ALL my-tool dependencies)"
+```
+
 ## Installation
 
 Easiest path: grab a prebuilt static Linux binary (`x86_64` or `aarch64`) from

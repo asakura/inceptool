@@ -1,0 +1,108 @@
+# Embedded base config: built-in defaults for every stage, in the same
+# shape as a user `inceptool.toml`. Parsed by `RawConfig::parse_base_config`
+# and merged with user layers like any other layer (see `RawConfig::merge`).
+#
+# Users may add or override entries via the same `[[read-write-guard.rules]]`
+# table in their own `inceptool.toml`.
+
+# Nix
+[[read-write-guard.rules]]
+filename = "flake.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `nix flake update` to update it."
+note = "(NOTE: this updates ALL flake inputs — use `nix flake update <name>` to update a specific one)"
+
+# Node
+[[read-write-guard.rules]]
+filename = "package-lock.json"
+[read-write-guard.rules.access.no]
+hint = "Run `npm install` to update it."
+note = "(NOTE: this updates ALL node packages)"
+
+[[read-write-guard.rules]]
+filename = "yarn.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `yarn install` to update it."
+note = "(NOTE: this updates ALL node packages)"
+
+[[read-write-guard.rules]]
+filename = "pnpm-lock.yaml"
+[read-write-guard.rules.access.no]
+hint = "Run `pnpm install` to update it."
+note = "(NOTE: this updates ALL node packages)"
+
+[[read-write-guard.rules]]
+filename = "bun.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `bun install` to update it."
+note = "(NOTE: this updates ALL node packages)"
+
+[[read-write-guard.rules]]
+filename = "bun.lockb"
+[read-write-guard.rules.access.no]
+hint = "Run `bun install` to update it."
+note = "(NOTE: this updates ALL node packages)"
+
+# Rust
+[[read-write-guard.rules]]
+filename = "Cargo.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `cargo update` to update it."
+note = "(NOTE: this updates ALL Rust dependencies — use `cargo update -p <name> --precise <ver>` for one)"
+
+# Python
+[[read-write-guard.rules]]
+filename = "poetry.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `poetry lock` to update it."
+note = "(NOTE: this updates ALL Python packages)"
+
+[[read-write-guard.rules]]
+filename = "Pipfile.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `pipenv lock` to update it."
+note = "(NOTE: this updates ALL Python packages)"
+
+[[read-write-guard.rules]]
+filename = "uv.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `uv lock` to update it."
+note = "(NOTE: this updates ALL Python packages)"
+
+# Go
+[[read-write-guard.rules]]
+filename = "go.sum"
+[read-write-guard.rules.access.no]
+hint = "Run `go mod tidy` to update it."
+note = "(NOTE: this updates ALL Go modules — use `go get <module>@<ver>` for one)"
+
+# Other
+[[read-write-guard.rules]]
+filename = "Gemfile.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `bundle install` to update it."
+note = "(NOTE: this updates ALL Ruby gems — use `bundle update <gem>` for one)"
+
+[[read-write-guard.rules]]
+filename = "composer.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `composer install` to update it."
+note = "(NOTE: this updates ALL dependencies at once)"
+
+[[read-write-guard.rules]]
+filename = "mix.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `mix deps.get` to update it."
+note = "(NOTE: this updates ALL dependencies at once)"
+
+[[read-write-guard.rules]]
+filename = "pubspec.lock"
+[read-write-guard.rules.access.no]
+hint = "Run `dart pub get` to update it."
+note = "(NOTE: this updates ALL dependencies at once)"
+
+[[read-write-guard.rules]]
+filename = ".terraform.lock.hcl"
+[read-write-guard.rules.access.no]
+hint = "Run `terraform init -upgrade` to update it."
+note = "(NOTE: this updates ALL dependencies at once)"

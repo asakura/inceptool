@@ -52,12 +52,19 @@ see the project's `~/.claude/settings.json`.
 - **Tools**: `Write`, `Edit`, `MultiEdit`, `write_file`, `replace`, `Read`,
   `view_file`, `cat`
 
-Triggers when the tool input's `file_path`/`path`/`AbsolutePath` points at a
-file matching a known ecosystem lockfile/manifest: `flake.lock`,
+This crate has no notion of "built-in" guarded files — `ReadWriteGuardStage`
+is constructed from a fully resolved `RuleSet` (`ReadWriteGuardStage::new`)
+that the binary's `src/config` layer assembles from its embedded base config
+(built-in defaults for the usual ecosystem lockfile/manifests: `flake.lock`,
 `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock`, `bun.lockb`,
 `Cargo.lock`, `poetry.lock`, `Pipfile.lock`, `uv.lock`, `go.sum`,
 `Gemfile.lock`, `composer.lock`, `mix.lock`, `pubspec.lock`, and
-`.terraform.lock.hcl`.
+`.terraform.lock.hcl`) merged with any user-supplied
+`[[read-write-guard.rules]]` overrides from `inceptool.toml` — see the
+top-level `README.md` for the override syntax.
+
+Triggers when the tool input's `file_path`/`path`/`AbsolutePath` points at a
+filename present in that `RuleSet`.
 
 For modifying tools (`Write`, `Edit`, `MultiEdit`, `write_file`, `replace`),
 the stage returns `Decision::Deny` with a `reason` pointing at the correct

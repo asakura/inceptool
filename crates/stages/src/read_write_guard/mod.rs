@@ -33,18 +33,19 @@
 //! 1. **Target Identification**: Filters `PreToolUse` events for both
 //!    modifying tools (`Write`, `Edit`, `MultiEdit`, `write_file`, `replace`)
 //!    and reading tools (`READ_TOOLS`).
-//! 2. **Path Matching**: Looks up the target file's name in `RuleSet`, a
-//!    `BTreeMap`-backed index of `Rule`s (one per guarded filename) — no
-//!    linear scan over the supported ecosystems.
-//! 3. **Response Generation**: Each `Rule` carries an [`Access`] policy
-//!    that determines, per tool kind, whether the action is denied and what
-//!    the denial reason looks like — modifying tools get a targeted hint
-//!    containing the correct terminal command to use instead; reading tools
-//!    get a generic "this is noise, use `git diff`" reminder. All built-in
-//!    rules use [`Access::No`] (deny both, with those two messages).
+//! 2. **Path Matching**: Looks up the target file's name in [`types::RuleSet`],
+//!    a `BTreeMap`-backed index of [`types::Rule`]s (one per guarded
+//!    filename) — no linear scan over the supported ecosystems.
+//! 3. **Response Generation**: Each [`types::Rule`] carries an
+//!    [`types::Access`] policy that determines, per tool kind, whether the
+//!    action is denied and what the denial reason looks like — modifying
+//!    tools get a targeted hint containing the correct terminal command to
+//!    use instead; reading tools get a generic "this is noise, use `git
+//!    diff`" reminder. All built-in rules use [`Access::No`] (deny both,
+//!    with those two messages).
 //!
-//! [`Access::Diff`] is a reserved policy for config.json-defined rules (or a
-//! future upgrade of the built-ins): it's meant to replace the generic
+//! [`Access::Diff`] is a reserved policy for a future upgrade of any rule
+//! (built-in or user-supplied): it's meant to replace the generic
 //! read-denial with a real diff/summary once that's implemented. For now it
 //! behaves identically to [`Access::No`].
 //! [`FlakeLockSummarizationStage`](crate::FlakeLockSummarizationStage),
@@ -52,25 +53,34 @@
 //! for `flake.lock` reads specifically — this stage's [`Access::No`]
 //! read-deny is the fallback for everything else (and for `flake.lock` when
 //! that stage is a no-op).
+//!
+//! ## Configuration
+//!
+//! [`ReadWriteGuardStage`] takes a fully resolved [`RuleSet`] — this crate
+//! has no notion of "built-in" rules or config files. The binary's config
+//! layer (`src/config`) owns the built-in defaults (embedded alongside the
+//! rest of its base config) and merges any user overrides in before
+//! constructing the stage via [`ReadWriteGuardStage::new`].
+
+mod types;
+
+pub use types::{Access, Rule, RuleSet};
 
 use inceptool_engine::{EngineError, Stage};
 use inceptool_protocol::{
     Conn, Decision, HookInputEvent, HookKind, HookOutputEvent, PreToolUseOutput, extract_file_path,
 };
 
-use serde::Deserialize;
 use serde_json::Value;
-
-use std::borrow::Cow;
-use std::collections::BTreeMap;
-use std::sync::LazyLock;
 
 /// Tool names whose `PreToolUse` event reads a file's contents.
 const READ_TOOLS: &[&str] = &["Read", "view_file", "cat"];
 
 /// Stage that denies direct reads and writes of ecosystem lockfiles.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct ReadWriteGuardStage;
+#[derive(Debug, Clone)]
+pub struct ReadWriteGuardStage {
+    rules: RuleSet,
+}
 
 impl Stage for ReadWriteGuardStage {
     fn name(&self) -> &'static str {
@@ -104,7 +114,7 @@ impl Stage for ReadWriteGuardStage {
 
             let file_name = file_path.split('/').next_back().unwrap_or(file_path);
 
-            let Some(rule) = RULES.get(file_name) else {
+            let Some(rule) = self.rules.get(file_name) else {
                 return Ok(None);
             };
 
@@ -120,208 +130,20 @@ impl Stage for ReadWriteGuardStage {
     }
 }
 
-/// Access policy for a guarded file, driving how [`ReadWriteGuardStage`]
-/// responds to reads and writes of it.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Access {
-    /// Deny both reads and writes. Reads get a flat, no-frills reason
-    /// pointing at `git diff`; writes get `hint` and `note`. The policy used
-    /// by all built-in rules.
-    No {
-        /// The terminal command suggested when a write is denied.
-        hint: Cow<'static, str>,
-        /// Additional caveats about the scope of `hint` (e.g. "updates ALL
-        /// packages").
-        note: Cow<'static, str>,
-    },
-    /// Like [`Access::No`], but reads are intended to get a richer
-    /// diff/summary instead of the flat reason, once diff-content generation
-    /// exists. Currently degrades to [`Access::No`]'s read behavior.
-    /// Reserved for config.json-defined rules (or a future upgrade of the
-    /// built-ins).
-    Diff {
-        /// The terminal command suggested when a write is denied.
-        hint: Cow<'static, str>,
-        /// Additional caveats about the scope of `hint`.
-        note: Cow<'static, str>,
-    },
-    /// Deny writes only (with `hint` and `note`); reads pass through
-    /// untouched.
-    Write {
-        /// The terminal command suggested when a write is denied.
-        hint: Cow<'static, str>,
-        /// Additional caveats about the scope of `hint`.
-        note: Cow<'static, str>,
-    },
-    /// Deny reads only (flat reason); writes pass through untouched.
-    Read,
-}
-
-/// A guarded-file rule: how [`ReadWriteGuardStage`] responds to reads and
-/// writes of [`Rule::filename`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Rule {
-    /// The filename this rule matches (e.g. `"Cargo.lock"`).
-    filename: Cow<'static, str>,
-    /// Which operations are intercepted, and how.
-    access: Access,
-}
-
-/// Index of [`Rule`]s by [`Rule::filename`], built via [`FromIterator`].
-struct RuleSet(BTreeMap<Cow<'static, str>, Rule>);
-
-impl FromIterator<Rule> for RuleSet {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = Rule>,
-    {
-        Self(
-            iter.into_iter()
-                .map(|rule| (rule.filename.clone(), rule))
-                .collect(),
-        )
+impl ReadWriteGuardStage {
+    /// Builds the stage from a fully resolved [`RuleSet`] (the caller is
+    /// responsible for merging built-in defaults with any user overrides).
+    #[must_use = "constructs a new stage; discarding it does nothing"]
+    pub const fn new(rules: RuleSet) -> Self {
+        Self { rules }
     }
 }
-
-impl RuleSet {
-    /// Looks up the [`Rule`] for `file_name`, or `None` if it isn't guarded.
-    fn get(&self, file_name: &str) -> Option<&Rule> {
-        self.0.get(file_name)
-    }
-}
-
-/// The built-in guarded-file rules, indexed by filename.
-static RULES: LazyLock<RuleSet> = LazyLock::new(|| {
-    [
-        // Nix
-        Rule {
-            filename: Cow::Borrowed("flake.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `nix flake update` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL flake inputs \u{2014} use `nix flake update <name>` to update a specific one)"),
-            },
-        },
-        // Node
-        Rule {
-            filename: Cow::Borrowed("package-lock.json"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `npm install` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL node packages)"),
-            },
-        },
-        Rule {
-            filename: Cow::Borrowed("yarn.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `yarn install` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL node packages)"),
-            },
-        },
-        Rule {
-            filename: Cow::Borrowed("pnpm-lock.yaml"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `pnpm install` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL node packages)"),
-            },
-        },
-        Rule {
-            filename: Cow::Borrowed("bun.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `bun install` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL node packages)"),
-            },
-        },
-        Rule {
-            filename: Cow::Borrowed("bun.lockb"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `bun install` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL node packages)"),
-            },
-        },
-        // Rust
-        Rule {
-            filename: Cow::Borrowed("Cargo.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `cargo update` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL Rust dependencies \u{2014} use `cargo update -p <name> --precise <ver>` for one)"),
-            },
-        },
-        // Python
-        Rule {
-            filename: Cow::Borrowed("poetry.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `poetry lock` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL Python packages)"),
-            },
-        },
-        Rule {
-            filename: Cow::Borrowed("Pipfile.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `pipenv lock` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL Python packages)"),
-            },
-        },
-        Rule {
-            filename: Cow::Borrowed("uv.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `uv lock` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL Python packages)"),
-            },
-        },
-        // Go
-        Rule {
-            filename: Cow::Borrowed("go.sum"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `go mod tidy` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL Go modules \u{2014} use `go get <module>@<ver>` for one)"),
-            },
-        },
-        // Other
-        Rule {
-            filename: Cow::Borrowed("Gemfile.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `bundle install` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL Ruby gems \u{2014} use `bundle update <gem>` for one)"),
-            },
-        },
-        Rule {
-            filename: Cow::Borrowed("composer.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `composer install` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL dependencies at once)"),
-            },
-        },
-        Rule {
-            filename: Cow::Borrowed("mix.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `mix deps.get` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL dependencies at once)"),
-            },
-        },
-        Rule {
-            filename: Cow::Borrowed("pubspec.lock"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `dart pub get` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL dependencies at once)"),
-            },
-        },
-        Rule {
-            filename: Cow::Borrowed(".terraform.lock.hcl"),
-            access: Access::No {
-                hint: Cow::Borrowed("Run `terraform init -upgrade` to update it."),
-                note: Cow::Borrowed("(NOTE: this updates ALL dependencies at once)"),
-            },
-        },
-    ]
-    .into_iter()
-    .collect()
-});
 
 /// Dispatches a guarded-file access: returns the [`Decision::Deny`] response
 /// for `rule`'s policy and the current tool kind, or `None` if `rule.access`
 /// allows this operation to pass through untouched.
 fn dispatch(file_name: &str, rule: &Rule, is_read_tool: bool) -> Option<PreToolUseOutput> {
-    match (&rule.access, is_read_tool) {
+    match (rule.access(), is_read_tool) {
         (Access::Write { .. }, true) | (Access::Read, false) => None,
         (_, true) => Some(deny_read(file_name)),
         (
@@ -367,6 +189,7 @@ mod tests {
     use serde_json::json;
     use serde_json::value::RawValue;
 
+    use std::borrow::Cow;
     use std::collections::BTreeSet;
 
     #[derive(thiserror::Error, Debug)]
@@ -377,6 +200,37 @@ mod tests {
         Json(#[from] serde_json::Error),
         #[error("Test failure: {0}")]
         Failure(String),
+    }
+
+    /// A small fixture [`RuleSet`] standing in for what the binary's config
+    /// layer would otherwise build from its base config + user overrides —
+    /// this crate has no notion of "built-in" rules of its own.
+    fn test_rules() -> RuleSet {
+        [
+            Rule::new(
+                Cow::Borrowed("flake.lock"),
+                Access::No {
+                    hint: Cow::Borrowed("Run `nix flake update` to update it."),
+                    note: Cow::Borrowed("(NOTE: updates ALL flake inputs)"),
+                },
+            ),
+            Rule::new(
+                Cow::Borrowed("Cargo.lock"),
+                Access::No {
+                    hint: Cow::Borrowed("Run `cargo update` to update it."),
+                    note: Cow::Borrowed("(NOTE: updates ALL Rust dependencies)"),
+                },
+            ),
+            Rule::new(
+                Cow::Borrowed("package-lock.json"),
+                Access::No {
+                    hint: Cow::Borrowed("Run `npm install` to update it."),
+                    note: Cow::Borrowed("(NOTE: updates ALL node packages)"),
+                },
+            ),
+        ]
+        .into_iter()
+        .collect()
     }
 
     /// Builds a synthetic `Conn` wrapping `event`, with placeholder session metadata.
@@ -404,7 +258,7 @@ mod tests {
         tool_name: &str,
         tool_input_json: &str,
     ) -> Result<Option<HookOutputEvent>, TestError> {
-        let stage = ReadWriteGuardStage;
+        let stage = ReadWriteGuardStage::new(test_rules());
         let tool_input = RawValue::from_string(tool_input_json.to_owned())?;
 
         let mut conn = conn_with_event(HookInputEvent::PreToolUse(PreToolUseInput {
@@ -439,12 +293,9 @@ mod tests {
     }
 
     /// Builds a synthetic [`Rule`] with `access`, for exercising [`dispatch`]
-    /// directly without going through [`RULES`].
+    /// directly without going through [`test_rules`].
     const fn rule_with_access(access: Access) -> Rule {
-        Rule {
-            filename: Cow::Borrowed("test.lock"),
-            access,
-        }
+        Rule::new(Cow::Borrowed("test.lock"), access)
     }
 
     #[rstest]
@@ -494,7 +345,7 @@ mod tests {
 
     #[rstest]
     fn ignores_non_pre_tool_use_event() -> Result<(), TestError> {
-        let stage = ReadWriteGuardStage;
+        let stage = ReadWriteGuardStage::new(test_rules());
 
         let mut conn = conn_with_event(HookInputEvent::BeforeAgent(BeforeAgentInput {
             prompt: Cow::Borrowed("rm -rf /"),
@@ -510,38 +361,12 @@ mod tests {
 
     #[rstest]
     fn tool_names_matches_read_and_write_tools() {
-        let stage = ReadWriteGuardStage;
+        let stage = ReadWriteGuardStage::new(test_rules());
 
         let expected: BTreeSet<&str> = READ_TOOLS.iter().chain(WRITE_TOOLS).copied().collect();
         let actual: BTreeSet<&str> = stage.tool_names().iter().copied().collect();
 
         assert_eq!(actual, expected);
-    }
-
-    #[rstest]
-    #[case::flake_lock("flake.lock")]
-    #[case::package_lock_json("package-lock.json")]
-    #[case::yarn_lock("yarn.lock")]
-    #[case::pnpm_lock("pnpm-lock.yaml")]
-    #[case::bun_lock("bun.lock")]
-    #[case::bun_lockb("bun.lockb")]
-    #[case::cargo_lock("Cargo.lock")]
-    #[case::poetry_lock("poetry.lock")]
-    #[case::pipfile_lock("Pipfile.lock")]
-    #[case::uv_lock("uv.lock")]
-    #[case::go_sum("go.sum")]
-    #[case::gemfile_lock("Gemfile.lock")]
-    #[case::composer_lock("composer.lock")]
-    #[case::mix_lock("mix.lock")]
-    #[case::pubspec_lock("pubspec.lock")]
-    #[case::terraform_lock(".terraform.lock.hcl")]
-    fn rules_recognize_all_supported_lockfiles(#[case] file_name: &str) {
-        assert!(RULES.get(file_name).is_some());
-    }
-
-    #[rstest]
-    fn rules_return_none_for_unknown_file() {
-        assert!(RULES.get("main.rs").is_none());
     }
 
     #[rstest]

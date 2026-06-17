@@ -182,6 +182,9 @@ inline_modules = "allow"
 pub_with_shorthand = "allow"
 separated_literal_suffix = "allow"
 assertions_on_result_states = "allow"
+# Mutually exclusive with self_named_module_files (kept denied); this
+# project always uses `foo/mod.rs` for submodules, never sibling `foo.rs`.
+mod_module_files = "allow"
 
 # Denied restriction lints
 absolute_paths = "deny"

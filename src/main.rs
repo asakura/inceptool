@@ -80,7 +80,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let config = Config::load();
+    let config = Config::load().into_diagnostic()?;
     let registry = registry::build_registry(&config);
 
     match cli.driver {

@@ -28,7 +28,7 @@ pub fn build_registry(config: &Config) -> Registry {
     register_stages!(
         "rtk" => RtkStage,
         "flake-lock-summarization" => FlakeLockSummarizationStage,
-        "read-write-guard" => ReadWriteGuardStage,
+        "read-write-guard" => ReadWriteGuardStage::new(config.read_write_guard_rules().clone()),
         "pre-commit-runner" => PreCommitRunnerStage,
     );
 
