@@ -22,8 +22,8 @@
 //! ## Flow
 //!
 //! 1. **Guard**: Intercepts `PostToolUse` events for write tools only.
-//! 2. **File path extraction**: Probes `file_path`, `path`, `AbsolutePath` fields
-//!    from the tool input JSON.
+//! 2. **File path extraction**: Probes the tool input JSON via the shared
+//!    [`inceptool_protocol::extract_file_path`] helper.
 //! 3. **Config discovery**: Discovers the git repository root via [`gix`], then looks for
 //!    `.pre-commit-config.yaml` there; falls back to the session cwd when the directory is
 //!    not inside a git repository or the repository has no working directory (bare clone).
@@ -55,7 +55,9 @@ use crate::pre_commit::{Hook, PreCommitConfig};
 use gix::diff::blob::unified_diff::{ConsumeBinaryHunk, ContextSize};
 use gix::diff::blob::{Algorithm, Diff, InternedInput, UnifiedDiff};
 use inceptool_engine::{EngineError, Stage};
-use inceptool_protocol::{Conn, HookInputEvent, HookKind, HookOutputEvent, PostToolUseOutput};
+use inceptool_protocol::{
+    Conn, HookInputEvent, HookKind, HookOutputEvent, PostToolUseOutput, extract_file_path,
+};
 
 use serde_json::Value;
 
@@ -175,7 +177,7 @@ impl Stage for PreCommitRunnerStage {
         };
 
         let parsed: Value = input.parse_tool_input()?;
-        let Some(file_path) = Self::extract_file_path(&parsed) else {
+        let Some(file_path) = extract_file_path(&parsed) else {
             return Ok(None);
         };
 
@@ -239,24 +241,6 @@ impl Stage for PreCommitRunnerStage {
 }
 
 impl PreCommitRunnerStage {
-    /// Probes the tool-input JSON for the path of the file being written.
-    ///
-    /// Checks `file_path`, `path`, and `AbsolutePath` in order; returns the first
-    /// non-empty string value found, or `None` when none of the fields are present.
-    #[must_use = "returns the file path extracted from the tool input JSON"]
-    fn extract_file_path(input: &Value) -> Option<&str> {
-        for key in &["file_path", "path", "AbsolutePath"] {
-            if let Some(s) = input
-                .get(*key)
-                .and_then(Value::as_str)
-                .filter(|s| !s.is_empty())
-            {
-                return Some(s);
-            }
-        }
-        None
-    }
-
     /// Returns `true` when `hook` should run against `file_path`.
     ///
     /// Checks `always_run` first (bypasses patterns), then the `files` inclusion
@@ -932,26 +916,6 @@ mod tests {
 
             assert!(PreCommitRunnerStage::file_matches_hook(&hook, "src/foo.rs"));
 
-            Ok(())
-        }
-    }
-
-    mod extract_file_path {
-        use super::*;
-
-        #[rstest]
-        #[case::file_path_field(r#"{"file_path": "src/main.rs"}"#, Some("src/main.rs"))]
-        #[case::path_field(r#"{"path": "src/main.rs"}"#, Some("src/main.rs"))]
-        #[case::absolute_path_field(r#"{"AbsolutePath": "src/main.rs"}"#, Some("src/main.rs"))]
-        #[case::empty_string_filtered(r#"{"file_path": ""}"#, None)]
-        #[case::empty_first_falls_back(
-            r#"{"file_path": "", "path": "src/main.rs"}"#,
-            Some("src/main.rs")
-        )]
-        #[case::missing_fields(r#"{"other": "value"}"#, None)]
-        fn extraction(#[case] json: &str, #[case] expected: Option<&str>) -> Result<(), TestError> {
-            let parsed: Value = serde_json::from_str(json)?;
-            assert_eq!(PreCommitRunnerStage::extract_file_path(&parsed), expected);
             Ok(())
         }
     }

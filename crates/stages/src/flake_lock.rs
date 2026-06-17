@@ -45,7 +45,7 @@
 
 use inceptool_engine::{EngineError, Stage};
 use inceptool_protocol::{
-    Conn, Decision, HookInputEvent, HookKind, HookOutputEvent, PreToolUseOutput,
+    Conn, Decision, HookInputEvent, HookKind, HookOutputEvent, PreToolUseOutput, extract_file_path,
 };
 
 use serde::Deserialize;
@@ -157,16 +157,12 @@ impl Stage for FlakeLockSummarizationStage {
         if let HookInputEvent::PreToolUse(input) = &conn.event {
             let parsed: Value = input.parse_tool_input()?;
 
-            let file_path = parsed
-                .get("file_path")
-                .or_else(|| parsed.get("path"))
-                .or_else(|| parsed.get("AbsolutePath"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let Some(file_path) = extract_file_path(&parsed) else {
+                return Ok(None);
+            };
 
-            if file_path.is_empty()
-                || Path::new(file_path).file_name().and_then(|f| f.to_str())
-                    != Some(FLAKE_LOCK_FILE_NAME)
+            if Path::new(file_path).file_name().and_then(|f| f.to_str())
+                != Some(FLAKE_LOCK_FILE_NAME)
             {
                 return Ok(None);
             }

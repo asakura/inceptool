@@ -55,7 +55,7 @@
 
 use inceptool_engine::{EngineError, Stage};
 use inceptool_protocol::{
-    Conn, Decision, HookInputEvent, HookKind, HookOutputEvent, PreToolUseOutput,
+    Conn, Decision, HookInputEvent, HookKind, HookOutputEvent, PreToolUseOutput, extract_file_path,
 };
 
 use serde::Deserialize;
@@ -98,16 +98,9 @@ impl Stage for ReadWriteGuardStage {
         if let HookInputEvent::PreToolUse(input) = &conn.event {
             let parsed: Value = input.parse_tool_input()?;
 
-            let file_path = parsed
-                .get("file_path")
-                .or_else(|| parsed.get("path")) // depending on claude vs gemini
-                .or_else(|| parsed.get("AbsolutePath"))
-                .and_then(Value::as_str)
-                .unwrap_or("");
-
-            if file_path.is_empty() {
+            let Some(file_path) = extract_file_path(&parsed) else {
                 return Ok(None);
-            }
+            };
 
             let file_name = file_path.split('/').next_back().unwrap_or(file_path);
 

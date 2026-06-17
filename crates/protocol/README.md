@@ -37,6 +37,9 @@ The crate is broken down into clean, single-purpose modules:
 - `driver`: The universal abstraction for an AI driver, plus the `from_wire`
   and `to_wire` entry points.
 - `error`: Strongly typed errors for protocol mapping operations.
+- `tool_input`: `extract_file_path`, a shared helper that probes a tool's raw
+  JSON input for the file path it targets, checking `file_path`, `path`, and
+  `AbsolutePath` in order (different drivers populate different fields).
 
 ## Hook Inputs & Outputs
 

@@ -19,12 +19,14 @@
 //! - [`output`]: Definitions for all output payloads returned by hooks.
 //! - [`error`]: Protocol-specific error definitions.
 //! - [`driver`]: The `Driver` trait which abstractly defines how a backend interacts with the protocol.
+//! - [`tool_input`]: Helper for probing a tool's raw JSON input for the file path it targets.
 
 pub mod driver;
 pub mod error;
 pub mod input;
 pub mod output;
 pub mod session;
+pub mod tool_input;
 pub mod types;
 
 pub use driver::*;
@@ -32,4 +34,5 @@ pub use error::*;
 pub use input::*;
 pub use output::*;
 pub use session::*;
+pub use tool_input::*;
 pub use types::*;
