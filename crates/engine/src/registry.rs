@@ -90,7 +90,7 @@ impl Default for Registry {
 
 impl Registry {
     /// Creates an empty registry with no stages registered.
-    #[must_use]
+    #[must_use = "constructing a registry has no effect unless stages are registered on it"]
     pub fn new() -> Self {
         Self {
             pipelines: array::from_fn(|_| Vec::new()),

@@ -594,7 +594,7 @@ impl HookOutputEvent {
     ///
     /// assert_eq!(output.exit_metadata(), (Some(1), Some("Not allowed")));
     /// ```
-    #[must_use]
+    #[must_use = "discards the (exit_code, reason) pair needed to halt the process with a specific status"]
     pub fn exit_metadata(&self) -> (Option<i32>, Option<&str>) {
         match self {
             Self::PreToolUse(o) => (o.exit_code, o.reason.as_deref()),
@@ -612,7 +612,7 @@ impl HookOutputEvent {
     ///
     /// See [`HookOutputEvent::set_decision`] for the full list of variants
     /// that carry a `decision` field; all other variants return `None`.
-    #[must_use]
+    #[must_use = "discards the decision that determines whether the hook allows, blocks, or asks"]
     pub const fn decision(&self) -> Option<Decision> {
         match self {
             Self::PreToolUse(o) => o.decision,
@@ -668,7 +668,7 @@ impl HookOutputEvent {
     ///
     /// Mirrors [`HookOutputEvent::decision`]'s variant coverage, except
     /// [`HookOutputEvent::Stop`] (whose output has no `reason` field).
-    #[must_use]
+    #[must_use = "discards the human-readable reason behind the decision"]
     pub fn reason(&self) -> Option<&str> {
         match self {
             Self::PreToolUse(o) => o.reason.as_deref(),
@@ -697,7 +697,7 @@ impl HookOutputEvent {
     /// [`HookOutputEvent::BeforeAgent`], [`HookOutputEvent::AfterAgent`],
     /// [`HookOutputEvent::BeforeModel`], and [`HookOutputEvent::AfterModel`]
     /// carry a `halt` field; all other variants return `None`.
-    #[must_use]
+    #[must_use = "discards whether the hook is requesting the process halt entirely"]
     pub const fn halt(&self) -> Option<bool> {
         match self {
             Self::PreToolUse(o) => o.halt,
@@ -714,7 +714,7 @@ impl HookOutputEvent {
     ///
     /// Only [`HookOutputEvent::PostToolUse`] carries a `suppress_output`
     /// field; all other variants return `None`.
-    #[must_use]
+    #[must_use = "discards whether the tool's output should be suppressed from the model"]
     pub const fn suppress_output(&self) -> Option<bool> {
         match self {
             Self::PostToolUse(o) => o.suppress_output,
@@ -729,7 +729,7 @@ impl HookOutputEvent {
     /// [`HookOutputEvent::InstructionsLoaded`], and
     /// [`HookOutputEvent::PostCompact`] carry a `system_message` field; all
     /// other variants return `None`.
-    #[must_use]
+    #[must_use = "discards the system message meant to be surfaced to the user"]
     pub fn system_message(&self) -> Option<&str> {
         match self {
             Self::SessionStart(o) => o.system_message.as_deref(),

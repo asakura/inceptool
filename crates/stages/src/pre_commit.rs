@@ -152,13 +152,13 @@ impl<'a> PreCommitConfig<'a> {
     }
 
     /// Returns the global default stages.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the parsed default stages list"]
     pub fn default_stages(&self) -> &[Cow<'a, str>] {
         &self.default_stages
     }
 
     /// Returns the repositories containing hooks.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the parsed list of repositories"]
     pub fn repos(&self) -> &[Repo<'a>] {
         &self.repos
     }
@@ -166,7 +166,7 @@ impl<'a> PreCommitConfig<'a> {
 
 impl<'a> Repo<'a> {
     /// Returns the repository URL or path (e.g. `local`).
-    #[must_use = "returns the value"]
+    #[must_use = "discards the repository URL or path"]
     pub fn url(&self) -> &str {
         &self.url
     }
@@ -175,7 +175,7 @@ impl<'a> Repo<'a> {
     ///
     /// Returns `None` when the URL contains `://` (e.g. `https://github.com/…`)
     /// because those strings are not filesystem paths.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the local-path classification; recomputing it duplicates the same string check"]
     pub fn local_path(&self) -> Option<&Path> {
         if self.url.contains("://") {
             None
@@ -185,13 +185,13 @@ impl<'a> Repo<'a> {
     }
 
     /// Returns the repository revision, if any.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the repository's pinned revision, if any"]
     pub fn rev(&self) -> Option<&str> {
         self.rev.as_deref()
     }
 
     /// Returns the hooks defined in this repository.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the repo's parsed hook list"]
     pub fn hooks(&self) -> &[Hook<'a>] {
         &self.hooks
     }
@@ -199,31 +199,31 @@ impl<'a> Repo<'a> {
 
 impl<'a> Hook<'a> {
     /// Returns the id of the hook.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the hook's id"]
     pub fn id(&self) -> &str {
         &self.id
     }
 
     /// Returns the alias of the hook, if any.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the hook's alias, if any"]
     pub fn alias(&self) -> Option<&str> {
         self.alias.as_deref()
     }
 
     /// Returns the name of the hook, if any.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the hook's display name, if any"]
     pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
     }
 
     /// Returns the entry (executable) of the hook, if any.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the hook's entry command, if any"]
     pub fn entry(&self) -> Option<&str> {
         self.entry.as_deref()
     }
 
     /// Returns the language of the hook, if any.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the hook's language, if any"]
     pub fn language(&self) -> Option<&str> {
         self.language.as_deref()
     }
@@ -232,7 +232,7 @@ impl<'a> Hook<'a> {
     ///
     /// Pre-commit uses Python `re` syntax; use [`Hook::files_regex`] to obtain
     /// a compiled [`fancy_regex::Regex`] that handles lookaheads and lookbehinds.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the raw files-inclusion pattern"]
     pub fn files_pattern(&self) -> Option<&str> {
         self.files.as_deref()
     }
@@ -245,7 +245,7 @@ impl<'a> Hook<'a> {
     /// # Errors
     ///
     /// Returns a [`fancy_regex::Error`] if the pattern is syntactically invalid.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the compiled regex (or compile error); recompiling repeats the work"]
     pub fn files_regex(&self) -> Option<Result<fancy_regex::Regex, fancy_regex::Error>> {
         self.files.as_deref().map(fancy_regex::Regex::new)
     }
@@ -253,7 +253,7 @@ impl<'a> Hook<'a> {
     /// Returns the raw file exclusion pattern string, if any.
     ///
     /// See [`Hook::files_pattern`] for notes on Python `re` syntax.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the raw files-exclusion pattern"]
     pub fn exclude_pattern(&self) -> Option<&str> {
         self.exclude.as_deref()
     }
@@ -265,67 +265,67 @@ impl<'a> Hook<'a> {
     /// # Errors
     ///
     /// Returns a [`fancy_regex::Error`] if the pattern is syntactically invalid.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the compiled exclude regex (or compile error); recompiling repeats the work"]
     pub fn exclude_regex(&self) -> Option<Result<fancy_regex::Regex, fancy_regex::Error>> {
         self.exclude.as_deref().map(fancy_regex::Regex::new)
     }
 
     /// Returns the list of file types to run on.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the hook's required file types"]
     pub fn types(&self) -> &[Cow<'a, str>] {
         &self.types
     }
 
     /// Returns the list of file types (OR) to run on.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the hook's alternative file types"]
     pub fn types_or(&self) -> &[Cow<'a, str>] {
         &self.types_or
     }
 
     /// Returns the list of file types to exclude.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the hook's excluded file types"]
     pub fn exclude_types(&self) -> &[Cow<'a, str>] {
         &self.exclude_types
     }
 
     /// Returns additional arguments to pass to the hook.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the hook's extra arguments"]
     pub fn args(&self) -> &[Cow<'a, str>] {
         &self.args
     }
 
     /// Returns the specific stages to run this hook in.
-    #[must_use = "returns the value"]
+    #[must_use = "discards the hook's git lifecycle stages"]
     pub fn stages(&self) -> &[Cow<'a, str>] {
         &self.stages
     }
 
     /// Returns whether to pass filenames to the hook. Defaults to `true`.
-    #[must_use = "returns the value"]
+    #[must_use = "discards whether filenames are passed to the hook"]
     pub const fn pass_filenames(&self) -> bool {
         self.pass_filenames
     }
 
     /// Returns whether to run the hook always, even if no files match. Defaults to `false`.
-    #[must_use = "returns the value"]
+    #[must_use = "discards whether the hook always runs regardless of file matches"]
     pub const fn always_run(&self) -> bool {
         self.always_run
     }
 
     /// Returns whether the run fails immediately on the first error. Defaults to `false`.
-    #[must_use = "returns the value"]
+    #[must_use = "discards whether the hook run fails fast"]
     pub const fn fail_fast(&self) -> bool {
         self.fail_fast
     }
 
     /// Returns whether to run sequentially instead of in parallel. Defaults to `false`.
-    #[must_use = "returns the value"]
+    #[must_use = "discards whether the hook requires serial execution"]
     pub const fn require_serial(&self) -> bool {
         self.require_serial
     }
 
     /// Returns whether to force verbose output. Defaults to `false`.
-    #[must_use = "returns the value"]
+    #[must_use = "discards whether the hook forces verbose output"]
     pub const fn verbose(&self) -> bool {
         self.verbose
     }
@@ -338,7 +338,9 @@ const fn default_true() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use rstest::rstest;
+
     use std::fs;
     use std::io;
     use std::path::PathBuf;
@@ -368,6 +370,7 @@ mod tests {
                 let config = PreCommitConfig::parse(&content)?;
 
                 assert!(!config.repos().is_empty(), "should have at least one repo");
+
                 let local_repo = config
                     .repos()
                     .iter()
@@ -385,6 +388,7 @@ mod tests {
                     .iter()
                     .find(|h| h.id() == "cargo-check")
                     .ok_or_else(|| TestError::Failure("should have cargo-check hook".into()))?;
+
                 assert_eq!(cargo_check.language(), Some("system"));
                 assert!(!cargo_check.always_run(), "cargo check does not always run");
 
