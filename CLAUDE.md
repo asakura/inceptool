@@ -83,11 +83,11 @@ style      = "omit comments that restate the name"
 doctest    = "hide setup lines with # prefix (# use inceptool_protocol::Conn;); annotate ```rust,no_run when example requires a live connection or runtime; never use ```rust,ignore"
 
 [arch]
-crates   = "protocol(Cow schema,HookEvent,Conn) → engine(Stage,Registry) → drivers(claude,gemini) → stages"
+crates   = "protocol(Cow schema,HookEvent,Conn) → engine(Stage,Registry) → drivers(claude,gemini) → stages; stages → parsers(flake.lock,.pre-commit-config.yaml decoders)"
 prefix   = "inceptool- for crate names; directory paths unprefixed"
 model    = "Phoenix-Plug with &mut Conn; Ok(None)=pass-through Ok(Some(_))=halt; Deny/Block are terminal"
 consumer = "Claude Code hook system; protocol I/O schema is load-bearing — field removal or rename requires a major version bump"
-boundary = "driver=decode provider wire format (JSON→typed structs); stage=policy on decoded structs; parsing Claude tool-use JSON belongs in driver-claude, not in stages"
+boundary = "driver=decode provider wire format (JSON→typed structs); parser=decode arbitrary file formats (flake.lock, .pre-commit-config.yaml) into typed structs, no Stage/Decision/EngineError awareness; stage=policy+decision on top of decoded structs; parsing Claude tool-use JSON belongs in driver-claude, not in stages"
 
 [async]
 executor = "tokio only; never assume a different runtime; no async-std, smol, or futures::executor::block_on"
