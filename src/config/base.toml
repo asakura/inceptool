@@ -341,3 +341,381 @@ filename = "**/.git/**"
 [read-write-guard.rules.access.no]
 hint = "Use `git` commands (`git add`, `git commit`, `git log`, etc.) instead of touching repository internals directly."
 note = "(NOTE: hand-editing anything under `.git/` can corrupt the repository)"
+
+[[read-write-guard.rules]]
+filename = "**/.svn/**"
+[read-write-guard.rules.access.no]
+hint = "Use `svn` commands instead of touching repository internals directly."
+note = "(NOTE: hand-editing anything under `.svn/` can corrupt the working copy)"
+
+[[read-write-guard.rules]]
+filename = "**/.hg/**"
+[read-write-guard.rules.access.no]
+hint = "Use `hg` commands instead of touching repository internals directly."
+note = "(NOTE: hand-editing anything under `.hg/` can corrupt the repository)"
+
+# JS/TS framework build & cache directories — full-path globs, deny both
+# (same shape as node_modules: regenerated entirely by the framework's CLI).
+[[read-write-guard.rules]]
+filename = "**/.next/**"
+[read-write-guard.rules.access.no]
+hint = "Run `next build`/`next dev` to regenerate it."
+note = "(NOTE: this is Next.js's build/dev cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "**/.nuxt/**"
+[read-write-guard.rules.access.no]
+hint = "Run `nuxt build`/`nuxt dev` to regenerate it."
+note = "(NOTE: this is Nuxt's build/dev cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "**/.svelte-kit/**"
+[read-write-guard.rules.access.no]
+hint = "Run `vite build`/`vite dev` (via SvelteKit) to regenerate it."
+note = "(NOTE: this is SvelteKit's build/dev cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "**/.angular/cache/**"
+[read-write-guard.rules.access.no]
+hint = "Run `ng build`/`ng serve` to regenerate it."
+note = "(NOTE: this is the Angular CLI's build cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "**/.turbo/**"
+[read-write-guard.rules.access.no]
+hint = "Run `turbo run` to regenerate it."
+note = "(NOTE: this is Turborepo's task cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "**/.nx/cache/**"
+[read-write-guard.rules.access.no]
+hint = "Run an `nx` task to regenerate it."
+note = "(NOTE: this is Nx's task cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "*.tsbuildinfo"
+[read-write-guard.rules.access.no]
+hint = "Run `tsc` to regenerate it."
+note = "(NOTE: this is TypeScript's incremental build cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = ".eslintcache"
+[read-write-guard.rules.access.no]
+hint = "Run `eslint` to regenerate it."
+note = "(NOTE: this is ESLint's lint cache, entirely disposable)"
+
+# Deploy platform local state — write-deny only, reading is harmless.
+[[read-write-guard.rules]]
+filename = "**/.vercel/**"
+[read-write-guard.rules.access.write]
+hint = "This is written locally by the Vercel CLI."
+note = "(NOTE: it's not meant to be hand-edited — let the CLI regenerate it)"
+
+[[read-write-guard.rules]]
+filename = "**/.netlify/**"
+[read-write-guard.rules.access.write]
+hint = "This is written locally by the Netlify CLI."
+note = "(NOTE: it's not meant to be hand-edited — let the CLI regenerate it)"
+
+# Test-runner output — read-deny only (large/binary artifacts; the test
+# command itself, not these files, is the useful source of truth).
+[[read-write-guard.rules]]
+filename = "**/coverage/**"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "**/.nyc_output/**"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "**/playwright-report/**"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "**/test-results/**"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "**/cypress/videos/**"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "**/cypress/screenshots/**"
+[read-write-guard.rules.access.read]
+
+# Tool caches — full-path/basename globs, deny both.
+[[read-write-guard.rules]]
+filename = "**/.pytest_cache/**"
+[read-write-guard.rules.access.no]
+hint = "Run `pytest` to regenerate it."
+note = "(NOTE: this is pytest's cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "**/.tox/**"
+[read-write-guard.rules.access.no]
+hint = "Run `tox` to regenerate it."
+note = "(NOTE: this is tox's virtualenv cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "**/.nox/**"
+[read-write-guard.rules.access.no]
+hint = "Run `nox` to regenerate it."
+note = "(NOTE: this is nox's virtualenv cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "**/.mypy_cache/**"
+[read-write-guard.rules.access.no]
+hint = "Run `mypy` to regenerate it."
+note = "(NOTE: this is mypy's type-check cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "**/.ruff_cache/**"
+[read-write-guard.rules.access.no]
+hint = "Run `ruff` to regenerate it."
+note = "(NOTE: this is ruff's lint cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "**/__pycache__/**"
+[read-write-guard.rules.access.no]
+hint = "This is regenerated automatically whenever the corresponding `.py` file is imported."
+note = "(NOTE: edit the `.py` source instead — bytecode caches are entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "*.pyc"
+[read-write-guard.rules.access.no]
+hint = "This is regenerated automatically whenever the corresponding `.py` file is imported."
+note = "(NOTE: edit the `.py` source instead — bytecode caches are entirely disposable)"
+
+# JVM / Android tooling.
+[[read-write-guard.rules]]
+filename = "**/.gradle/**"
+[read-write-guard.rules.access.no]
+hint = "Run a `./gradlew` task to regenerate it."
+note = "(NOTE: this is Gradle's build cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "*.iml"
+[read-write-guard.rules.access.write]
+hint = "This is generated by IntelliJ/Android Studio from your project structure."
+note = "(NOTE: edit the build files instead — the IDE regenerates this on sync)"
+
+[[read-write-guard.rules]]
+filename = "**/.idea/**"
+[read-write-guard.rules.access.write]
+hint = "This is generated locally by IntelliJ/Android Studio."
+note = "(NOTE: it's not meant to be committed or hand-edited)"
+
+[[read-write-guard.rules]]
+filename = "*.keystore"
+[read-write-guard.rules.access.no]
+hint = "Signing keystores should never be generated or modified by an agent."
+note = "(NOTE: use `keytool`/Android Studio's signing UI directly in a terminal if a new one is truly needed)"
+
+[[read-write-guard.rules]]
+filename = "*.jks"
+[read-write-guard.rules.access.no]
+hint = "Signing keystores should never be generated or modified by an agent."
+note = "(NOTE: use `keytool`/Android Studio's signing UI directly in a terminal if a new one is truly needed)"
+
+# .NET tooling.
+[[read-write-guard.rules]]
+filename = "*.user"
+[read-write-guard.rules.access.write]
+hint = "This holds user-local Visual Studio settings, regenerated by the IDE."
+note = "(NOTE: it's not meant to be committed or hand-edited)"
+
+[[read-write-guard.rules]]
+filename = "**/.vs/**"
+[read-write-guard.rules.access.write]
+hint = "This is written locally by Visual Studio."
+note = "(NOTE: it's not meant to be committed or hand-edited)"
+
+# iOS / CocoaPods / Xcode.
+[[read-write-guard.rules]]
+filename = "**/Pods/**"
+[read-write-guard.rules.access.no]
+hint = "Run `pod install` to manage dependencies — never hand-edit installed pods."
+note = "(NOTE: this directory is entirely regenerated by CocoaPods)"
+
+[[read-write-guard.rules]]
+filename = "*.xcuserstate"
+[read-write-guard.rules.access.no]
+hint = "This is Xcode's local UI/window state."
+note = "(NOTE: it's not meant to be committed or hand-edited)"
+
+[[read-write-guard.rules]]
+filename = "**/xcuserdata/**"
+[read-write-guard.rules.access.no]
+hint = "This is Xcode's per-user local project state."
+note = "(NOTE: it's not meant to be committed or hand-edited)"
+
+[[read-write-guard.rules]]
+filename = "**/DerivedData/**"
+[read-write-guard.rules.access.no]
+hint = "Run a clean Xcode build to regenerate it."
+note = "(NOTE: this is Xcode's build cache, entirely disposable)"
+
+# Generated code (GraphQL/codegen, WASM).
+[[read-write-guard.rules]]
+filename = "*.generated.ts"
+[read-write-guard.rules.access.write]
+hint = "Edit the source schema/query and rerun the codegen tool instead."
+note = "(NOTE: this file is fully regenerated on every codegen run)"
+
+[[read-write-guard.rules]]
+filename = "**/__generated__/**"
+[read-write-guard.rules.access.write]
+hint = "Edit the source schema/query and rerun the codegen tool instead."
+note = "(NOTE: this directory is fully regenerated on every codegen run)"
+
+[[read-write-guard.rules]]
+filename = "*.wasm"
+[read-write-guard.rules.access.no]
+hint = "Rebuild from source (e.g. `wasm-pack build`) instead."
+note = "(NOTE: this is a compiled binary artifact)"
+
+# Infra/cloud tool state.
+[[read-write-guard.rules]]
+filename = "**/.terraform/**"
+[read-write-guard.rules.access.no]
+hint = "Run `terraform init` to regenerate it."
+note = "(NOTE: this is Terraform's provider/module cache, entirely disposable)"
+
+[[read-write-guard.rules]]
+filename = "*.tfplan"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.retry"
+[read-write-guard.rules.access.write]
+hint = "This is written automatically by Ansible after a failed playbook run."
+note = "(NOTE: it's not meant to be hand-edited — rerun the playbook instead)"
+
+[[read-write-guard.rules]]
+filename = "**/.pulumi/**"
+[read-write-guard.rules.access.no]
+hint = "Run a `pulumi` command to regenerate it."
+note = "(NOTE: this is Pulumi's local workspace cache, entirely disposable)"
+
+# Editor swap files and OS noise.
+[[read-write-guard.rules]]
+filename = "*.swp"
+[read-write-guard.rules.access.no]
+hint = "This is a Vim swap file for an in-progress edit elsewhere."
+note = "(NOTE: it's not meant to be read or hand-edited)"
+
+[[read-write-guard.rules]]
+filename = "*.swo"
+[read-write-guard.rules.access.no]
+hint = "This is a Vim swap file for an in-progress edit elsewhere."
+note = "(NOTE: it's not meant to be read or hand-edited)"
+
+[[read-write-guard.rules]]
+filename = ".DS_Store"
+[read-write-guard.rules.access.no]
+hint = "This is macOS Finder's per-directory metadata file."
+note = "(NOTE: it's binary, carries no useful signal, and is never meant to be hand-edited)"
+
+# Private keys and certificate bundles — never legitimately read or written
+# by an agent.
+[[read-write-guard.rules]]
+filename = "*.pem"
+[read-write-guard.rules.access.no]
+hint = "Private keys and certificates should never be generated or modified by an agent."
+note = "(NOTE: use `openssl`/`ssh-keygen` directly in a terminal if a new one is truly needed)"
+
+[[read-write-guard.rules]]
+filename = "*.p12"
+[read-write-guard.rules.access.no]
+hint = "Private keys and certificates should never be generated or modified by an agent."
+note = "(NOTE: use `openssl` directly in a terminal if a new one is truly needed)"
+
+[[read-write-guard.rules]]
+filename = "*.pfx"
+[read-write-guard.rules.access.no]
+hint = "Private keys and certificates should never be generated or modified by an agent."
+note = "(NOTE: use `openssl` directly in a terminal if a new one is truly needed)"
+
+[[read-write-guard.rules]]
+filename = "id_rsa"
+[read-write-guard.rules.access.no]
+hint = "Private SSH keys should never be generated or modified by an agent."
+note = "(NOTE: use `ssh-keygen` directly in a terminal if a new key is truly needed)"
+
+[[read-write-guard.rules]]
+filename = "id_dsa"
+[read-write-guard.rules.access.no]
+hint = "Private SSH keys should never be generated or modified by an agent."
+note = "(NOTE: use `ssh-keygen` directly in a terminal if a new key is truly needed)"
+
+[[read-write-guard.rules]]
+filename = "id_ecdsa"
+[read-write-guard.rules.access.no]
+hint = "Private SSH keys should never be generated or modified by an agent."
+note = "(NOTE: use `ssh-keygen` directly in a terminal if a new key is truly needed)"
+
+[[read-write-guard.rules]]
+filename = "id_ed25519"
+[read-write-guard.rules.access.no]
+hint = "Private SSH keys should never be generated or modified by an agent."
+note = "(NOTE: use `ssh-keygen` directly in a terminal if a new key is truly needed)"
+
+# Verbose/low-signal logs and crash dumps — read-deny only.
+[[read-write-guard.rules]]
+filename = "npm-debug.log*"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "yarn-error.log*"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "lerna-debug.log*"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.dmp"
+[read-write-guard.rules.access.read]
+
+# Big-data / binary / ML formats — read-deny only (binary, unreadable as
+# text; writing isn't guarded since these are usually produced by a real
+# data/training pipeline, not hand-edited either way).
+[[read-write-guard.rules]]
+filename = "*.parquet"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.avro"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.orc"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.safetensors"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.onnx"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.pt"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.bin"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.sqlite"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.sqlite3"
+[read-write-guard.rules.access.read]
+
+[[read-write-guard.rules]]
+filename = "*.db"
+[read-write-guard.rules.access.read]
