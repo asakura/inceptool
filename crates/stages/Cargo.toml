@@ -11,7 +11,6 @@ keywords = ["stages", "hooks", "ai"]
 categories = ["development-tools"]
 
 [dependencies]
-flash.workspace = true
 gix.workspace = true
 inceptool_engine.workspace = true
 inceptool_parsers.workspace = true

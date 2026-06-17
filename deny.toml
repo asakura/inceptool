@@ -21,14 +21,7 @@ yanked = "warn"
 maximum-db-staleness = "P30D"
 unused-ignored-advisory = "warn"
 
-ignore = [
-  # `atty` is unmaintained, pulled in transitively via `flash` (the same
-  # GPL-3.0-or-later dependency already exempted below for licensing). No
-  # safe upgrade is available upstream - resolve alongside the `flash`
-  # licensing issue before/at crates.io publication.
-  "RUSTSEC-2024-0375",
-  "RUSTSEC-2021-0145",
-]
+ignore = []
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
@@ -51,15 +44,6 @@ allow = [
 confidence-threshold = 0.8
 include-dev = true
 unused-allowed-license = "warn"
-
-# `flash` (the bash AST parser `inceptool-stages` uses for guardrails) is
-# GPL-3.0-or-later, which is otherwise incompatible with this workspace's
-# `MIT OR Apache-2.0` licensing. This is a known, deliberate exception -
-# resolve before/at crates.io publication (e.g. a relicensing discussion with
-# upstream, dual-licensing `inceptool`, or replacing the dependency).
-[[licenses.exceptions]]
-allow = ["GPL-3.0-or-later"]
-crate = "flash"
 
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]

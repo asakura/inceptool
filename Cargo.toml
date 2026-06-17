@@ -40,7 +40,6 @@ fancy-regex = { version = "0.18", default-features = false, features = [
   "perf",
   "unicode",
 ] }
-flash = { version = "0.0", default-features = false }
 gix = { version = "0.84", default-features = false, features = [
   "sha1",
   "zlib-rs",
