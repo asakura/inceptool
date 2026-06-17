@@ -1,0 +1,24 @@
+[package]
+name = "inceptool-parsers"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+description = "Zero-copy parsers for external file formats consumed by Inceptool stages"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["parsers", "config", "ai"]
+categories = ["development-tools"]
+
+[dependencies]
+fancy-regex.workspace = true
+serde.workspace = true
+serde-saphyr.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

@@ -1369,6 +1369,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "inceptool-parsers"
+version = "0.1.0"
+dependencies = [
+ "fancy-regex",
+ "rstest",
+ "serde",
+ "serde-saphyr",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "inceptool-protocol"
 version = "0.1.1"
 dependencies = [
@@ -1385,10 +1397,10 @@ dependencies = [
 name = "inceptool-stages"
 version = "0.3.0"
 dependencies = [
- "fancy-regex",
  "flash",
  "gix",
  "inceptool-engine",
+ "inceptool-parsers",
  "inceptool-protocol",
  "indoc",
  "regex",

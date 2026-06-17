@@ -6,8 +6,8 @@
 //! ## Core Design
 //!
 //! Rather than invoking the `pre-commit` CLI, this stage reads
-//! `.pre-commit-config.yaml` via the existing [`crate::pre_commit::PreCommitConfig`]
-//! parser, resolves which hooks apply to the edited file by matching their
+//! `.pre-commit-config.yaml` via [`inceptool_parsers::pre_commit::PreCommitConfig`],
+//! resolves which hooks apply to the edited file by matching their
 //! `files` / `exclude` regex patterns, and spawns each hook's `entry` binary
 //! directly via [`std::process::Command`]. This removes the dependency on the
 //! `pre-commit` binary being installed.
@@ -50,11 +50,10 @@
 //! - If an earlier hook's change is fully reverted by a later one, the net diff is
 //!   empty and no modification is reported, even though individual hooks ran.
 
-use crate::pre_commit::{Hook, PreCommitConfig};
-
 use gix::diff::blob::unified_diff::{ConsumeBinaryHunk, ContextSize};
 use gix::diff::blob::{Algorithm, Diff, InternedInput, UnifiedDiff};
 use inceptool_engine::{EngineError, Stage};
+use inceptool_parsers::pre_commit::{Hook, PreCommitConfig};
 use inceptool_protocol::{
     Conn, HookInputEvent, HookKind, HookOutputEvent, PostToolUseOutput, extract_file_path,
 };
@@ -490,7 +489,6 @@ impl fmt::Display for HookFailure {
 )]
 mod tests {
     use super::*;
-    use crate::pre_commit::PreCommitConfig;
 
     use inceptool_protocol::{PostToolUseInput, RawJson, SessionMeta};
 

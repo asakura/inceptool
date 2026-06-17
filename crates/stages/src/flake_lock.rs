@@ -12,23 +12,23 @@
 //! whether they have changed relative to the git repository's `HEAD`.
 //!
 //! This stage intercepts `Read` operations targeting `flake.lock` *before*
-//! they execute. It parses the file directly from disk and optionally
-//! compares it against the last committed version (`HEAD`), then denies the
-//! read and returns a highly condensed, line-by-line summary as the denial
-//! reason — the agent never sees the raw JSON.
+//! they execute. It parses the file via
+//! [`inceptool_parsers::flake_lock::FlakeLock`] and optionally compares it
+//! against the last committed version (`HEAD`), then denies the read and
+//! returns a highly condensed, line-by-line summary as the denial reason —
+//! the agent never sees the raw JSON.
 //!
 //! ## Flow
 //! 1. **Event Filtering**: Triggers on `PreToolUse` for tools: `Read`,
 //!    `view_file`, `cat`, etc., when the target is named `flake.lock`.
 //! 2. **Current State**: Deserializes the current `flake.lock` from the
-//!    filesystem into `FlakeLock`, which borrows field values directly from
-//!    the source buffer via `Cow<'a, str>` instead of allocating a full
-//!    `serde_json::Value` tree.
+//!    filesystem into a [`FlakeLock`] (see [`inceptool_parsers::flake_lock`]
+//!    for the zero-copy decoding details).
 //! 3. **Head State**: Uses [`gix`] to discover the enclosing repository,
 //!    walk `HEAD`'s tree to the `flake.lock` blob, and parse its content the
 //!    same way.
-//! 4. **Diffing**: Compares the revisions (`rev` fields) of inputs between
-//!    `HEAD` and the current file.
+//! 4. **Diffing**: Delegates to [`FlakeLock::diff`] to compare the revisions
+//!    (`rev` fields) of inputs between `HEAD` and the current file.
 //! 5. **Formatting**: Generates a compact summary, e.g.
 //!    `nixpkgs: NixOS/nixpkgs@abcdef1 -> 1234567`.
 //! 6. **Denial**: Returns `Decision::Deny` with the summary as `reason`,
@@ -44,24 +44,19 @@
 //! unchanged (no `->` diff).
 
 use inceptool_engine::{EngineError, Stage};
+use inceptool_parsers::flake_lock::{DiffEntry, FlakeLock};
 use inceptool_protocol::{
     Conn, Decision, HookInputEvent, HookKind, HookOutputEvent, PreToolUseOutput, extract_file_path,
 };
 
-use serde::Deserialize;
 use serde_json::Value;
 
-use std::borrow::Cow;
-use std::collections::BTreeMap;
 use std::fmt;
 use std::fs;
 use std::path::Path;
 
 /// The file name this stage triggers on.
 const FLAKE_LOCK_FILE_NAME: &str = "flake.lock";
-
-/// The synthetic root node present in every `flake.lock`, which carries no `locked` pin.
-const ROOT_NODE_NAME: &str = "root";
 
 /// Number of leading characters of a revision hash shown in summaries.
 const SHORT_REV_LEN: usize = 7;
@@ -72,73 +67,12 @@ const SHORT_REV_LEN: usize = 7;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FlakeLockSummarizationStage;
 
-/// Zero-copy view of the top-level structure of a `flake.lock` (format version 7).
-///
-/// Field values borrow directly from the source JSON via `Cow<'a, str>`. Only the
-/// `nodes` map is retained; the top-level `version` and `root` pointer are ignored.
-#[derive(Debug, Default, Deserialize)]
-struct FlakeLock<'a> {
-    /// All input nodes, keyed by their identifier (including the `"root"` node).
-    #[serde(borrow, default)]
-    nodes: BTreeMap<Cow<'a, str>, FlakeNode<'a>>,
-}
-
-/// A single entry in a `flake.lock`'s `nodes` map.
-///
-/// Only the `locked` pin is retained; `inputs` and `original` are ignored during
-/// deserialization.
-#[derive(Debug, Deserialize)]
-struct FlakeNode<'a> {
-    /// The pinned source information for this input, if present.
-    #[serde(borrow, default)]
-    locked: Option<LockedRef<'a>>,
-}
-
-/// The `locked` pin of a `flake.lock` node, with fields borrowed from the source JSON.
-#[derive(Debug, Deserialize)]
-struct LockedRef<'a> {
-    /// The source type (e.g. `github`, `git`, `tarball`, `path`).
-    #[serde(borrow, default, rename = "type")]
-    node_type: Cow<'a, str>,
-    /// The repository owner, for `github`/`gitlab` sources.
-    #[serde(borrow, default)]
-    owner: Cow<'a, str>,
-    /// The repository name, for `github`/`gitlab` sources.
-    #[serde(borrow, default)]
-    repo: Cow<'a, str>,
-    /// The pinned git revision (commit hash).
-    #[serde(borrow, default)]
-    rev: Cow<'a, str>,
-    /// The source URL, for `git`/`tarball` sources.
-    #[serde(borrow, default)]
-    url: Cow<'a, str>,
-    /// The source path, for `path` sources.
-    #[serde(borrow, default)]
-    path: Cow<'a, str>,
-}
-
-/// A single non-root `flake.lock` input, summarized for display.
-struct SummaryEntry {
-    /// The node's key in the `flake.lock`'s `nodes` map (e.g. `"nixpkgs"`).
-    name: String,
-    /// The formatted source, as produced by [`LockedRef::label`] (e.g.
-    /// `NixOS/nixpkgs`, `git:<url>`, `path:<path>`).
-    label: String,
-    /// The pinned revision in the current `flake.lock`, or empty if unpinned.
-    cur_rev: String,
-    /// The pinned revision in `HEAD`'s `flake.lock`, or empty if the input is
-    /// new or `HEAD` couldn't be determined.
-    old_rev: String,
-    /// `true` if [`Self::old_rev`] is non-empty and differs from [`Self::cur_rev`].
-    changed: bool,
-}
-
-/// A rendered `flake.lock` summary: the header plus one line per [`SummaryEntry`],
+/// A rendered `flake.lock` summary: the header plus one line per [`DiffEntry`],
 /// as described in the module's "Flow" step 5.
 ///
 /// Callers should treat an empty slice as "nothing to summarize" and return
 /// `Ok(None)` instead of constructing this.
-struct Summary<'a>(&'a [SummaryEntry]);
+struct Summary<'a>(&'a [DiffEntry]);
 
 impl Stage for FlakeLockSummarizationStage {
     fn name(&self) -> &'static str {
@@ -175,7 +109,7 @@ impl Stage for FlakeLockSummarizationStage {
                 return Ok(None);
             };
 
-            if current.nodes.is_empty() {
+            if current.is_empty() {
                 return Ok(None);
             }
 
@@ -200,76 +134,6 @@ impl Stage for FlakeLockSummarizationStage {
             })));
         }
         Ok(None)
-    }
-}
-
-impl FlakeLock<'_> {
-    /// Compares this lock's nodes against `head`'s, producing one [`SummaryEntry`] per
-    /// non-root node. An entry's `changed` flag is set when `head` has a recorded
-    /// revision for that node that differs from the current one.
-    fn diff(&self, head: &FlakeLock<'_>) -> Vec<SummaryEntry> {
-        let mut entries = Vec::new();
-
-        for (name, node) in &self.nodes {
-            if name.as_ref() == ROOT_NODE_NAME {
-                continue;
-            }
-
-            let locked = node.locked.as_ref();
-            let cur_rev = locked.map_or("", |l| l.rev.as_ref());
-
-            let old_rev = head
-                .nodes
-                .get(name.as_ref())
-                .and_then(|n| n.locked.as_ref())
-                .map_or("", |l| l.rev.as_ref());
-
-            let changed = !old_rev.is_empty() && old_rev != cur_rev;
-
-            entries.push(SummaryEntry {
-                name: name.as_ref().to_owned(),
-                label: locked.map(LockedRef::label).unwrap_or_default(),
-                cur_rev: cur_rev.to_owned(),
-                old_rev: old_rev.to_owned(),
-                changed,
-            });
-        }
-
-        entries
-    }
-}
-
-impl LockedRef<'_> {
-    /// Formats this pin as a human-readable label, based on [`Self::node_type`]:
-    /// `owner/repo` for `github`/`gitlab`, `<type>:<url>` for `git`/`tarball`,
-    /// `path:<path>` for `path`, or the raw type name otherwise.
-    fn label(&self) -> String {
-        match self.node_type.as_ref() {
-            "github" | "gitlab" => format!("{}/{}", self.owner, self.repo),
-            "git" => format!("git:{}", self.url),
-            "tarball" => format!("tarball:{}", self.url),
-            "path" => format!("path:{}", self.path),
-            other => other.to_owned(),
-        }
-    }
-}
-
-impl fmt::Display for SummaryEntry {
-    /// Renders as `  <name>: <label>@<rev>`, or `  <name>: <label>@<old> -> <new>`
-    /// when [`Self::changed`] is `true`.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "  {}: {}@", self.name, self.label)?;
-
-        if self.changed {
-            write!(
-                f,
-                "{} -> {}",
-                short_rev(&self.old_rev),
-                short_rev(&self.cur_rev)
-            )
-        } else {
-            write!(f, "{}", short_rev(&self.cur_rev))
-        }
     }
 }
 
@@ -306,10 +170,27 @@ fn get_head_content(file_path: &str) -> Option<String> {
     String::from_utf8(entry.object().ok()?.detach().data).ok()
 }
 
+/// Renders a single [`DiffEntry`] as `  <name>: <label>@<rev>`, or
+/// `  <name>: <label>@<old> -> <new>` when [`DiffEntry::changed`] is `true`.
+fn write_entry(f: &mut fmt::Formatter<'_>, entry: &DiffEntry) -> fmt::Result {
+    write!(f, "  {}: {}@", entry.name, entry.label)?;
+
+    if entry.changed {
+        write!(
+            f,
+            "{} -> {}",
+            short_rev(&entry.old_rev),
+            short_rev(&entry.cur_rev)
+        )
+    } else {
+        write!(f, "{}", short_rev(&entry.cur_rev))
+    }
+}
+
 impl fmt::Display for Summary<'_> {
     /// Renders the header line (`flake.lock read blocked — use this summary
     /// instead (N inputs[, M changed vs HEAD]):`) followed by one line per
-    /// entry, formatted via [`SummaryEntry`]'s `Display` impl.
+    /// entry, formatted via [`write_entry`].
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let total = self.0.len();
         let changed_count = self.0.iter().filter(|e| e.changed).count();
@@ -326,7 +207,8 @@ impl fmt::Display for Summary<'_> {
         }
 
         for entry in self.0 {
-            write!(f, "\n{entry}")?;
+            f.write_str("\n")?;
+            write_entry(f, entry)?;
         }
 
         Ok(())
@@ -343,6 +225,7 @@ mod tests {
     use serde_json::json;
     use serde_json::value::RawValue;
 
+    use std::borrow::Cow;
     use std::io;
 
     #[derive(thiserror::Error, Debug)]
@@ -355,59 +238,6 @@ mod tests {
         Io(#[from] io::Error),
         #[error("Test failure: {0}")]
         Failure(String),
-    }
-
-    // A `flake.lock` with a single non-root `nixpkgs` input pinned to `abc1234`.
-    #[fixture]
-    fn flake_lock_json() -> String {
-        json!({
-            "nodes": {
-                "nixpkgs": {
-                    "locked": {
-                        "type": "github",
-                        "owner": "NixOS",
-                        "repo": "nixpkgs",
-                        "rev": "abc1234",
-                        "narHash": "sha256-abc...",
-                        "lastModified": 1_700_000_000
-                    },
-                    "original": {
-                        "type": "github",
-                        "owner": "NixOS",
-                        "repo": "nixpkgs",
-                        "ref": "nixos-unstable"
-                    }
-                },
-                "root": {
-                    "inputs": {"nixpkgs": "nixpkgs"}
-                }
-            },
-            "root": "root",
-            "version": 7
-        })
-        .to_string()
-    }
-
-    // A `flake.lock` with a single non-root `nixpkgs` input, pinned to `rev` via the
-    // `github:NixOS/nixpkgs` source.
-    #[fixture]
-    fn nixpkgs_flake_json(#[default("abc1234")] rev: &str) -> String {
-        json!({
-            "nodes": {
-                "nixpkgs": {
-                    "locked": {
-                        "type": "github",
-                        "owner": "NixOS",
-                        "repo": "nixpkgs",
-                        "rev": rev
-                    }
-                },
-                "root": {"inputs": {"nixpkgs": "nixpkgs"}}
-            },
-            "root": "root",
-            "version": 7
-        })
-        .to_string()
     }
 
     // Tests for [`FlakeLockSummarizationStage::run`].
@@ -488,6 +318,48 @@ mod tests {
         fn commit_all(dir: &Path, message: &str) -> Result<(), TestError> {
             run_git(dir, &["add", "-A"])?;
             run_git(dir, &["commit", "--quiet", "-m", message])
+        }
+
+        /// A `flake.lock` with a single non-root `nixpkgs` input pinned to `abc1234`.
+        #[fixture]
+        fn flake_lock_json() -> String {
+            json!({
+                "nodes": {
+                    "nixpkgs": {
+                        "locked": {
+                            "type": "github",
+                            "owner": "NixOS",
+                            "repo": "nixpkgs",
+                            "rev": "abc1234"
+                        }
+                    },
+                    "root": {"inputs": {"nixpkgs": "nixpkgs"}}
+                },
+                "root": "root",
+                "version": 7
+            })
+            .to_string()
+        }
+
+        /// A `flake.lock` with a single non-root `nixpkgs` input, pinned to `rev`.
+        #[fixture]
+        fn nixpkgs_flake_json(#[default("abc1234")] rev: &str) -> String {
+            json!({
+                "nodes": {
+                    "nixpkgs": {
+                        "locked": {
+                            "type": "github",
+                            "owner": "NixOS",
+                            "repo": "nixpkgs",
+                            "rev": rev
+                        }
+                    },
+                    "root": {"inputs": {"nixpkgs": "nixpkgs"}}
+                },
+                "root": "root",
+                "version": 7
+            })
+            .to_string()
         }
 
         #[rstest]
@@ -590,152 +462,6 @@ mod tests {
         }
     }
 
-    // Tests for [`FlakeLock`] deserialization and [`FlakeLock::diff`].
-    mod flake_lock {
-        use super::*;
-
-        #[rstest]
-        fn deserialization_keeps_all_nodes(flake_lock_json: String) -> Result<(), TestError> {
-            let lock: FlakeLock<'_> = serde_json::from_str(&flake_lock_json)?;
-            assert_eq!(lock.nodes.len(), 2);
-            Ok(())
-        }
-
-        #[rstest]
-        fn deserialization_ignores_inputs_and_original(
-            flake_lock_json: String,
-        ) -> Result<(), TestError> {
-            let lock: FlakeLock<'_> = serde_json::from_str(&flake_lock_json)?;
-
-            let root = lock
-                .nodes
-                .get("root")
-                .ok_or_else(|| TestError::Failure("missing root node".into()))?;
-
-            assert!(root.locked.is_none());
-
-            Ok(())
-        }
-
-        #[rstest]
-        fn deserialization_defaults_to_empty_without_nodes() -> Result<(), TestError> {
-            let lock: FlakeLock<'_> = serde_json::from_str("{}")?;
-            assert!(lock.nodes.is_empty());
-            Ok(())
-        }
-
-        // Tests for [`FlakeLock::diff`].
-        mod diff {
-            use super::*;
-
-            #[rstest]
-            fn skips_root_node(flake_lock_json: String) -> Result<(), TestError> {
-                let lock: FlakeLock<'_> = serde_json::from_str(&flake_lock_json)?;
-                let entries = lock.diff(&FlakeLock::default());
-
-                let entry = entries
-                    .first()
-                    .ok_or_else(|| TestError::Failure("expected one entry".into()))?;
-
-                assert_eq!(entries.len(), 1);
-                assert_eq!(entry.name, "nixpkgs");
-                assert_eq!(entry.label, "NixOS/nixpkgs");
-                assert_eq!(entry.cur_rev, "abc1234");
-
-                assert!(!entry.changed);
-
-                Ok(())
-            }
-
-            #[rstest]
-            fn detects_rev_change(
-                #[from(nixpkgs_flake_json)]
-                #[with("2222222")]
-                current_json: String,
-                #[from(nixpkgs_flake_json)]
-                #[with("1111111")]
-                head_json: String,
-            ) -> Result<(), TestError> {
-                let current: FlakeLock<'_> = serde_json::from_str(&current_json)?;
-                let head: FlakeLock<'_> = serde_json::from_str(&head_json)?;
-                let entries = current.diff(&head);
-
-                let entry = entries
-                    .first()
-                    .ok_or_else(|| TestError::Failure("expected one entry".into()))?;
-
-                assert_eq!(entries.len(), 1);
-                assert_eq!(entry.old_rev, "1111111");
-                assert_eq!(entry.cur_rev, "2222222");
-                assert!(entry.changed);
-
-                Ok(())
-            }
-
-            #[rstest]
-            fn unchanged_when_rev_matches_head(
-                nixpkgs_flake_json: String,
-            ) -> Result<(), TestError> {
-                let current: FlakeLock<'_> = serde_json::from_str(&nixpkgs_flake_json)?;
-                let head: FlakeLock<'_> = serde_json::from_str(&nixpkgs_flake_json)?;
-                let entries = current.diff(&head);
-
-                let entry = entries
-                    .first()
-                    .ok_or_else(|| TestError::Failure("expected one entry".into()))?;
-
-                assert_eq!(entries.len(), 1);
-                assert!(!entry.changed);
-
-                Ok(())
-            }
-        }
-    }
-
-    // Tests for [`LockedRef`] deserialization and [`LockedRef::label`].
-    mod locked_ref {
-        use super::*;
-
-        #[rstest]
-        fn deserialization_borrows_from_source() -> Result<(), TestError> {
-            let flake_json =
-                json!({"type":"github","owner":"NixOS","repo":"nixpkgs","rev":"abc1234"})
-                    .to_string();
-            let locked: LockedRef<'_> = serde_json::from_str(&flake_json)?;
-
-            assert!(matches!(locked.node_type, Cow::Borrowed("github")));
-            assert!(matches!(locked.owner, Cow::Borrowed("NixOS")));
-            assert!(matches!(locked.rev, Cow::Borrowed("abc1234")));
-
-            Ok(())
-        }
-
-        #[rstest]
-        #[case::github(
-            json!({"type":"github","owner":"NixOS","repo":"nixpkgs"}).to_string(),
-            "NixOS/nixpkgs"
-        )]
-        #[case::gitlab(json!({"type":"gitlab","owner":"foo","repo":"bar"}).to_string(), "foo/bar")]
-        #[case::git(
-            json!({"type":"git","url":"https://example.com/repo.git"}).to_string(),
-            "git:https://example.com/repo.git"
-        )]
-        #[case::tarball(
-            json!({"type":"tarball","url":"https://example.com/x.tar.gz"}).to_string(),
-            "tarball:https://example.com/x.tar.gz"
-        )]
-        #[case::path(json!({"type":"path","path":"/nix/store/abc"}).to_string(), "path:/nix/store/abc")]
-        #[case::unknown(json!({"type":"mercurial"}).to_string(), "mercurial")]
-        fn label_formats_by_node_type(
-            #[case] json: String,
-            #[case] expected: &str,
-        ) -> Result<(), TestError> {
-            let locked: LockedRef<'_> = serde_json::from_str(&json)?;
-            assert_eq!(locked.label(), expected);
-            Ok(())
-        }
-    }
-
     // Tests for [`short_rev`].
     mod short_rev {
         use super::*;
@@ -756,7 +482,7 @@ mod tests {
 
         #[rstest]
         fn display_lists_unchanged_input_without_arrow() {
-            let entries = vec![SummaryEntry {
+            let entries = vec![DiffEntry {
                 name: "nixpkgs".to_owned(),
                 label: "NixOS/nixpkgs".to_owned(),
                 cur_rev: "abc1234".to_owned(),
@@ -772,7 +498,7 @@ mod tests {
 
         #[rstest]
         fn display_lists_changed_input_with_arrow_and_count() {
-            let entries = vec![SummaryEntry {
+            let entries = vec![DiffEntry {
                 name: "nixpkgs".to_owned(),
                 label: "NixOS/nixpkgs".to_owned(),
                 cur_rev: "2222222".to_owned(),

@@ -18,9 +18,6 @@ pub use flake_lock::FlakeLockSummarizationStage;
 pub mod read_write_guard;
 pub use read_write_guard::ReadWriteGuardStage;
 
-pub mod pre_commit;
-pub use pre_commit::{Hook, PreCommitConfig, Repo};
-
 pub mod pre_commit_runner;
 pub use pre_commit_runner::PreCommitRunnerStage;
 

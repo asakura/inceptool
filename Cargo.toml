@@ -15,6 +15,7 @@ members = [
   "crates/driver-claude",
   "crates/driver-gemini",
   "crates/engine",
+  "crates/parsers",
   "crates/protocol",
   "crates/stages",
 ]
@@ -48,6 +49,7 @@ gix = { version = "0.84", default-features = false, features = [
 inceptool_driver-claude = { version = "0.9", package = "inceptool-driver-claude", path = "crates/driver-claude" }
 inceptool_driver-gemini = { version = "0.9", package = "inceptool-driver-gemini", path = "crates/driver-gemini" }
 inceptool_engine = { version = "0.1", package = "inceptool-engine", path = "crates/engine" }
+inceptool_parsers = { version = "0.1", package = "inceptool-parsers", path = "crates/parsers" }
 inceptool_protocol = { version = "0.1", package = "inceptool-protocol", path = "crates/protocol" }
 inceptool_stages = { version = "0.3", package = "inceptool-stages", path = "crates/stages" }
 indoc = { version = "2.0", default-features = false }
