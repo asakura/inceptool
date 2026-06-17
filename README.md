@@ -63,7 +63,7 @@ Config is loaded in two layers and merged together:
    second and overriding the user-level config on a per-hook basis.
 
 The stages you can toggle are: `rtk`, `guardrails`, `read-write-guard`,
-`format`, `lint`, `flake-lock-summarization`, and `pre-commit-summarization`.
+`format`, `lint`, `flake-lock-summarization`, and `pre-commit-runner`.
 
 Here's an example that just disables the rtk rewrite stage, leaving
 everything else at its default:

@@ -3,7 +3,9 @@
 use crate::config::Config;
 
 use inceptool_engine::Registry;
-use inceptool_stages::{FlakeLockSummarizationStage, ReadWriteGuardStage, RtkStage};
+use inceptool_stages::{
+    FlakeLockSummarizationStage, PreCommitRunnerStage, ReadWriteGuardStage, RtkStage,
+};
 
 #[cfg(debug_assertions)]
 use std::env;
@@ -27,6 +29,7 @@ pub fn build_registry(config: &Config) -> Registry {
         "rtk" => RtkStage,
         "flake-lock-summarization" => FlakeLockSummarizationStage,
         "read-write-guard" => ReadWriteGuardStage,
+        "pre-commit-runner" => PreCommitRunnerStage,
     );
 
     #[cfg(debug_assertions)]

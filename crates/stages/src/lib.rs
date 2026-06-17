@@ -21,5 +21,8 @@ pub use read_write_guard::ReadWriteGuardStage;
 pub mod pre_commit;
 pub use pre_commit::{Hook, PreCommitConfig, Repo};
 
+pub mod pre_commit_runner;
+pub use pre_commit_runner::PreCommitRunnerStage;
+
 pub mod rtk;
 pub use rtk::RtkStage;

@@ -43,12 +43,14 @@ flash = { version = "0.0", default-features = false }
 gix = { version = "0.84", default-features = false, features = [
   "sha1",
   "zlib-rs",
+  "blob-diff",
 ] }
 inceptool_driver-claude = { version = "0.9", package = "inceptool-driver-claude", path = "crates/driver-claude" }
 inceptool_driver-gemini = { version = "0.9", package = "inceptool-driver-gemini", path = "crates/driver-gemini" }
 inceptool_engine = { version = "0.1", package = "inceptool-engine", path = "crates/engine" }
 inceptool_protocol = { version = "0.1", package = "inceptool-protocol", path = "crates/protocol" }
 inceptool_stages = { version = "0.3", package = "inceptool-stages", path = "crates/stages" }
+indoc = { version = "2.0", default-features = false }
 insta = { version = "1.48", default-features = false, features = [
   "json",
   "redactions",

@@ -40,6 +40,7 @@ use serde::Deserialize;
 
 use std::borrow::Cow;
 use std::path::Path;
+use std::slice::Iter;
 
 /// Top-level structure of a `.pre-commit-config.yaml` file.
 ///
@@ -162,6 +163,12 @@ impl<'a> PreCommitConfig<'a> {
     pub fn repos(&self) -> &[Repo<'a>] {
         &self.repos
     }
+
+    /// Returns an iterator over every hook across all repositories.
+    #[must_use = "iterators are lazy and do nothing unless consumed"]
+    pub fn hooks(&self) -> impl Iterator<Item = &Hook<'a>> {
+        self.repos.iter().flatten()
+    }
 }
 
 impl<'a> Repo<'a> {
@@ -194,6 +201,21 @@ impl<'a> Repo<'a> {
     #[must_use = "discards the repo's parsed hook list"]
     pub fn hooks(&self) -> &[Hook<'a>] {
         &self.hooks
+    }
+
+    /// Returns an iterator over the hooks defined in this repository.
+    #[must_use = "iterators are lazy and do nothing unless consumed"]
+    pub fn iter(&self) -> Iter<'_, Hook<'a>> {
+        self.hooks.iter()
+    }
+}
+
+impl<'b, 'a> IntoIterator for &'b Repo<'a> {
+    type Item = &'b Hook<'a>;
+    type IntoIter = Iter<'b, Hook<'a>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 

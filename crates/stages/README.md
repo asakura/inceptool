@@ -79,6 +79,29 @@ The read-deny path only fires if Claude Code's `PreToolUse` hook matcher
 covers `Read`/`view_file`/`cat` (the default `inceptool` config only wires
 `Bash`) — see the project's `~/.claude/settings.json`.
 
+### `PreCommitRunnerStage` (`pre-commit-runner`)
+
+- **Hook**: `PostToolUse`
+- **Tools**: `Write`, `Edit`, `MultiEdit`, `write_file`, `replace`
+
+Runs after the agent writes a file. Reads `.pre-commit-config.yaml` from the
+discovered git repository root (falling back to the session cwd outside a
+git repository or in a bare clone), filters the configured hooks down to
+those whose `files`/`exclude` regex matches the edited file (or that set
+`always_run`), and spawns each matching hook's `entry` binary directly via
+`std::process::Command` — bypassing the `pre-commit` CLI entirely.
+
+Hooks run sequentially against the same file, so the stage snapshots the
+file's content before the first matching hook and after the last one, and
+folds the chain into `additional_context`: a single unified diff (rendered
+via `gix::diff::blob`) attributed to every hook that changed the content
+along the way, followed by one block per hook that exited non-zero. If
+nothing changed and nothing failed, the stage is a no-op (`Ok(None)`).
+
+A hook with a malformed `files` or `exclude` regex is logged via
+`tracing::error!` and skipped (fails closed), rather than silently running
+against — or failing to exclude — files it wasn't meant to touch.
+
 ### `RtkStage` (`rtk`)
 
 - **Hook**: `PreToolUse`
