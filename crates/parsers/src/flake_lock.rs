@@ -12,7 +12,7 @@
 //!
 //! ## Flow
 //!
-//! 1. **Decode**: [`serde_json::from_str`] into [`FlakeLock`], retaining
+//! 1. **Decode**: `serde_json::from_str` into [`FlakeLock`], retaining
 //!    only the `nodes` map (the top-level `version` and `root` pointer are
 //!    ignored).
 //! 2. **Diff**: [`FlakeLock::diff`] compares two revisions' nodes by `rev`,
@@ -83,7 +83,7 @@ struct LockedRef<'a> {
 pub struct DiffEntry {
     /// The node's key in the `flake.lock`'s `nodes` map (e.g. `"nixpkgs"`).
     pub name: String,
-    /// The formatted source, as produced by [`LockedRef::label`] (e.g.
+    /// The formatted source, as produced by `LockedRef::label` (e.g.
     /// `NixOS/nixpkgs`, `git:<url>`, `path:<path>`).
     pub label: String,
     /// The pinned revision in the [`FlakeLock::diff`] receiver, or empty if unpinned.

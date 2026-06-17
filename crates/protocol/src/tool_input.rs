@@ -7,9 +7,9 @@ use serde_json::Value;
 /// fields: Claude Code uses `file_path`, Gemini uses `path`/`AbsolutePath`.
 const FILE_PATH_FIELDS: &[&str] = &["file_path", "path", "AbsolutePath"];
 
-/// Returns the first non-empty string among [`FILE_PATH_FIELDS`] present in
-/// `input`, checked in order; falls through to the next field when a field
-/// is present but empty.
+/// Returns the first non-empty string among `file_path`, `path`, and
+/// `AbsolutePath` present in `input`, checked in order; falls through to the
+/// next field when a field is present but empty.
 #[must_use = "returns the extracted file path; discarding it loses the lookup"]
 pub fn extract_file_path(input: &Value) -> Option<&str> {
     FILE_PATH_FIELDS.iter().find_map(|key| {
