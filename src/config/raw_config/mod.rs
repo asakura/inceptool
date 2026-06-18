@@ -1,46 +1,77 @@
+//! The TOML-facing mirror of [`Config`]: every type in this module and its
+//! submodules ([`access`], [`raw_hook_config`], [`read_write_guard_raw_config`],
+//! [`rule`]) exists only to describe what a user may write in
+//! `inceptool.toml` (or the embedded base config) and to convert that,
+//! field by field, into the stage-facing types the rest of the binary uses
+//! ([`Config`], [`inceptool_stages::read_write_guard::Rule`],
+//! [`inceptool_stages::read_write_guard::Access`]).
+//!
+//! That conversion boundary is deliberate, not incidental:
+//! [`Rule`] and
+//! [`Access`](inceptool_stages::read_write_guard::Access) are policy types
+//! owned by the `inceptool-stages` crate, used by
+//! [`ReadWriteGuardStage`](inceptool_stages::ReadWriteGuardStage) to decide
+//! what to do with a read or write. They are *not* `Deserialize`, and
+//! should stay that way.
+//!
+//! So instead, [`rule::RawRule`]/[`access::RawAccess`] mirror the TOML
+//! shape exactly (with `deny_unknown_fields` living *there*, where it's
+//! actually about catching user typos) and convert via [`From`] into
+//! [`Rule`]/[`Access`](inceptool_stages::read_write_guard::Access).
+//! [`RawConfig`] itself follows the same pattern one level up, converting
+//! into [`Config`] via [`TryFrom`].
+//!
+//! [`RawConfig`] only ever describes a single layer (the embedded base
+//! config, or one `inceptool.toml`): it has no merge logic of its own.
+//! Combining layers is [`Config::merge`]'s job, once each layer has already
+//! been resolved into the stage-facing shape — see that method's doc for
+//! why multi-layer merging belongs there rather than here.
+
+mod access;
+mod raw_hook_config;
+mod read_write_guard_raw_config;
+mod rule;
+
+#[cfg(test)]
+use access::RawAccess;
+use raw_hook_config::RawHookConfig;
+use read_write_guard_raw_config::ReadWriteGuardRawConfig;
+use rule::RawRule;
+
 use super::{Config, ConfigError};
 
 use inceptool_stages::read_write_guard::Rule;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use std::{borrow::Cow, collections::BTreeMap, fs, path::Path};
+use std::{borrow::Cow, collections::BTreeMap, fs, io, path::Path};
 
 /// The embedded base config: built-in defaults for every stage, in the same
 /// shape as a user `inceptool.toml`. Parsed by [`RawConfig::parse_base_config`]
-/// and merged with user layers exactly like any other layer via
-/// [`RawConfig::merge`] — the binary has no separate "built-in" code path.
-const BASE_CONFIG_TOML: &str = include_str!("base.toml");
+/// and resolved into a [`Config`] exactly like any other layer, then merged
+/// with user layers via [`Config::merge`] — the binary has no separate
+/// "built-in" code path.
+const BASE_CONFIG_TOML: &str = include_str!("../base.toml");
 
 /// Intermediate deserialization view of `inceptool.toml` (or the embedded
 /// base config); never exposed publicly. Mirrors the TOML shape exactly —
-/// [`Config`] is built from this via [`TryFrom`].
-#[derive(Debug, Deserialize, Default)]
+/// [`Config`] is built from this via [`TryFrom`]. See the module doc for
+/// why this layer exists rather than deserializing straight into
+/// [`Config`]'s own field types.
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Default)]
+#[serde(deny_unknown_fields)]
 pub(super) struct RawConfig {
     #[serde(default)]
-    hooks: BTreeMap<String, RawHookConfig>,
+    hooks: BTreeMap<Cow<'static, str>, RawHookConfig>,
     #[serde(default, rename = "read-write-guard")]
     read_write_guard: ReadWriteGuardRawConfig,
 }
 
-/// Per-stage enable/disable override.
-#[derive(Debug, Deserialize, Default)]
-struct RawHookConfig {
-    #[serde(default = "default_true")]
-    enabled: bool,
-}
-
-const fn default_true() -> bool {
-    true
-}
-
-/// Raw guarded-file rules for [`ReadWriteGuardStage`](inceptool_stages::ReadWriteGuardStage):
-/// the built-ins in the embedded base config, and any user-supplied
-/// additions/overrides in a user `inceptool.toml`.
-#[derive(Debug, Deserialize, Default)]
-struct ReadWriteGuardRawConfig {
-    #[serde(default)]
-    rules: Vec<Rule>,
+/// Renders `path` for [`ConfigError::Read`]/[`ConfigError::Parse`]; shared
+/// so [`RawConfig::load_layer`]'s two error arms don't each spell out the
+/// same lossy-conversion chain.
+fn path_display(path: &Path) -> Cow<'static, str> {
+    path.to_string_lossy().into_owned().into()
 }
 
 impl RawConfig {
@@ -55,42 +86,45 @@ impl RawConfig {
     }
 
     /// Loads and parses `path` if it exists, or returns `Ok(None)` if it's
-    /// missing.
+    /// missing. Reads `path` directly rather than checking existence first,
+    /// so a file deleted between the two (e.g. an editor's atomic save)
+    /// can't turn a benign "missing" case into a spurious read error.
     ///
     /// # Errors
     ///
     /// Returns [`ConfigError::Read`] if `path` exists but cannot be read, or
     /// [`ConfigError::Parse`] if its contents are not valid TOML.
     pub(super) fn load_layer(path: &Path) -> Result<Option<Self>, ConfigError> {
-        if !path.exists() {
-            return Ok(None);
-        }
-
-        let path_display: Cow<'static, str> = path.to_string_lossy().into_owned().into();
-
-        let content = fs::read_to_string(path).map_err(|inner| ConfigError::Read {
-            inner,
-            path: path_display.clone(),
-        })?;
+        let content = match fs::read_to_string(path) {
+            Ok(content) => content,
+            Err(inner) if inner.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(inner) => {
+                return Err(ConfigError::Read {
+                    inner,
+                    path: path_display(path),
+                });
+            }
+        };
 
         toml::from_str(&content)
             .map(Some)
             .map_err(|inner| ConfigError::Parse {
                 inner,
-                path: path_display,
+                path: path_display(path),
             })
     }
 
-    /// Merges `other` on top of `self`: per-hook overrides win outright;
-    /// read-write-guard rules from both layers accumulate, with same-filename
-    /// precedence resolved later when [`Config`] collects them into a
-    /// [`RuleSet`](inceptool_stages::read_write_guard::RuleSet) (later
-    /// entries win there too, so layering order is preserved end to end).
-    pub(super) fn merge(&mut self, other: Self) {
-        self.hooks.extend(other.hooks);
-        self.read_write_guard
-            .rules
-            .extend(other.read_write_guard.rules);
+    /// Renders `self` as TOML text, for `inceptool config` (see
+    /// [`Config::to_toml`]).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ConfigError::Serialize`] if `self` fails to serialize —
+    /// this would indicate a bug in this type's `Serialize` derive output,
+    /// not a user error.
+    #[must_use = "returns the rendered TOML text; has no side effects"]
+    pub(super) fn to_toml(&self) -> Result<String, ConfigError> {
+        toml::to_string_pretty(self).map_err(ConfigError::Serialize)
     }
 }
 
@@ -104,8 +138,45 @@ impl TryFrom<RawConfig> for Config {
                 .into_iter()
                 .map(|(name, hook)| (name, hook.enabled))
                 .collect(),
-            read_write_guard_rules: raw.read_write_guard.rules.into_iter().collect(),
+            read_write_guard_rules: raw
+                .read_write_guard
+                .rules
+                .into_iter()
+                .map(Rule::from)
+                .collect(),
+            repo_root: None,
         })
+    }
+}
+
+/// Inverse of [`TryFrom<RawConfig> for Config`] above: renders a resolved
+/// [`Config`] back into the TOML-facing [`RawConfig`] shape, for `inceptool
+/// config` (the `git config --list` equivalent for this binary). Unlike
+/// that direction, this one can't fail — `Config` is already valid data,
+/// just reshaped. Takes `config` by value rather than `&Config`: every
+/// caller is done with it afterward, so each hook name and rule can move
+/// into its `RawConfig` counterpart instead of being cloned.
+///
+/// This reflects the *merged* result only: built-in vs. user-layer
+/// provenance isn't tracked anywhere past [`Config::merge`], so e.g. a
+/// built-in rule a user override replaced is indistinguishable here from
+/// one that was always user-supplied.
+impl From<Config> for RawConfig {
+    fn from(config: Config) -> Self {
+        Self {
+            hooks: config
+                .hooks
+                .into_iter()
+                .map(|(name, enabled)| (name, RawHookConfig { enabled }))
+                .collect(),
+            read_write_guard: ReadWriteGuardRawConfig {
+                rules: config
+                    .read_write_guard_rules
+                    .into_iter()
+                    .map(RawRule::from)
+                    .collect(),
+            },
+        }
     }
 }
 
@@ -116,6 +187,7 @@ mod tests {
     use inceptool_stages::read_write_guard::Access;
 
     use rstest::rstest;
+    use toml::de::Error as TomlDeError;
 
     use core::assert_matches;
     use std::io;
@@ -126,6 +198,8 @@ mod tests {
         Config(#[from] ConfigError),
         #[error(transparent)]
         Io(#[from] io::Error),
+        #[error(transparent)]
+        TomlDe(#[from] TomlDeError),
         #[error("Test failure: {0}")]
         Failure(String),
     }
@@ -171,43 +245,23 @@ mod tests {
 
             Ok(())
         }
-    }
-
-    mod merge {
-        use super::*;
 
         #[rstest]
-        fn later_layer_overrides_earlier_hook() {
-            let mut base = RawConfig {
-                hooks: BTreeMap::from([("rtk".to_owned(), RawHookConfig { enabled: true })]),
-                read_write_guard: ReadWriteGuardRawConfig::default(),
-            };
+        fn typo_d_rules_table_name_is_rejected_not_silently_dropped() -> Result<(), TestError> {
+            let dir = tempfile::tempdir()?;
+            let path = dir.path().join("inceptool.toml");
 
-            base.merge(RawConfig {
-                hooks: BTreeMap::from([("rtk".to_owned(), RawHookConfig { enabled: false })]),
-                read_write_guard: ReadWriteGuardRawConfig::default(),
-            });
+            // "rule" (singular) instead of "rules" — without
+            // #[serde(deny_unknown_fields)] this parses fine and silently
+            // produces zero rules instead of the one the user wrote.
+            fs::write(
+                &path,
+                "[[read-write-guard.rule]]\nfilename = \"flake.lock\"\n",
+            )?;
 
-            assert_eq!(base.hooks.get("rtk").map(|h| h.enabled), Some(false));
-        }
+            assert_matches!(RawConfig::load_layer(&path), Err(ConfigError::Parse { .. }));
 
-        #[rstest]
-        fn rules_from_both_layers_accumulate() {
-            let mut base = RawConfig {
-                hooks: BTreeMap::default(),
-                read_write_guard: ReadWriteGuardRawConfig {
-                    rules: vec![Rule::new(Cow::Borrowed("a.lock"), Access::Read)],
-                },
-            };
-
-            base.merge(RawConfig {
-                hooks: BTreeMap::default(),
-                read_write_guard: ReadWriteGuardRawConfig {
-                    rules: vec![Rule::new(Cow::Borrowed("b.lock"), Access::Read)],
-                },
-            });
-
-            assert_eq!(base.read_write_guard.rules.len(), 2);
+            Ok(())
         }
     }
 
@@ -246,11 +300,9 @@ mod tests {
         fn user_rule_overrides_built_in() -> Result<(), TestError> {
             let mut raw = RawConfig::parse_base_config()?;
 
-            raw.merge(RawConfig {
-                hooks: BTreeMap::default(),
-                read_write_guard: ReadWriteGuardRawConfig {
-                    rules: vec![Rule::new(Cow::Borrowed("Cargo.lock"), Access::Read)],
-                },
+            raw.read_write_guard.rules.push(RawRule {
+                filename: Cow::Borrowed("Cargo.lock"),
+                access: RawAccess::DenyRead,
             });
 
             let config = Config::try_from(raw)?;
@@ -260,7 +312,34 @@ mod tests {
                 .get("Cargo.lock")
                 .ok_or_else(|| TestError::Failure("expected Cargo.lock rule".into()))?;
 
-            assert_eq!(rule.access(), &Access::Read);
+            assert_eq!(rule.access(), &Access::DenyRead);
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case::nix("flake.lock")]
+        #[case::npm("package-lock.json")]
+        #[case::yarn("yarn.lock")]
+        #[case::pnpm("pnpm-lock.yaml")]
+        #[case::bun_lock("bun.lock")]
+        #[case::bun_lockb("bun.lockb")]
+        #[case::cargo("Cargo.lock")]
+        #[case::poetry("poetry.lock")]
+        #[case::pipenv("Pipfile.lock")]
+        #[case::uv("uv.lock")]
+        #[case::go("go.sum")]
+        #[case::bundler("Gemfile.lock")]
+        #[case::composer("composer.lock")]
+        #[case::mix("mix.lock")]
+        #[case::pub_dart("pubspec.lock")]
+        #[case::terraform_lock(".terraform.lock.hcl")]
+        fn original_built_in_lockfiles_are_present(
+            #[case] file_name: &str,
+        ) -> Result<(), TestError> {
+            let config = Config::try_from(RawConfig::parse_base_config()?)?;
+
+            assert!(config.read_write_guard_rules().get(file_name).is_some());
 
             Ok(())
         }
@@ -269,11 +348,9 @@ mod tests {
         fn user_rule_adds_new_filename_alongside_built_ins() -> Result<(), TestError> {
             let mut raw = RawConfig::parse_base_config()?;
 
-            raw.merge(RawConfig {
-                hooks: BTreeMap::default(),
-                read_write_guard: ReadWriteGuardRawConfig {
-                    rules: vec![Rule::new(Cow::Borrowed("custom.lock"), Access::Read)],
-                },
+            raw.read_write_guard.rules.push(RawRule {
+                filename: Cow::Borrowed("custom.lock"),
+                access: RawAccess::DenyRead,
             });
 
             let config = Config::try_from(raw)?;
@@ -369,7 +446,7 @@ mod tests {
         #[rstest]
         fn hooks_resolve_to_enabled_flags() -> Result<(), TestError> {
             let raw = RawConfig {
-                hooks: BTreeMap::from([("rtk".to_owned(), RawHookConfig { enabled: false })]),
+                hooks: BTreeMap::from([(Cow::Borrowed("rtk"), RawHookConfig { enabled: false })]),
                 read_write_guard: ReadWriteGuardRawConfig::default(),
             };
 
@@ -377,6 +454,58 @@ mod tests {
 
             assert!(!config.is_hook_enabled("rtk"));
             assert!(config.is_hook_enabled("pre-commit-runner"));
+
+            Ok(())
+        }
+    }
+
+    mod from_config {
+        use super::*;
+
+        #[rstest]
+        fn preserves_hook_flags() -> Result<(), TestError> {
+            let raw = RawConfig {
+                hooks: BTreeMap::from([(Cow::Borrowed("rtk"), RawHookConfig { enabled: false })]),
+                read_write_guard: ReadWriteGuardRawConfig::default(),
+            };
+
+            let config = Config::try_from(raw)?;
+            let round_tripped = RawConfig::from(config);
+
+            assert_eq!(
+                round_tripped.hooks.get("rtk").map(|hook| hook.enabled),
+                Some(false)
+            );
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn preserves_every_rule() -> Result<(), TestError> {
+            let config = Config::try_from(RawConfig::parse_base_config()?)?;
+            let base_rule_count = RawConfig::parse_base_config()?.read_write_guard.rules.len();
+
+            let round_tripped = RawConfig::from(config);
+
+            assert_eq!(round_tripped.read_write_guard.rules.len(), base_rule_count);
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn round_trips_through_toml_text() -> Result<(), TestError> {
+            let config = Config::try_from(RawConfig::parse_base_config()?)?;
+
+            let toml_text = RawConfig::from(config).to_toml()?;
+            let reparsed: RawConfig = toml::from_str(&toml_text)?;
+            let reparsed_config = Config::try_from(reparsed)?;
+
+            let (rule, _) = reparsed_config
+                .read_write_guard_rules()
+                .get("Cargo.lock")
+                .ok_or_else(|| TestError::Failure("expected Cargo.lock rule".into()))?;
+
+            assert_matches!(rule.access(), Access::DenyAll { .. });
 
             Ok(())
         }

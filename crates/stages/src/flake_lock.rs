@@ -43,6 +43,8 @@
 //! yet, etc.), the summary is still produced, but every entry is shown as
 //! unchanged (no `->` diff).
 
+use crate::path_utils::basename;
+
 use inceptool_engine::{EngineError, Stage};
 use inceptool_parsers::flake_lock::{DiffEntry, FlakeLock};
 use inceptool_protocol::{
@@ -95,9 +97,7 @@ impl Stage for FlakeLockSummarizationStage {
                 return Ok(None);
             };
 
-            if Path::new(file_path).file_name().and_then(|f| f.to_str())
-                != Some(FLAKE_LOCK_FILE_NAME)
-            {
+            if basename(file_path) != Some(FLAKE_LOCK_FILE_NAME) {
                 return Ok(None);
             }
 

@@ -12,6 +12,8 @@
 //! This crate contains all the built-in stages used by the engine to augment
 //! and enforce agent behavior during execution.
 
+mod path_utils;
+
 pub mod flake_lock;
 pub use flake_lock::FlakeLockSummarizationStage;
 

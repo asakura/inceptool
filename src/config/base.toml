@@ -1,6 +1,7 @@
 # Embedded base config: built-in defaults for every stage, in the same
 # shape as a user `inceptool.toml`. Parsed by `RawConfig::parse_base_config`
-# and merged with user layers like any other layer (see `RawConfig::merge`).
+# and resolved into a `Config` like any other layer, then merged with user
+# layers via `Config::merge`.
 #
 # Users may add or override entries via the same `[[read-write-guard.rules]]`
 # table in their own `inceptool.toml`.
@@ -8,243 +9,243 @@
 # Nix
 [[read-write-guard.rules]]
 filename = "flake.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `nix flake update` to update it."
 note = "(NOTE: this updates ALL flake inputs — use `nix flake update <name>` to update a specific one)"
 
 # Node
 [[read-write-guard.rules]]
 filename = "package-lock.json"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `npm install` to update it."
 note = "(NOTE: this updates ALL node packages)"
 
 [[read-write-guard.rules]]
 filename = "yarn.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `yarn install` to update it."
 note = "(NOTE: this updates ALL node packages)"
 
 [[read-write-guard.rules]]
 filename = "pnpm-lock.yaml"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `pnpm install` to update it."
 note = "(NOTE: this updates ALL node packages)"
 
 [[read-write-guard.rules]]
 filename = "bun.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `bun install` to update it."
 note = "(NOTE: this updates ALL node packages)"
 
 [[read-write-guard.rules]]
 filename = "bun.lockb"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `bun install` to update it."
 note = "(NOTE: this updates ALL node packages)"
 
 [[read-write-guard.rules]]
 filename = "npm-shrinkwrap.json"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `npm install` to update it."
 note = "(NOTE: this updates ALL node packages)"
 
 # Deno
 [[read-write-guard.rules]]
 filename = "deno.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `deno cache --reload` to update it."
 note = "(NOTE: this updates ALL cached imports)"
 
 # Rust
 [[read-write-guard.rules]]
 filename = "Cargo.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `cargo update` to update it."
 note = "(NOTE: this updates ALL Rust dependencies — use `cargo update -p <name> --precise <ver>` for one)"
 
 # Python
 [[read-write-guard.rules]]
 filename = "poetry.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `poetry lock` to update it."
 note = "(NOTE: this updates ALL Python packages)"
 
 [[read-write-guard.rules]]
 filename = "Pipfile.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `pipenv lock` to update it."
 note = "(NOTE: this updates ALL Python packages)"
 
 [[read-write-guard.rules]]
 filename = "uv.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `uv lock` to update it."
 note = "(NOTE: this updates ALL Python packages)"
 
 [[read-write-guard.rules]]
 filename = "pdm.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `pdm lock` to update it."
 note = "(NOTE: this updates ALL Python packages)"
 
 # Go
 [[read-write-guard.rules]]
 filename = "go.sum"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `go mod tidy` to update it."
 note = "(NOTE: this updates ALL Go modules — use `go get <module>@<ver>` for one)"
 
 # .NET
 [[read-write-guard.rules]]
 filename = "packages.lock.json"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `dotnet restore --force-evaluate` to update it."
 note = "(NOTE: this updates ALL NuGet package locks)"
 
 # Swift
 [[read-write-guard.rules]]
 filename = "Package.resolved"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `swift package update` to update it."
 note = "(NOTE: this updates ALL Swift package dependencies — use `swift package update <package>` for one)"
 
 [[read-write-guard.rules]]
 filename = "Podfile.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `pod update` to update it."
 note = "(NOTE: this updates ALL CocoaPods dependencies — use `pod update <pod>` for one)"
 
 [[read-write-guard.rules]]
 filename = "Cartfile.resolved"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `carthage update` to update it."
 note = "(NOTE: this updates ALL Carthage dependencies — use `carthage update <dependency>` for one)"
 
 # Julia
 [[read-write-guard.rules]]
 filename = "Manifest.toml"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `julia -e 'using Pkg; Pkg.update()'` to update it."
 note = "(NOTE: this updates ALL Julia package dependencies)"
 
 # R
 [[read-write-guard.rules]]
 filename = "renv.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `R -e 'renv::update()'` to update it."
 note = "(NOTE: this updates ALL R package dependencies)"
 
 # Haskell
 [[read-write-guard.rules]]
 filename = "stack.yaml.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `stack update` to update it."
 note = "(NOTE: this updates ALL Stackage package indices)"
 
 [[read-write-guard.rules]]
 filename = "cabal.project.freeze"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `cabal freeze` to update it."
 note = "(NOTE: this updates ALL frozen package versions)"
 
 # Crystal
 [[read-write-guard.rules]]
 filename = "shard.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `shards update` to update it."
 note = "(NOTE: this updates ALL Crystal shards — use `shards update <shard>` for one)"
 
 # Conda
 [[read-write-guard.rules]]
 filename = "conda-lock.yml"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `conda-lock` to update it."
 note = "(NOTE: this updates ALL conda environment dependencies)"
 
 # Pixi
 [[read-write-guard.rules]]
 filename = "pixi.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `pixi update` to update it."
 note = "(NOTE: this updates ALL Pixi environment dependencies — use `pixi update <package>` for one)"
 
 # Helm
 [[read-write-guard.rules]]
 filename = "Chart.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `helm dependency update` to update it."
 note = "(NOTE: this updates ALL Helm chart dependencies)"
 
 # Java / Kotlin (Gradle)
 [[read-write-guard.rules]]
 filename = "gradle.lockfile"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `./gradlew dependencies --write-locks` to update it."
 note = "(NOTE: this updates ALL locked configurations — use `--update-locks <module>` for one)"
 
 [[read-write-guard.rules]]
 filename = "buildscript-gradle.lockfile"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `./gradlew dependencies --write-locks` to update it."
 note = "(NOTE: this updates ALL locked configurations — use `--update-locks <module>` for one)"
 
 # Bazel
 [[read-write-guard.rules]]
 filename = "MODULE.bazel.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `bazel mod deps --lockfile_mode=update` to update it."
 note = "(NOTE: this updates ALL Bzlmod module dependencies)"
 
 # C / C++ (Conan)
 [[read-write-guard.rules]]
 filename = "conan.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `conan lock create .` to update it."
 note = "(NOTE: this updates ALL Conan package dependencies)"
 
 # Erlang
 [[read-write-guard.rules]]
 filename = "rebar.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `rebar3 upgrade` to update it."
 note = "(NOTE: this updates ALL rebar3 dependencies — use `rebar3 upgrade <app>` for one)"
 
 # Perl
 [[read-write-guard.rules]]
 filename = "cpanfile.snapshot"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `carton install` to update it."
 note = "(NOTE: this updates ALL Carton-managed Perl dependencies)"
 
 # Other
 [[read-write-guard.rules]]
 filename = "Gemfile.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `bundle install` to update it."
 note = "(NOTE: this updates ALL Ruby gems — use `bundle update <gem>` for one)"
 
 [[read-write-guard.rules]]
 filename = "composer.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `composer install` to update it."
 note = "(NOTE: this updates ALL dependencies at once)"
 
 [[read-write-guard.rules]]
 filename = "mix.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `mix deps.get` to update it."
 note = "(NOTE: this updates ALL dependencies at once)"
 
 [[read-write-guard.rules]]
 filename = "pubspec.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `dart pub get` to update it."
 note = "(NOTE: this updates ALL dependencies at once)"
 
 [[read-write-guard.rules]]
 filename = ".terraform.lock.hcl"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `terraform init -upgrade` to update it."
 note = "(NOTE: this updates ALL dependencies at once)"
 
@@ -252,79 +253,72 @@ note = "(NOTE: this updates ALL dependencies at once)"
 # lockfiles are; agents may legitimately need to inspect current state)
 [[read-write-guard.rules]]
 filename = "terraform.tfstate"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "Run `terraform apply`/`terraform plan`, or `terraform state` subcommands, instead of editing it directly."
 note = "(NOTE: hand-editing state can desync it from real infrastructure and cause `terraform apply` to destroy or orphan resources)"
 
 [[read-write-guard.rules]]
 filename = "terraform.tfstate.backup"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This is an automatic backup written by Terraform itself — use `terraform state` subcommands to fix state issues."
 note = "(NOTE: it should never be restored or edited by hand)"
 
 # Go workspaces
 [[read-write-guard.rules]]
 filename = "go.work.sum"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "Run `go build`/`go test` in the workspace (or `go work sync`) to update it."
 note = "(NOTE: this is the workspace-level companion to `go.sum`)"
 
 # Prisma
 [[read-write-guard.rules]]
 filename = "migration_lock.toml"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "Run `prisma migrate dev` to update it."
 note = "(NOTE: it just records the migrations provider — edit `schema.prisma` and regenerate instead)"
 
 # Android
 [[read-write-guard.rules]]
 filename = "local.properties"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This is written locally by Android Studio/Gradle with machine-specific SDK paths."
 note = "(NOTE: it's not meant to be committed or hand-edited — let the IDE/Gradle regenerate it)"
 
 [[read-write-guard.rules]]
 filename = "R.java"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This is regenerated by the Android build system from your resources on every build."
 note = "(NOTE: edit the resource XML files instead — hand edits are overwritten immediately)"
 
 [[read-write-guard.rules]]
 filename = "BuildConfig.java"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This is regenerated by the Android Gradle plugin from your build config on every build."
 note = "(NOTE: edit `build.gradle`/`build.gradle.kts` instead — hand edits are overwritten immediately)"
-
-# Django
-[[read-write-guard.rules]]
-filename = "db.sqlite3"
-[read-write-guard.rules.access.write]
-hint = "Run `python manage.py migrate`, or use the `sqlite3` CLI/ORM, instead of editing the file directly."
-note = "(NOTE: it's a binary SQLite database — direct text edits will corrupt it)"
 
 # Generated code (protobuf / gRPC) — basename globs, write-deny only since
 # reading these isn't noise the way a lockfile is.
 [[read-write-guard.rules]]
 filename = "*_pb2.py"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "Edit the `.proto` file and regenerate with `protoc`/`grpc_tools.protoc` instead."
 note = "(NOTE: this file is fully regenerated on every protoc run)"
 
 [[read-write-guard.rules]]
 filename = "*_pb2_grpc.py"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "Edit the `.proto` file and regenerate with `protoc`/`grpc_tools.protoc` instead."
 note = "(NOTE: this file is fully regenerated on every protoc run)"
 
 [[read-write-guard.rules]]
 filename = "*.pb.go"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "Edit the `.proto` file and regenerate with `protoc-gen-go` instead."
 note = "(NOTE: this file is fully regenerated on every protoc run)"
 
 [[read-write-guard.rules]]
 filename = "*_grpc.pb.go"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "Edit the `.proto` file and regenerate with `protoc-gen-go-grpc` instead."
 note = "(NOTE: this file is fully regenerated on every protoc run)"
 
@@ -332,25 +326,25 @@ note = "(NOTE: this file is fully regenerated on every protoc run)"
 # regenerated/managed entirely by tooling, and not useful to read directly.
 [[read-write-guard.rules]]
 filename = "**/node_modules/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `npm install`/`yarn install`/`pnpm install` to manage dependencies — never hand-edit installed packages."
 note = "(NOTE: this directory is entirely regenerated by the package manager and excluded from version control)"
 
 [[read-write-guard.rules]]
 filename = "**/.git/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Use `git` commands (`git add`, `git commit`, `git log`, etc.) instead of touching repository internals directly."
 note = "(NOTE: hand-editing anything under `.git/` can corrupt the repository)"
 
 [[read-write-guard.rules]]
 filename = "**/.svn/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Use `svn` commands instead of touching repository internals directly."
 note = "(NOTE: hand-editing anything under `.svn/` can corrupt the working copy)"
 
 [[read-write-guard.rules]]
 filename = "**/.hg/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Use `hg` commands instead of touching repository internals directly."
 note = "(NOTE: hand-editing anything under `.hg/` can corrupt the repository)"
 
@@ -358,62 +352,62 @@ note = "(NOTE: hand-editing anything under `.hg/` can corrupt the repository)"
 # (same shape as node_modules: regenerated entirely by the framework's CLI).
 [[read-write-guard.rules]]
 filename = "**/.next/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `next build`/`next dev` to regenerate it."
 note = "(NOTE: this is Next.js's build/dev cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "**/.nuxt/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `nuxt build`/`nuxt dev` to regenerate it."
 note = "(NOTE: this is Nuxt's build/dev cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "**/.svelte-kit/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `vite build`/`vite dev` (via SvelteKit) to regenerate it."
 note = "(NOTE: this is SvelteKit's build/dev cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "**/.angular/cache/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `ng build`/`ng serve` to regenerate it."
 note = "(NOTE: this is the Angular CLI's build cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "**/.turbo/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `turbo run` to regenerate it."
 note = "(NOTE: this is Turborepo's task cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "**/.nx/cache/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run an `nx` task to regenerate it."
 note = "(NOTE: this is Nx's task cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "*.tsbuildinfo"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `tsc` to regenerate it."
 note = "(NOTE: this is TypeScript's incremental build cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = ".eslintcache"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `eslint` to regenerate it."
 note = "(NOTE: this is ESLint's lint cache, entirely disposable)"
 
 # Deploy platform local state — write-deny only, reading is harmless.
 [[read-write-guard.rules]]
 filename = "**/.vercel/**"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This is written locally by the Vercel CLI."
 note = "(NOTE: it's not meant to be hand-edited — let the CLI regenerate it)"
 
 [[read-write-guard.rules]]
 filename = "**/.netlify/**"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This is written locally by the Netlify CLI."
 note = "(NOTE: it's not meant to be hand-edited — let the CLI regenerate it)"
 
@@ -421,198 +415,198 @@ note = "(NOTE: it's not meant to be hand-edited — let the CLI regenerate it)"
 # command itself, not these files, is the useful source of truth).
 [[read-write-guard.rules]]
 filename = "**/coverage/**"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "**/.nyc_output/**"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "**/playwright-report/**"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "**/test-results/**"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "**/cypress/videos/**"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "**/cypress/screenshots/**"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 # Tool caches — full-path/basename globs, deny both.
 [[read-write-guard.rules]]
 filename = "**/.pytest_cache/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `pytest` to regenerate it."
 note = "(NOTE: this is pytest's cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "**/.tox/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `tox` to regenerate it."
 note = "(NOTE: this is tox's virtualenv cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "**/.nox/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `nox` to regenerate it."
 note = "(NOTE: this is nox's virtualenv cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "**/.mypy_cache/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `mypy` to regenerate it."
 note = "(NOTE: this is mypy's type-check cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "**/.ruff_cache/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `ruff` to regenerate it."
 note = "(NOTE: this is ruff's lint cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "**/__pycache__/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "This is regenerated automatically whenever the corresponding `.py` file is imported."
 note = "(NOTE: edit the `.py` source instead — bytecode caches are entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "*.pyc"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "This is regenerated automatically whenever the corresponding `.py` file is imported."
 note = "(NOTE: edit the `.py` source instead — bytecode caches are entirely disposable)"
 
 # JVM / Android tooling.
 [[read-write-guard.rules]]
 filename = "**/.gradle/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run a `./gradlew` task to regenerate it."
 note = "(NOTE: this is Gradle's build cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "*.iml"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This is generated by IntelliJ/Android Studio from your project structure."
 note = "(NOTE: edit the build files instead — the IDE regenerates this on sync)"
 
 [[read-write-guard.rules]]
 filename = "**/.idea/**"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This is generated locally by IntelliJ/Android Studio."
 note = "(NOTE: it's not meant to be committed or hand-edited)"
 
 [[read-write-guard.rules]]
 filename = "*.keystore"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Signing keystores should never be generated or modified by an agent."
 note = "(NOTE: use `keytool`/Android Studio's signing UI directly in a terminal if a new one is truly needed)"
 
 [[read-write-guard.rules]]
 filename = "*.jks"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Signing keystores should never be generated or modified by an agent."
 note = "(NOTE: use `keytool`/Android Studio's signing UI directly in a terminal if a new one is truly needed)"
 
 # .NET tooling.
 [[read-write-guard.rules]]
 filename = "*.user"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This holds user-local Visual Studio settings, regenerated by the IDE."
 note = "(NOTE: it's not meant to be committed or hand-edited)"
 
 [[read-write-guard.rules]]
 filename = "**/.vs/**"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This is written locally by Visual Studio."
 note = "(NOTE: it's not meant to be committed or hand-edited)"
 
 # iOS / CocoaPods / Xcode.
 [[read-write-guard.rules]]
 filename = "**/Pods/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `pod install` to manage dependencies — never hand-edit installed pods."
 note = "(NOTE: this directory is entirely regenerated by CocoaPods)"
 
 [[read-write-guard.rules]]
 filename = "*.xcuserstate"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "This is Xcode's local UI/window state."
 note = "(NOTE: it's not meant to be committed or hand-edited)"
 
 [[read-write-guard.rules]]
 filename = "**/xcuserdata/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "This is Xcode's per-user local project state."
 note = "(NOTE: it's not meant to be committed or hand-edited)"
 
 [[read-write-guard.rules]]
 filename = "**/DerivedData/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run a clean Xcode build to regenerate it."
 note = "(NOTE: this is Xcode's build cache, entirely disposable)"
 
 # Generated code (GraphQL/codegen, WASM).
 [[read-write-guard.rules]]
 filename = "*.generated.ts"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "Edit the source schema/query and rerun the codegen tool instead."
 note = "(NOTE: this file is fully regenerated on every codegen run)"
 
 [[read-write-guard.rules]]
 filename = "**/__generated__/**"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "Edit the source schema/query and rerun the codegen tool instead."
 note = "(NOTE: this directory is fully regenerated on every codegen run)"
 
 [[read-write-guard.rules]]
 filename = "*.wasm"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Rebuild from source (e.g. `wasm-pack build`) instead."
 note = "(NOTE: this is a compiled binary artifact)"
 
 # Infra/cloud tool state.
 [[read-write-guard.rules]]
 filename = "**/.terraform/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `terraform init` to regenerate it."
 note = "(NOTE: this is Terraform's provider/module cache, entirely disposable)"
 
 [[read-write-guard.rules]]
 filename = "*.tfplan"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.retry"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "This is written automatically by Ansible after a failed playbook run."
 note = "(NOTE: it's not meant to be hand-edited — rerun the playbook instead)"
 
 [[read-write-guard.rules]]
 filename = "**/.pulumi/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run a `pulumi` command to regenerate it."
 note = "(NOTE: this is Pulumi's local workspace cache, entirely disposable)"
 
 # Editor swap files and OS noise.
 [[read-write-guard.rules]]
 filename = "*.swp"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "This is a Vim swap file for an in-progress edit elsewhere."
 note = "(NOTE: it's not meant to be read or hand-edited)"
 
 [[read-write-guard.rules]]
 filename = "*.swo"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "This is a Vim swap file for an in-progress edit elsewhere."
 note = "(NOTE: it's not meant to be read or hand-edited)"
 
 [[read-write-guard.rules]]
 filename = ".DS_Store"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "This is macOS Finder's per-directory metadata file."
 note = "(NOTE: it's binary, carries no useful signal, and is never meant to be hand-edited)"
 
@@ -620,102 +614,112 @@ note = "(NOTE: it's binary, carries no useful signal, and is never meant to be h
 # by an agent.
 [[read-write-guard.rules]]
 filename = "*.pem"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Private keys and certificates should never be generated or modified by an agent."
 note = "(NOTE: use `openssl`/`ssh-keygen` directly in a terminal if a new one is truly needed)"
 
 [[read-write-guard.rules]]
 filename = "*.p12"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Private keys and certificates should never be generated or modified by an agent."
 note = "(NOTE: use `openssl` directly in a terminal if a new one is truly needed)"
 
 [[read-write-guard.rules]]
 filename = "*.pfx"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Private keys and certificates should never be generated or modified by an agent."
 note = "(NOTE: use `openssl` directly in a terminal if a new one is truly needed)"
 
 [[read-write-guard.rules]]
 filename = "id_rsa"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Private SSH keys should never be generated or modified by an agent."
 note = "(NOTE: use `ssh-keygen` directly in a terminal if a new key is truly needed)"
 
 [[read-write-guard.rules]]
 filename = "id_dsa"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Private SSH keys should never be generated or modified by an agent."
 note = "(NOTE: use `ssh-keygen` directly in a terminal if a new key is truly needed)"
 
 [[read-write-guard.rules]]
 filename = "id_ecdsa"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Private SSH keys should never be generated or modified by an agent."
 note = "(NOTE: use `ssh-keygen` directly in a terminal if a new key is truly needed)"
 
 [[read-write-guard.rules]]
 filename = "id_ed25519"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Private SSH keys should never be generated or modified by an agent."
 note = "(NOTE: use `ssh-keygen` directly in a terminal if a new key is truly needed)"
 
 # Verbose/low-signal logs and crash dumps — read-deny only.
 [[read-write-guard.rules]]
 filename = "npm-debug.log*"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "yarn-error.log*"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "lerna-debug.log*"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.dmp"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 # Big-data / binary / ML formats — read-deny only (binary, unreadable as
 # text; writing isn't guarded since these are usually produced by a real
 # data/training pipeline, not hand-edited either way).
 [[read-write-guard.rules]]
 filename = "*.parquet"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.avro"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.orc"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.safetensors"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.onnx"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.pt"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.bin"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.sqlite"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.sqlite3"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
 
 [[read-write-guard.rules]]
 filename = "*.db"
-[read-write-guard.rules.access.read]
+[read-write-guard.rules.access.deny_read]
+
+# Django — declared after the generic `*.sqlite3`/`*.db` globs above so this
+# exact, narrower override (write-deny only; Django code legitimately reads
+# its own dev database) takes precedence over their read-deny-only policy,
+# rather than being subsumed by them (see `Rule::subsumes`).
+[[read-write-guard.rules]]
+filename = "db.sqlite3"
+[read-write-guard.rules.access.deny_write]
+hint = "Run `python manage.py migrate`, or use the `sqlite3` CLI/ORM, instead of editing the file directly."
+note = "(NOTE: it's a binary SQLite database — direct text edits will corrupt it)"

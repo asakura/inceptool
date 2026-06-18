@@ -9,6 +9,7 @@ use inceptool_stages::{
 
 #[cfg(debug_assertions)]
 use std::env;
+use std::path::Path;
 
 /// Registers the standard stages enabled by `config`.
 pub fn build_registry(config: &Config) -> Registry {
@@ -28,7 +29,10 @@ pub fn build_registry(config: &Config) -> Registry {
     register_stages!(
         "rtk" => RtkStage,
         "flake-lock-summarization" => FlakeLockSummarizationStage,
-        "read-write-guard" => ReadWriteGuardStage::new(config.read_write_guard_rules().clone()),
+        "read-write-guard" => ReadWriteGuardStage::new(
+            config.read_write_guard_rules().clone(),
+            config.repo_root().map(Path::to_path_buf),
+        ),
         "pre-commit-runner" => PreCommitRunnerStage,
     );
 

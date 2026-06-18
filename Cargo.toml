@@ -206,6 +206,7 @@ unused_trait_names = "deny"
 [dependencies]
 clap.workspace = true
 directories.workspace = true
+gix.workspace = true
 inceptool_driver-claude.workspace = true
 inceptool_driver-gemini.workspace = true
 inceptool_engine.workspace = true
@@ -225,6 +226,9 @@ insta.workspace = true
 predicates.workspace = true
 rstest.workspace = true
 tempfile.workspace = true
+
+[build-dependencies]
+toml.workspace = true
 
 [profile.dev]
 split-debuginfo = "unpacked"

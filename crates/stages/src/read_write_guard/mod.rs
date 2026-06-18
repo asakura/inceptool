@@ -30,28 +30,42 @@
 //! 1. **Target Identification**: Filters `PreToolUse` events for both
 //!    modifying tools (`Write`, `Edit`, `MultiEdit`, `write_file`, `replace`)
 //!    and reading tools (`READ_TOOLS`).
-//! 2. **Path Matching**: Looks up the target path in [`types::RuleSet`]. Each
-//!    [`types::Rule`]'s pattern is one of three forms: an exact basename
+//! 2. **Path Matching**: Looks up the target path in [`RuleSet`]. Each
+//!    [`Rule`]'s pattern is one of three forms: an exact basename
 //!    (`Cargo.lock`, checked first via a `BTreeMap` — `O(log n)`, no linear
-//!    scan), a basename glob (`*.pb.go`), or — if it contains `/` — a
-//!    full-path glob (`**/node_modules/**`, gitignore-style: a leading
-//!    `**/` matches at any depth). Glob/path patterns are compiled once and
-//!    checked in a fallback linear scan only when the exact lookup misses.
-//! 3. **Response Generation**: Each [`types::Rule`] carries an
-//!    [`types::Access`] policy that determines, per tool kind, whether the
+//!    scan and unconditionally the most specific possible match), a
+//!    basename glob (`*.pb.go`), or — if it contains `/` — a full-path glob
+//!    (`**/node_modules/**`, gitignore-style: a leading `**/` matches at any
+//!    depth, including zero; without one, the pattern is anchored — see
+//!    below). Glob/path patterns are compiled once into a single list ranked
+//!    by specificity (fewer wildcards and a longer fixed substring rank
+//!    higher) and checked as a fallback linear scan, most specific first,
+//!    only when the exact lookup misses — so a narrower user override
+//!    actually takes effect over a broader rule (built-in or not) it
+//!    overlaps with. When merging config layers, a broader rule can also
+//!    outright drop an earlier, more specific one it fully covers; see
+//!    [`Rule::subsumes`]. Before the lookup, the target path is made
+//!    relative to the enclosing git repository's root, when one is known
+//!    (see [`ReadWriteGuardStage::new`]) — otherwise a full-path glob's
+//!    anchor would be whatever literal absolute path the tool happened to
+//!    report, which a pattern like `"vendor/lib.rs"` can realistically never
+//!    match. Basename/exact matching is unaffected either way, since only
+//!    the last path component is ever consulted there.
+//! 3. **Response Generation**: Each [`Rule`] carries an
+//!    [`Access`] policy that determines, per tool kind, whether the
 //!    action is denied and what the denial reason looks like — modifying
 //!    tools get a targeted hint containing the correct terminal command to
 //!    use instead; reading tools get a generic "this is noise, use `git
-//!    diff`" reminder. All built-in rules use [`Access::No`] (deny both,
+//!    diff`" reminder. All built-in rules use [`Access::DenyAll`] (deny both,
 //!    with those two messages).
 //!
-//! [`Access::Diff`] is a reserved policy for a future upgrade of any rule
+//! [`Access::DenyAllWithDiff`] is a reserved policy for a future upgrade of any rule
 //! (built-in or user-supplied): it's meant to replace the generic
 //! read-denial with a real diff/summary once that's implemented. For now it
-//! behaves identically to [`Access::No`].
+//! behaves identically to [`Access::DenyAll`].
 //! [`FlakeLockSummarizationStage`](crate::FlakeLockSummarizationStage),
 //! registered earlier in the pipeline, already provides this kind of summary
-//! for `flake.lock` reads specifically — this stage's [`Access::No`]
+//! for `flake.lock` reads specifically — this stage's [`Access::DenyAll`]
 //! read-deny is the fallback for everything else (and for `flake.lock` when
 //! that stage is a no-op).
 //!
@@ -63,9 +77,14 @@
 //! rest of its base config) and merges any user overrides in before
 //! constructing the stage via [`ReadWriteGuardStage::new`].
 
-mod types;
+mod access;
+mod glob;
+mod rule;
+mod rule_set;
 
-pub use types::{Access, Rule, RuleSet};
+pub use access::Access;
+pub use rule::Rule;
+pub use rule_set::RuleSet;
 
 use inceptool_engine::{EngineError, Stage};
 use inceptool_protocol::{
@@ -74,6 +93,9 @@ use inceptool_protocol::{
 
 use serde_json::Value;
 
+use std::fmt;
+use std::path::{Path, PathBuf};
+
 /// Tool names whose `PreToolUse` event reads a file's contents.
 const READ_TOOLS: &[&str] = &["Read", "view_file", "cat"];
 
@@ -81,6 +103,22 @@ const READ_TOOLS: &[&str] = &["Read", "view_file", "cat"];
 #[derive(Debug, Clone)]
 pub struct ReadWriteGuardStage {
     rules: RuleSet,
+    /// The enclosing git repository's working directory, if known — see
+    /// [`ReadWriteGuardStage::repo_relative`] for how it's used.
+    repo_root: Option<PathBuf>,
+}
+
+/// Denial reason for a guarded read of `display_name`. A [`fmt::Display`]
+/// newtype rather than an inline `format!()`, per project convention.
+struct ReadDenialReason<'a>(&'a str);
+
+/// Denial reason for a guarded write of `display_name`, using the matched
+/// [`Access`] variant's `hint` and `note`. A [`fmt::Display`] newtype rather
+/// than an inline `format!()`, per project convention.
+struct WriteDenialReason<'a> {
+    display_name: &'a str,
+    hint: &'a str,
+    note: &'a str,
 }
 
 impl Stage for ReadWriteGuardStage {
@@ -113,7 +151,7 @@ impl Stage for ReadWriteGuardStage {
                 return Ok(None);
             };
 
-            let Some((rule, display_name)) = self.rules.get(file_path) else {
+            let Some((rule, display_name)) = self.rules.get(self.repo_relative(file_path)) else {
                 return Ok(None);
             };
 
@@ -131,10 +169,58 @@ impl Stage for ReadWriteGuardStage {
 
 impl ReadWriteGuardStage {
     /// Builds the stage from a fully resolved [`RuleSet`] (the caller is
-    /// responsible for merging built-in defaults with any user overrides).
+    /// responsible for merging built-in defaults with any user overrides)
+    /// and the enclosing git repository's working directory, if known — used
+    /// to anchor full-path glob rules to the repo root instead of an
+    /// arbitrary absolute path.
     #[must_use = "constructs a new stage; discarding it does nothing"]
-    pub const fn new(rules: RuleSet) -> Self {
-        Self { rules }
+    pub const fn new(rules: RuleSet, repo_root: Option<PathBuf>) -> Self {
+        Self { rules, repo_root }
+    }
+
+    /// Returns `file_path` relative to the stored repo root, when one is
+    /// known and `file_path` lies under it — letting a
+    /// full-path glob rule like `"vendor/lib.rs"` mean what it looks like it
+    /// means (gitignore's own convention: a slash-containing pattern with no
+    /// leading `**/` is anchored to a root), rather than being anchored to
+    /// whatever literal absolute path the tool happened to report. Falls
+    /// back to `file_path` unchanged when there's no known repo root, or
+    /// when `file_path` isn't under it (e.g. a file outside the repo) —
+    /// [`RuleSet::get`] computes the basename from whichever string it's
+    /// handed, so basename/exact matching is identical either way; only the
+    /// full-path glob target is affected. Uses [`Path::strip_prefix`] rather
+    /// than a string-prefix check, since it's component-aware: `/repo`
+    /// doesn't falsely match a sibling like `/repository/...`.
+    #[must_use = "returns file_path made relative to the repo root when known; has no side effects"]
+    fn repo_relative<'a>(&self, file_path: &'a str) -> &'a str {
+        self.repo_root
+            .as_deref()
+            .and_then(|root| Path::new(file_path).strip_prefix(root).ok())
+            .and_then(Path::to_str)
+            .unwrap_or(file_path)
+    }
+}
+
+impl fmt::Display for ReadDenialReason<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self(display_name) = self;
+        write!(
+            f,
+            "Reading {display_name} directly wastes context \u{2014} it's \
+             machine-generated or otherwise low-signal. Run `git diff \
+             {display_name}` to see what changed."
+        )
+    }
+}
+
+impl fmt::Display for WriteDenialReason<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            display_name,
+            hint,
+            note,
+        } = self;
+        write!(f, "Writing to {display_name} is not allowed. {hint} {note}")
     }
 }
 
@@ -145,10 +231,12 @@ impl ReadWriteGuardStage {
 /// exact/basename-glob matches, the full path for path-glob matches.
 fn dispatch(display_name: &str, rule: &Rule, is_read_tool: bool) -> Option<PreToolUseOutput> {
     match (rule.access(), is_read_tool) {
-        (Access::Write { .. }, true) | (Access::Read, false) => None,
+        (Access::DenyWrite { .. }, true) | (Access::DenyRead, false) => None,
         (_, true) => Some(deny_read(display_name)),
         (
-            Access::No { hint, note } | Access::Diff { hint, note } | Access::Write { hint, note },
+            Access::DenyAll { hint, note }
+            | Access::DenyAllWithDiff { hint, note }
+            | Access::DenyWrite { hint, note },
             false,
         ) => Some(deny_write(display_name, hint, note)),
     }
@@ -159,14 +247,7 @@ fn dispatch(display_name: &str, rule: &Rule, is_read_tool: bool) -> Option<PreTo
 fn deny_read(display_name: &str) -> PreToolUseOutput {
     PreToolUseOutput {
         decision: Some(Decision::Deny),
-        reason: Some(
-            format!(
-                "Reading {display_name} directly wastes context \u{2014} it's \
-                 machine-generated or otherwise low-signal. Run `git diff \
-                 {display_name}` to see what changed."
-            )
-            .into(),
-        ),
+        reason: Some(ReadDenialReason(display_name).to_string().into()),
         ..Default::default()
     }
 }
@@ -176,7 +257,15 @@ fn deny_read(display_name: &str) -> PreToolUseOutput {
 fn deny_write(display_name: &str, hint: &str, note: &str) -> PreToolUseOutput {
     PreToolUseOutput {
         decision: Some(Decision::Deny),
-        reason: Some(format!("Writing to {display_name} is not allowed. {hint} {note}").into()),
+        reason: Some(
+            WriteDenialReason {
+                display_name,
+                hint,
+                note,
+            }
+            .to_string()
+            .into(),
+        ),
         ..Default::default()
     }
 }
@@ -188,11 +277,14 @@ mod tests {
     use inceptool_protocol::{BeforeAgentInput, PreToolUseInput, RawJson, SessionMeta};
 
     use rstest::rstest;
-    use serde_json::json;
-    use serde_json::value::RawValue;
+    use serde_json::{json, value::RawValue};
 
     use std::borrow::Cow;
     use std::collections::BTreeSet;
+    use std::iter::once;
+
+    /// Tool names whose `PreToolUse` event writes a file's contents.
+    const WRITE_TOOLS: &[&str] = &["Write", "Edit", "MultiEdit", "write_file", "replace"];
 
     #[derive(thiserror::Error, Debug)]
     enum TestError {
@@ -211,21 +303,21 @@ mod tests {
         [
             Rule::new(
                 Cow::Borrowed("flake.lock"),
-                Access::No {
+                Access::DenyAll {
                     hint: Cow::Borrowed("Run `nix flake update` to update it."),
                     note: Cow::Borrowed("(NOTE: updates ALL flake inputs)"),
                 },
             ),
             Rule::new(
                 Cow::Borrowed("Cargo.lock"),
-                Access::No {
+                Access::DenyAll {
                     hint: Cow::Borrowed("Run `cargo update` to update it."),
                     note: Cow::Borrowed("(NOTE: updates ALL Rust dependencies)"),
                 },
             ),
             Rule::new(
                 Cow::Borrowed("package-lock.json"),
-                Access::No {
+                Access::DenyAll {
                     hint: Cow::Borrowed("Run `npm install` to update it."),
                     note: Cow::Borrowed("(NOTE: updates ALL node packages)"),
                 },
@@ -260,7 +352,7 @@ mod tests {
         tool_name: &str,
         tool_input_json: &str,
     ) -> Result<Option<HookOutputEvent>, TestError> {
-        let stage = ReadWriteGuardStage::new(test_rules());
+        let stage = ReadWriteGuardStage::new(test_rules(), None);
         let tool_input = RawValue::from_string(tool_input_json.to_owned())?;
 
         let mut conn = conn_with_event(HookInputEvent::PreToolUse(PreToolUseInput {
@@ -347,7 +439,7 @@ mod tests {
 
     #[rstest]
     fn ignores_non_pre_tool_use_event() -> Result<(), TestError> {
-        let stage = ReadWriteGuardStage::new(test_rules());
+        let stage = ReadWriteGuardStage::new(test_rules(), None);
 
         let mut conn = conn_with_event(HookInputEvent::BeforeAgent(BeforeAgentInput {
             prompt: Cow::Borrowed("rm -rf /"),
@@ -358,12 +450,9 @@ mod tests {
         Ok(())
     }
 
-    /// Tool names whose `PreToolUse` event writes a file's contents.
-    const WRITE_TOOLS: &[&str] = &["Write", "Edit", "MultiEdit", "write_file", "replace"];
-
     #[rstest]
     fn tool_names_matches_read_and_write_tools() {
-        let stage = ReadWriteGuardStage::new(test_rules());
+        let stage = ReadWriteGuardStage::new(test_rules(), None);
 
         let expected: BTreeSet<&str> = READ_TOOLS.iter().chain(WRITE_TOOLS).copied().collect();
         let actual: BTreeSet<&str> = stage.tool_names().iter().copied().collect();
@@ -372,9 +461,9 @@ mod tests {
     }
 
     #[rstest]
-    #[case::no(Access::No { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") })]
-    #[case::diff(Access::Diff { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") })]
-    #[case::read(Access::Read)]
+    #[case::no(Access::DenyAll { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") })]
+    #[case::diff(Access::DenyAllWithDiff { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") })]
+    #[case::read(Access::DenyRead)]
     fn dispatch_denies_read_with_generic_reason(#[case] access: Access) -> Result<(), TestError> {
         let rule = rule_with_access(access);
         let output = dispatch("test.lock", &rule, true)
@@ -393,9 +482,9 @@ mod tests {
     }
 
     #[rstest]
-    #[case::no(Access::No { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") })]
-    #[case::diff(Access::Diff { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") })]
-    #[case::write(Access::Write { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") })]
+    #[case::no(Access::DenyAll { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") })]
+    #[case::diff(Access::DenyAllWithDiff { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") })]
+    #[case::write(Access::DenyWrite { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") })]
     fn dispatch_denies_write_with_hint(#[case] access: Access) -> Result<(), TestError> {
         let rule = rule_with_access(access);
         let output = dispatch("test.lock", &rule, false)
@@ -415,8 +504,8 @@ mod tests {
     }
 
     #[rstest]
-    #[case::write_access_read_tool(Access::Write { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") }, true)]
-    #[case::read_access_write_tool(Access::Read, false)]
+    #[case::write_access_read_tool(Access::DenyWrite { hint: Cow::Borrowed("<hint>"), note: Cow::Borrowed("<note>") }, true)]
+    #[case::read_access_write_tool(Access::DenyRead, false)]
     fn dispatch_passes_through_unrestricted_operation(
         #[case] access: Access,
         #[case] is_read_tool: bool,
@@ -434,14 +523,14 @@ mod tests {
             [
                 Rule::new(
                     Cow::Borrowed("*.pb.go"),
-                    Access::Write {
+                    Access::DenyWrite {
                         hint: Cow::Borrowed("Regenerate from the .proto file."),
                         note: Cow::Borrowed("(NOTE: fully regenerated on every protoc run)"),
                     },
                 ),
                 Rule::new(
                     Cow::Borrowed("**/node_modules/**"),
-                    Access::No {
+                    Access::DenyAll {
                         hint: Cow::Borrowed("Run `npm install` to manage dependencies."),
                         note: Cow::Borrowed("(NOTE: regenerated entirely by the package manager)"),
                     },
@@ -457,7 +546,7 @@ mod tests {
             tool_name: &str,
             file_path: &str,
         ) -> Result<Option<HookOutputEvent>, TestError> {
-            let stage = ReadWriteGuardStage::new(glob_rules());
+            let stage = ReadWriteGuardStage::new(glob_rules(), None);
             let tool_input_json = json!({"file_path": file_path}).to_string();
             let tool_input = RawValue::from_string(tool_input_json)?;
 
@@ -488,6 +577,86 @@ mod tests {
 
             assert!(reason.starts_with(&format!("Reading {path} directly wastes context")));
             assert!(reason.contains(&format!("git diff {path}")));
+
+            Ok(())
+        }
+    }
+
+    mod repo_root_anchoring {
+        use super::*;
+
+        /// A literal (non-`**/`-prefixed) full-path glob — only matches a
+        /// candidate path made relative to a known repo root; see
+        /// [`ReadWriteGuardStage::repo_relative`].
+        fn vendor_lib_rule() -> RuleSet {
+            once(Rule::new(
+                Cow::Borrowed("vendor/lib.rs"),
+                Access::DenyAll {
+                    hint: Cow::Borrowed("<hint>"),
+                    note: Cow::Borrowed("<note>"),
+                },
+            ))
+            .collect()
+        }
+
+        /// Same as [`run_stage`](super::run_stage), but builds the stage
+        /// with `repo_root` and a caller-supplied `rules` instead of
+        /// [`test_rules`](super::test_rules) and `None`.
+        fn run_stage_with_repo_root(
+            rules: RuleSet,
+            repo_root: Option<&str>,
+            file_path: &str,
+        ) -> Result<Option<HookOutputEvent>, TestError> {
+            let stage = ReadWriteGuardStage::new(rules, repo_root.map(PathBuf::from));
+            let tool_input_json = json!({"file_path": file_path}).to_string();
+            let tool_input = RawValue::from_string(tool_input_json)?;
+
+            let mut conn = conn_with_event(HookInputEvent::PreToolUse(PreToolUseInput {
+                tool_name: Cow::Borrowed("Edit"),
+                tool_input: RawJson(&tool_input),
+                mcp_context: None,
+                original_request_name: None,
+            }));
+
+            Ok(stage.run(&mut conn)?)
+        }
+
+        #[rstest]
+        #[case::matches_when_relative_to_a_known_repo_root(
+            Some("/repo"),
+            "/repo/vendor/lib.rs",
+            true
+        )]
+        #[case::no_match_for_the_same_absolute_path_without_a_repo_root(
+            None,
+            "/repo/vendor/lib.rs",
+            false
+        )]
+        #[case::no_match_for_a_file_outside_the_repo_root(
+            Some("/repo"),
+            "/other/vendor/lib.rs",
+            false
+        )]
+        fn literal_path_glob_matching(
+            #[case] repo_root: Option<&str>,
+            #[case] file_path: &str,
+            #[case] expect_match: bool,
+        ) -> Result<(), TestError> {
+            let matched =
+                run_stage_with_repo_root(vendor_lib_rule(), repo_root, file_path)?.is_some();
+
+            assert_eq!(matched, expect_match);
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn basename_match_is_unaffected_by_a_repo_root() -> Result<(), TestError> {
+            let matched =
+                run_stage_with_repo_root(test_rules(), Some("/repo"), "/repo/Cargo.lock")?
+                    .is_some();
+
+            assert!(matched);
 
             Ok(())
         }

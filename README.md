@@ -38,16 +38,16 @@ A few things shape how it's built:
 ## Usage
 
 ```
-inceptool <driver> <hook>
+inceptool <command> [args]
 ```
 
-- `<driver>` — `claude` or `gemini`. Picks the wire format used for stdin and
-  stdout.
-- `<hook>` — the raw hook event name as configured in your agent's settings
-  (e.g. `PreToolUse` for Claude, `BeforeTool` for Gemini). Each driver maps
-  this, via `Driver::hook_kind`, to the canonical `HookKind` that picks the
-  stage pipeline — dispatch comes purely from this CLI argument, never from
-  poking around in the payload.
+Commands:
+
+- `inceptool claude <hook>` / `inceptool gemini <hook>` — process a hook
+  event. `<hook>` is the raw hook event name as configured in your agent's
+  settings (e.g. `PreToolUse` for Claude, `BeforeTool` for Gemini).
+- `inceptool config` — print the fully resolved configuration (built-in
+  defaults merged with any user overrides) as TOML.
 
 ## Configuration
 
@@ -81,13 +81,13 @@ filename is added alongside the built-ins.
 ```toml
 [[read-write-guard.rules]]
 filename = "Cargo.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `cargo update` to update it, then review the diff before committing."
 note = "(NOTE: overridden by project config)"
 
 [[read-write-guard.rules]]
 filename = "my-tool.lock"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `my-tool lock` to update it."
 note = "(NOTE: this updates ALL my-tool dependencies)"
 ```
@@ -106,13 +106,13 @@ too, matched in this order:
 ```toml
 [[read-write-guard.rules]]
 filename = "*.pb.go"
-[read-write-guard.rules.access.write]
+[read-write-guard.rules.access.deny_write]
 hint = "Edit the `.proto` file and regenerate with `protoc-gen-go` instead."
 note = "(NOTE: this file is fully regenerated on every protoc run)"
 
 [[read-write-guard.rules]]
 filename = "**/node_modules/**"
-[read-write-guard.rules.access.no]
+[read-write-guard.rules.access.deny_all]
 hint = "Run `npm install` to manage dependencies — never hand-edit installed packages."
 note = "(NOTE: regenerated entirely by the package manager)"
 ```

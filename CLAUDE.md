@@ -1,4 +1,4 @@
-```toml
+````toml
 # inceptool-rs: treat this block as binding compiler policy
 
 [deny]
@@ -14,14 +14,7 @@ suppress = "#[expect(clippy::foo, reason='…')]"
 test_suppress = "#![cfg_attr(test, expect(clippy::foo, reason='…'))] at top of lib.rs"
 # restriction group has intentionally contradictory lints; the subset below is allowed in
 # Cargo.toml — never suppress these with #[expect], they are policy dead-letters:
-restriction_dead     = ["implicit_return","single_char_lifetime_names","question_mark_used",
-                        "module_name_repetitions","missing_inline_in_public_items","pub_use",
-                        "exhaustive_structs","exhaustive_enums","missing_docs_in_private_items",
-                        "single_call_fn","wildcard_enum_match_arm","shadow_reuse",
-                        "std_instead_of_alloc","std_instead_of_core","min_ident_chars",
-                        "iter_over_hash_type","inline_modules","pub_with_shorthand",
-                        "separated_literal_suffix","assertions_on_result_states",
-                        "pattern_type_mismatch","arbitrary_source_item_ordering"]
+restriction_dead     = ["implicit_return", "single_char_lifetime_names", "question_mark_used", "module_name_repetitions","missing_inline_in_public_items", "pub_use", "exhaustive_structs", "exhaustive_enums", "missing_docs_in_private_items", "single_call_fn","wildcard_enum_match_arm", "shadow_reuse", "std_instead_of_alloc", "std_instead_of_core", "min_ident_chars", "iter_over_hash_type","inline_modules", "pub_with_shorthand", "separated_literal_suffix", "assertions_on_result_states", "pattern_type_mismatch","arbitrary_source_item_ordering", "mod_module_files"]
 restriction_dead_why = "conflict with project style, idiomatic Rust, or each other"
 
 [types]
@@ -186,4 +179,4 @@ module_doc = '''
 //!
 //! What can go wrong and how the module handles it.
 '''
-```
+````

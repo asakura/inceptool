@@ -233,3 +233,26 @@ fn integration_worktree_create_special_case(inceptool_cmd: Result<TestEnv>) -> R
 
     Ok(())
 }
+
+#[rstest]
+fn integration_config_prints_resolved_toml(inceptool_cmd: Result<TestEnv>) -> Result<()> {
+    let mut inceptool_cmd = inceptool_cmd?;
+
+    let assert = inceptool_cmd
+        .cmd
+        .args(["config"])
+        .assert()
+        .success()
+        .stderr(predicate::str::is_empty());
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).into_diagnostic()?;
+    let parsed: toml::Value = toml::from_str(&stdout).into_diagnostic()?;
+
+    if parsed.get("read-write-guard").is_none() {
+        return Err(miette::miette!(
+            "expected a [read-write-guard] table in resolved config, got: {stdout:?}"
+        ));
+    }
+
+    Ok(())
+}
