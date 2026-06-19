@@ -445,14 +445,14 @@ cmd1 &> /dev/null | cmd2
 === combined in list with background
 cmd1 &> log1.txt & cmd2 &> log2.txt
 ---
-(list (redirected (command (word "cmd1")) (redirect "&>" (word "log1.txt"))) (redirected (command (word "cmd2")) (redirect "&>" (word "log2.txt"))))
+(bg (redirected (command (word "cmd1")) (redirect "&>" (word "log1.txt"))) (redirected (command (word "cmd2")) (redirect "&>" (word "log2.txt"))))
 ---
 
 
 === combined in and list
 cmd1 &> log1.txt && cmd2 &> log2.txt
 ---
-(list (redirected (command (word "cmd1")) (redirect "&>" (word "log1.txt"))) (redirected (command (word "cmd2")) (redirect "&>" (word "log2.txt"))))
+(and (redirected (command (word "cmd1")) (redirect "&>" (word "log1.txt"))) (redirected (command (word "cmd2")) (redirect "&>" (word "log2.txt"))))
 ---
 
 

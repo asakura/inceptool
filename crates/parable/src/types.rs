@@ -29,8 +29,7 @@ pub enum Token<'a> {
     Semi,
     /// `|` — pipeline separator, connecting one command's stdout to the next's stdin.
     Pipe,
-    /// `&` — background-execution suffix, or (within a [`Statement::List`]) a separator that
-    /// runs the preceding pipeline asynchronously.
+    /// `&` — background-execution suffix; see [`Statement::Background`].
     Amp,
     /// `(` — opens a [`Statement::Subshell`].
     LParen,
@@ -178,11 +177,36 @@ pub enum Statement<'a> {
         /// The statements run inside the group.
         body: Vec<Self>,
     },
-    /// A sequence of pipelines joined by `;`/`&`/`&&`/`||`/newline separators.
-    List {
-        /// Each pipeline paired with the [`Token`] that follows it (its separator), or
-        /// [`Token::Newline`] as an implicit terminator when none was lexed.
-        items: Vec<(Self, Token<'a>)>,
+    /// Two pipelines joined by `&&`/`||`: `right` runs only if `left`'s exit status satisfies
+    /// `op`. Binds tighter than [`Statement::Sequence`]/[`Statement::Background`] (mirroring
+    /// POSIX's `list`/`and_or` grammar split), built left-associatively by
+    /// `parser::command::parse_and_or` — `a && b || c` is
+    /// `AndOr(AndOr(a, And, b), Or, c)`.
+    AndOr {
+        /// The left-hand pipeline (or nested `AndOr`), evaluated first.
+        left: Box<Self>,
+        /// Which condition on `left`'s exit status gates running `right`.
+        op: LogicalOp,
+        /// The right-hand pipeline (or nested `AndOr`), evaluated per `op`.
+        right: Box<Self>,
+    },
+    /// Two statements joined by `;` or a newline: `right` always runs after `left`, regardless of
+    /// `left`'s exit status. A lone trailing `;`/newline carries no information and is never
+    /// built into this variant — `parser::command::parse_list` returns the bare `left` instead.
+    Sequence {
+        /// The statement that runs first.
+        left: Box<Self>,
+        /// The statement that unconditionally runs after `left`.
+        right: Box<Self>,
+    },
+    /// `left &` (or `left & right`): `left` runs asynchronously. Unlike a lone trailing `;`,
+    /// backgrounding is meaningful even with nothing following — `right` is `None` exactly when
+    /// `&` was the list's final token.
+    Background {
+        /// The statement that runs asynchronously.
+        left: Box<Self>,
+        /// The statement that runs after launching `left`, if the list continues.
+        right: Option<Box<Self>>,
     },
     /// `inner` with one or more [`Redirect`]s attached, in source order. A single wrapper
     /// variant rather than a `redirects` field on every other variant: Bash's own grammar
@@ -198,6 +222,15 @@ pub enum Statement<'a> {
         /// `1>&2 2>&1`).
         redirects: Vec<Redirect<'a>>,
     },
+}
+
+/// Which exit-status condition on `left` gates running `right` in a [`Statement::AndOr`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogicalOp {
+    /// `&&` — run `right` only if `left` exits successfully.
+    And,
+    /// `||` — run `right` only if `left` exits with failure.
+    Or,
 }
 
 /// One I/O redirection attached to a [`Statement`] via [`Statement::Redirected`].
@@ -428,11 +461,20 @@ impl fmt::Debug for Statement<'_> {
 
                 write!(f, ")")
             }
-            Statement::List { items } => {
-                write!(f, "(list")?;
+            Statement::AndOr { left, op, right } => {
+                let tag = match op {
+                    LogicalOp::And => "and",
+                    LogicalOp::Or => "or",
+                };
 
-                for (stmt, _sep) in items {
-                    write!(f, " {stmt:?}")?;
+                write!(f, "({tag} {left:?} {right:?})")
+            }
+            Statement::Sequence { left, right } => write!(f, "(semi {left:?} {right:?})"),
+            Statement::Background { left, right } => {
+                write!(f, "(bg {left:?}")?;
+
+                if let Some(right) = right {
+                    write!(f, " {right:?}")?;
                 }
 
                 write!(f, ")")
@@ -485,6 +527,17 @@ impl fmt::Display for RedirectKind {
             Self::Both => "&>",
             Self::BothAppend => "&>>",
             Self::HereString => "<<<",
+        };
+
+        write!(f, "{s}")
+    }
+}
+
+impl fmt::Display for LogicalOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::And => "&&",
+            Self::Or => "||",
         };
 
         write!(f, "{s}")
@@ -723,38 +776,15 @@ impl fmt::Display for Statement<'_> {
 
                 write!(f, "; }}")
             }
-            Statement::List { items } => {
-                let mut needs_space = false;
+            Statement::AndOr { left, op, right } => write!(f, "{left} {op} {right}"),
+            Statement::Sequence { left, right } => write!(f, "{left}; {right}"),
+            Statement::Background { left, right } => {
+                write!(f, "{left} &")?;
 
-                for (stmt, sep) in items {
-                    if needs_space {
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "{stmt}")?;
-
-                    match sep {
-                        Token::Eof => {
-                            needs_space = true;
-                        }
-                        Token::Newline => {
-                            writeln!(f)?;
-                            needs_space = false;
-                        }
-                        Token::Semi => {
-                            write!(f, ";")?;
-                            needs_space = true;
-                        }
-                        Token::Amp => {
-                            write!(f, "&")?;
-                            needs_space = true;
-                        }
-                        _ => {
-                            write!(f, " {sep}")?;
-                            needs_space = true;
-                        }
-                    }
+                if let Some(right) = right {
+                    write!(f, " {right}")?;
                 }
+
                 Ok(())
             }
             Statement::Redirected { inner, redirects } => {

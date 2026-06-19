@@ -1,0 +1,309 @@
+#! Suite 4: Lists
+
+# === AND lists ===
+
+=== simple AND
+echo foo && echo bar
+---
+(and (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
+---
+
+
+=== double AND
+cmd1 && cmd2 && cmd3
+---
+(and (and (command (word "cmd1")) (command (word "cmd2"))) (command (word "cmd3")))
+---
+
+
+=== with no spaces
+echo foo&&echo bar
+---
+(and (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
+---
+
+
+=== with complex commands
+grep pattern file && echo "found" && notify-send "done"
+---
+(and (and (command (word "grep") (word "pattern") (word "file")) (command (word "echo") (word "\"found\""))) (command (word "notify-send") (word "\"done\"")))
+---
+
+
+# === OR lists ===
+
+=== simple OR
+echo foo || echo bar
+---
+(or (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
+---
+
+
+=== double OR
+cmd1 || cmd2 || cmd3
+---
+(or (or (command (word "cmd1")) (command (word "cmd2"))) (command (word "cmd3")))
+---
+
+
+=== with no spaces
+echo foo||echo bar
+---
+(or (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
+---
+
+
+=== with exit
+command || exit 1
+---
+(or (command (word "command")) (command (word "exit") (word "1")))
+---
+
+
+# === Sequential lists ===
+
+=== simple
+echo foo ; echo bar
+---
+(semi (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
+---
+
+
+=== double sequential
+cmd1 ; cmd2 ; cmd3
+---
+(semi (semi (command (word "cmd1")) (command (word "cmd2"))) (command (word "cmd3")))
+---
+
+
+=== with no space before
+echo foo; echo bar
+---
+(semi (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
+---
+
+
+=== with no spaces
+echo foo;echo bar
+---
+(semi (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
+---
+
+
+=== newline separated commands
+echo foo
+echo bar
+---
+(semi (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
+---
+
+
+=== trailing semicolon
+echo foo;
+---
+(command (word "echo") (word "foo"))
+---
+
+
+=== trailing semicolon with space before
+echo foo ;
+---
+(command (word "echo") (word "foo"))
+---
+
+
+# === Background ===
+
+=== simple background
+echo foo &
+---
+(bg (command (word "echo") (word "foo")))
+---
+
+
+=== with no space
+echo foo&
+---
+(bg (command (word "echo") (word "foo")))
+---
+
+
+=== with command after
+sleep 10 & echo started
+---
+(bg (command (word "sleep") (word "10")) (command (word "echo") (word "started")))
+---
+
+
+=== multiple backgrounds
+cmd1 & cmd2 & cmd3 &
+---
+(bg (bg (bg (command (word "cmd1")) (command (word "cmd2"))) (command (word "cmd3"))))
+---
+
+
+# === Mixed operators ===
+
+=== AND then OR
+echo a && echo b || echo c
+---
+(or (and (command (word "echo") (word "a")) (command (word "echo") (word "b"))) (command (word "echo") (word "c")))
+---
+
+
+=== OR then AND
+cmd1 || cmd2 && cmd3
+---
+(and (or (command (word "cmd1")) (command (word "cmd2"))) (command (word "cmd3")))
+---
+
+
+=== Semi then AND
+cmd1 ; cmd2 && cmd3
+---
+(semi (command (word "cmd1")) (and (command (word "cmd2")) (command (word "cmd3"))))
+---
+
+
+=== AND then Semi
+cmd1 && cmd2 ; cmd3
+---
+(semi (and (command (word "cmd1")) (command (word "cmd2"))) (command (word "cmd3")))
+---
+
+
+=== complex mixed
+a && b || c ; d & e
+---
+(bg (semi (or (and (command (word "a")) (command (word "b"))) (command (word "c"))) (command (word "d"))) (command (word "e")))
+---
+
+
+=== AND chain backgrounded
+a && b &
+---
+(bg (and (command (word "a")) (command (word "b"))))
+---
+
+
+=== OR chain backgrounded
+a || b &
+---
+(bg (or (command (word "a")) (command (word "b"))))
+---
+
+
+=== Semi then background
+cmd1 ; cmd2 &
+---
+(bg (semi (command (word "cmd1")) (command (word "cmd2"))))
+---
+
+
+=== with trailing semicolon after AND chain
+cmd1 && cmd2;
+---
+(and (command (word "cmd1")) (command (word "cmd2")))
+---
+
+
+=== background then AND chain
+cmd1 & cmd2 && cmd3
+---
+(bg (command (word "cmd1")) (and (command (word "cmd2")) (command (word "cmd3"))))
+---
+
+
+# === Pipelines in lists ===
+
+=== AND after
+echo foo | grep foo && echo found
+---
+(and (pipeline (command (word "echo") (word "foo")) (command (word "grep") (word "foo"))) (command (word "echo") (word "found")))
+---
+
+
+=== OR after
+cat file | grep pattern || echo "not found"
+---
+(or (pipeline (command (word "cat") (word "file")) (command (word "grep") (word "pattern"))) (command (word "echo") (word "\"not found\"")))
+---
+
+
+=== multiple pipelines with AND
+ls | head && ps | head
+---
+(and (pipeline (command (word "ls")) (command (word "head"))) (pipeline (command (word "ps")) (command (word "head"))))
+---
+
+
+=== pipeline in background
+find . -name "*.log" | xargs rm &
+---
+(bg (pipeline (command (word "find") (word ".") (word "-name") (word "\"*.log\"")) (command (word "xargs") (word "rm"))))
+---
+
+
+# === Whitespace variations ===
+
+=== space only before AND
+cmd1&& cmd2
+---
+(and (command (word "cmd1")) (command (word "cmd2")))
+---
+
+
+=== space only after AND
+cmd1 &&cmd2
+---
+(and (command (word "cmd1")) (command (word "cmd2")))
+---
+
+
+=== multiple spaces around Semi
+cmd1   ;   cmd2
+---
+(semi (command (word "cmd1")) (command (word "cmd2")))
+---
+
+
+=== multiple spaces around background
+cmd1   &   cmd2
+---
+(bg (command (word "cmd1")) (command (word "cmd2")))
+---
+
+
+# === From tree-sitter-bash ===
+
+=== complex list from tree-sitter
+a | b && c && d ; e f g || h i
+---
+(semi (and (and (pipeline (command (word "a")) (command (word "b"))) (command (word "c"))) (command (word "d"))) (or (command (word "e") (word "f") (word "g")) (command (word "h") (word "i"))))
+---
+
+
+# === Edge cases ===
+
+=== cd then command pattern
+cd /foo ; bar
+---
+(semi (command (word "cd") (word "/foo")) (command (word "bar")))
+---
+
+
+=== true and increment pattern
+true && echo yes
+---
+(and (command (word "true")) (command (word "echo") (word "yes")))
+---
+
+
+=== false or fallback pattern
+false || echo fallback
+---
+(or (command (word "false")) (command (word "echo") (word "fallback")))
+---
+
+
+# eof

@@ -150,9 +150,15 @@ impl<'r> Engine<'r> {
             Statement::Subshell { body } | Statement::BraceGroup { body } => {
                 self.visit_all(body, env, findings);
             }
-            Statement::List { items } => {
-                for (inner, _separator) in items {
-                    self.visit(inner, env, findings);
+            Statement::AndOr { left, right, .. } | Statement::Sequence { left, right } => {
+                self.visit(left, env, findings);
+                self.visit(right, env, findings);
+            }
+            Statement::Background { left, right } => {
+                self.visit(left, env, findings);
+
+                if let Some(right) = right {
+                    self.visit(right, env, findings);
                 }
             }
             Statement::Redirected { inner, .. } => self.visit(inner, env, findings),

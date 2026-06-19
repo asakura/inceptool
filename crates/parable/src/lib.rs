@@ -50,7 +50,9 @@ pub mod types;
 
 pub use error::ParseError;
 pub use stream::TokenStream;
-pub use types::{Expr, LexerState, Redirect, RedirectKind, RedirectTarget, Statement, Token};
+pub use types::{
+    Expr, LexerState, LogicalOp, Redirect, RedirectKind, RedirectTarget, Statement, Token,
+};
 
 use parser::parse_statement;
 

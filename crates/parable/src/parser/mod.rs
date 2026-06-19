@@ -24,11 +24,19 @@
 //! wrapping the result in [`crate::types::Statement::Redirected`] rather than each compound
 //! parser doing so independently.
 //!
+//! `command::parse_list` and `command::parse_and_or` mirror POSIX's two-level `list`/`and_or`
+//! split: `&&`/`||` (`and_or`) bind tighter than `;`/`&`/newline (`list`), so a `&&`/`||` chain
+//! always folds into one [`crate::types::Statement::AndOr`] before `parse_list` sees the next
+//! `;`/`&`/newline separator. This isn't just a precedence nicety — `&`'s scope depends on it:
+//! `a && b &` backgrounds the whole `a && b` conjunction, not just `b`.
+//!
 //! ## Flow
 //!
 //! 1. [`parse_statement`] (the crate's entry point) parses a full `;`/`&`/`&&`/`||`/newline
 //!    -separated `command::parse_list`.
-//! 2. Each list item is a pipeline (`command`) of one or more `parse_command`s.
+//! 2. Each list item is an `and_or` chain (`command::parse_and_or`) of one or more pipelines
+//!    (`command::parse_pipeline`) joined by `&&`/`||`; each pipeline is one or more
+//!    `parse_command`s joined by `|`.
 //! 3. `parse_command` tries each compound-command parser before falling back to `command`'s
 //!    base-command parser — order matters only in that a compound command must be recognized by
 //!    its leading keyword/punctuation before a plain command parser would otherwise swallow it
