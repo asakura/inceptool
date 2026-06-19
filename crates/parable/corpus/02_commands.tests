@@ -1,0 +1,260 @@
+#! Suite 2: Commands
+
+# === Basic ===
+
+=== single word command
+echo
+---
+(command (word "echo"))
+---
+
+
+=== with one argument
+echo hello
+---
+(command (word "echo") (word "hello"))
+---
+
+
+=== with two arguments
+echo hello world
+---
+(command (word "echo") (word "hello") (word "world"))
+---
+
+
+=== with miltiple arguments
+echo a b c d e f g
+---
+(command (word "echo") (word "a") (word "b") (word "c") (word "d") (word "e") (word "f") (word "g"))
+---
+
+
+=== with quoted argument
+echo "hello world"
+---
+(command (word "echo") (word "\"hello world\""))
+---
+
+
+=== with single quoted argument
+echo 'hello world'
+---
+(command (word "echo") (word "'hello world'"))
+---
+
+
+=== with mixed arguments
+echo hello "beautiful world" goodbye
+---
+(command (word "echo") (word "hello") (word "\"beautiful world\"") (word "goodbye"))
+---
+
+
+# === Path ===
+
+=== absolute path command
+/usr/bin/ls
+---
+(command (word "/usr/bin/ls"))
+---
+
+
+=== absolute path with arguments
+/usr/bin/ls -la /tmp
+---
+(command (word "/usr/bin/ls") (word "-la") (word "/tmp"))
+---
+
+
+=== relative path with no arguments
+./script.sh
+---
+(command (word "./script.sh"))
+---
+
+
+=== relative path with arguments
+./build.sh --release --target=x86
+---
+(command (word "./build.sh") (word "--release") (word "--target=x86"))
+---
+
+
+=== parent directory command
+../bin/tool
+---
+(command (word "../bin/tool"))
+---
+
+
+# === With flags ===
+
+=== with short flag
+ls -l
+---
+(command (word "ls") (word "-l"))
+---
+
+
+=== with combined short flags
+ls -la
+---
+(command (word "ls") (word "-la"))
+---
+
+
+=== with multiple short flags
+tar -x -v -f archive.tar
+---
+(command (word "tar") (word "-x") (word "-v") (word "-f") (word "archive.tar"))
+---
+
+
+=== with long flag
+grep --color
+---
+(command (word "grep") (word "--color"))
+---
+
+
+=== with long flag plus value
+grep --color=auto
+---
+(command (word "grep") (word "--color=auto"))
+---
+
+
+=== with long flag plus quoted value
+docker run --name="my container"
+---
+(command (word "docker") (word "run") (word "--name=\"my container\""))
+---
+
+
+=== with double dash separator
+rm -- -file-starting-with-dash
+---
+(command (word "rm") (word "--") (word "-file-starting-with-dash"))
+---
+
+
+# === With special arguments ===
+
+=== with start mark glob
+ls *.txt
+---
+(command (word "ls") (word "*.txt"))
+---
+
+
+=== with question mark glob
+ls file?.txt
+---
+(command (word "ls") (word "file?.txt"))
+---
+
+
+=== with bracket glob
+ls file[0-9].txt
+---
+(command (word "ls") (word "file[0-9].txt"))
+---
+
+
+=== with brace argument
+echo {a,b,c}
+---
+(command (word "echo") (word "{a,b,c}"))
+---
+
+
+=== with range brace
+echo {1..10}
+---
+(command (word "echo") (word "{1..10}"))
+---
+
+
+=== with tilde argument
+cd ~
+---
+(command (word "cd") (word "~"))
+---
+
+
+=== with tilde user argument
+cd ~root
+---
+(command (word "cd") (word "~root"))
+---
+
+
+# === Special word combinations ===
+
+=== with equal sign in argument
+grep pattern file=name
+---
+(command (word "grep") (word "pattern") (word "file=name"))
+---
+
+
+=== with colon char in argument
+echo foo:bar:baz
+---
+(command (word "echo") (word "foo:bar:baz"))
+---
+
+
+=== with argument starting with dash
+echo -n hello
+---
+(command (word "echo") (word "-n") (word "hello"))
+---
+
+
+=== with numeric only argument
+exit 1
+---
+(command (word "exit") (word "1"))
+---
+
+
+=== with negative number argument
+expr 5 - 3
+---
+(command (word "expr") (word "5") (word "-") (word "3"))
+---
+
+
+# === Edge cases from tree-sitter-bash ===
+
+=== command name with special chars
+echo {o[k]}
+---
+(command (word "echo") (word "{o[k]}"))
+---
+
+
+=== closing braces as argument
+echo }}}
+---
+(command (word "echo") (word "}}}"))
+---
+
+
+=== closing brackets and equals
+echo ]]] ===
+---
+(command (word "echo") (word "]]]") (word "==="))
+---
+
+
+=== words with colons like paths
+echo foo::bar
+---
+(command (word "echo") (word "foo::bar"))
+---
+
+
+# eof

@@ -1,0 +1,141 @@
+#! Suite 3: Pipelines
+
+# === Basic ===
+
+=== simple pipeline
+echo foo | cat
+---
+(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+---
+
+
+=== triple pipeline
+echo foo | grep bar | wc -l
+---
+(pipeline (command (word "echo") (word "foo")) (command (word "grep") (word "bar")) (command (word "wc") (word "-l")))
+---
+
+
+=== quad pipeline
+cat file | grep pattern | sort | uniq
+---
+(pipeline (command (word "cat") (word "file")) (command (word "grep") (word "pattern")) (command (word "sort")) (command (word "uniq")))
+---
+
+
+=== five stage pipeline
+ps aux | grep python | awk '{print $2}' | head -5 | xargs echo
+---
+(pipeline (command (word "ps") (word "aux")) (command (word "grep") (word "python")) (command (word "awk") (word "'{print $2}'")) (command (word "head") (word "-5")) (command (word "xargs") (word "echo")))
+---
+
+
+# === With paths ===
+
+=== with absolute paths
+/usr/bin/cat file | /usr/bin/grep foo
+---
+(pipeline (command (word "/usr/bin/cat") (word "file")) (command (word "/usr/bin/grep") (word "foo")))
+---
+
+
+=== with relative paths
+./generate | ./process | ./output
+---
+(pipeline (command (word "./generate")) (command (word "./process")) (command (word "./output")))
+---
+
+
+# === With arguments ===
+
+=== with many arguments
+ls -la /tmp | grep -v total | head -n 10
+---
+(pipeline (command (word "ls") (word "-la") (word "/tmp")) (command (word "grep") (word "-v") (word "total")) (command (word "head") (word "-n") (word "10")))
+---
+
+
+=== with quoted args
+echo "hello world" | grep hello
+---
+(pipeline (command (word "echo") (word "\"hello world\"")) (command (word "grep") (word "hello")))
+---
+
+
+=== with single quoted args
+echo 'pattern with spaces' | grep 'pattern'
+---
+(pipeline (command (word "echo") (word "'pattern with spaces'")) (command (word "grep") (word "'pattern'")))
+---
+
+
+=== with mixed quotes
+echo "foo" | grep 'foo' | cat
+---
+(pipeline (command (word "echo") (word "\"foo\"")) (command (word "grep") (word "'foo'")) (command (word "cat")))
+---
+
+
+# === With special characters ===
+
+=== with glob patterns
+ls *.txt | wc -l
+---
+(pipeline (command (word "ls") (word "*.txt")) (command (word "wc") (word "-l")))
+---
+
+
+=== with equals in args
+env | grep PATH=
+---
+(pipeline (command (word "env")) (command (word "grep") (word "PATH=")))
+---
+
+
+# === Whitespace variations ===
+
+=== with no spaces around
+echo foo|cat
+---
+(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+---
+
+
+=== with space only before pipe
+echo foo |cat
+---
+(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+---
+
+
+=== with space only after pipe
+echo foo| cat
+---
+(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+---
+
+
+=== with multiple spaces
+echo foo  |  cat
+---
+(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+---
+
+
+# === From tree-sitter-bash ===
+
+=== with head
+cat foo | grep -v bar
+---
+(pipeline (command (word "cat") (word "foo")) (command (word "grep") (word "-v") (word "bar")))
+---
+
+
+=== pipe to head
+cat baz | head -n 1
+---
+(pipeline (command (word "cat") (word "baz")) (command (word "head") (word "-n") (word "1")))
+---
+
+
+# eof

@@ -1,0 +1,298 @@
+#! Suite 1: Words
+
+# === Basic ===
+
+=== bare word
+foo
+---
+(command (word "foo"))
+---
+
+
+=== with numbers
+foo123
+---
+(command (word "foo123"))
+---
+
+
+=== with dash
+foo-bar
+---
+(command (word "foo-bar"))
+---
+
+
+=== with underscore
+foo_bar
+---
+(command (word "foo_bar"))
+---
+
+
+=== with dot
+foo.bar
+---
+(command (word "foo.bar"))
+---
+
+
+=== with slash
+/usr/bin
+---
+(command (word "/usr/bin"))
+---
+
+
+=== starting with number
+123abc
+---
+(command (word "123abc"))
+---
+
+
+=== with all numbers
+12345
+---
+(command (word "12345"))
+---
+
+
+=== with equal sign
+foo=bar
+---
+(command (word "foo=bar"))
+---
+
+
+=== with colon char
+foo:bar
+---
+(command (word "foo:bar"))
+---
+
+
+=== with at sign
+foo@bar
+---
+(command (word "foo@bar"))
+---
+
+
+=== with percent sign
+foo%bar
+---
+(command (word "foo%bar"))
+---
+
+
+=== with caret sign
+foo^bar
+---
+(command (word "foo^bar"))
+---
+
+
+=== with plus sign
+foo+bar
+---
+(command (word "foo+bar"))
+---
+
+
+=== with comma
+foo,bar
+---
+(command (word "foo,bar"))
+---
+
+
+=== with tilde sign
+~user
+---
+(command (word "~user"))
+---
+
+
+=== with question mark
+foo?
+---
+(command (word "foo?"))
+---
+
+
+=== with asterisk
+foo*
+---
+(command (word "foo*"))
+---
+
+
+=== with hash inside
+foo#bar
+---
+(command (word "foo#bar"))
+---
+
+
+=== with brackets
+foo[0]
+---
+(command (word "foo[0]"))
+---
+
+
+=== starting with relative path
+./script.sh
+---
+(command (word "./script.sh"))
+---
+
+
+=== with parent path
+../other/file
+---
+(command (word "../other/file"))
+---
+
+
+=== absolute path with dots
+/foo/../bar/./baz
+---
+(command (word "/foo/../bar/./baz"))
+---
+
+
+# === Single quoted ===
+
+=== empty
+''
+---
+(command (word "''"))
+---
+
+
+=== simple
+'hello'
+---
+(command (word "'hello'"))
+---
+
+
+=== with spaces
+'hello world'
+---
+(command (word "'hello world'"))
+---
+
+
+=== with special chars
+'$foo `cmd` \n'
+---
+(command (word "'$foo `cmd` \\n'"))
+---
+
+
+=== with double quotes inside
+'say "hello"'
+---
+(command (word "'say \"hello\"'"))
+---
+
+
+=== adjacent single quoted
+'foo''bar'
+---
+(command (word "'foo''bar'"))
+---
+
+
+# === Double quoted ===
+
+=== empty
+""
+---
+(command (word "\"\""))
+---
+
+
+=== simple
+"hello"
+---
+(command (word "\"hello\""))
+---
+
+
+=== with spaces
+"hello world"
+---
+(command (word "\"hello world\""))
+---
+
+
+=== with single quotes inside
+"it's fine"
+---
+(command (word "\"it's fine\""))
+---
+
+
+=== with escaped quote
+"say \"hello\""
+---
+(command (word "\"say \\\"hello\\\"\""))
+---
+
+
+=== with escaped backslash
+"path\\to\\file"
+---
+(command (word "\"path\\\\to\\\\file\""))
+---
+
+
+=== with newline escape
+"line1\nline2"
+---
+(command (word "\"line1\\nline2\""))
+---
+
+
+=== adjacent double quoted
+"foo""bar"
+---
+(command (word "\"foo\"\"bar\""))
+---
+
+
+# === Mixed quoting ===
+
+=== mixed quotes adjacent
+'single'"double"
+---
+(command (word "'single'\"double\""))
+---
+
+
+=== unquoted with single quoted
+foo'bar'baz
+---
+(command (word "foo'bar'baz"))
+---
+
+
+=== unquoted with double quoted
+foo"bar"baz
+---
+(command (word "foo\"bar\"baz"))
+---
+
+
+=== complex mixed quoting
+foo'bar'"baz"qux
+---
+(command (word "foo'bar'\"baz\"qux"))
+---
+
+
+# eof

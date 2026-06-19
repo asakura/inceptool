@@ -1,0 +1,27 @@
+[package]
+name = "inceptool-parable"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Parable zero-copy context-aware Bash parser"
+keywords = ["parser", "bash"]
+categories = ["parsing"]
+
+[dependencies]
+smallvec.workspace = true
+thiserror.workspace = true
+winnow.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+
+[build-dependencies]
+inceptool_corpus-parser.workspace = true
+proc-macro2.workspace = true
+quote.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true
