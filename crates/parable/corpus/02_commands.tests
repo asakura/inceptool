@@ -23,7 +23,7 @@ echo hello world
 ---
 
 
-=== with miltiple arguments
+=== with multiple arguments
 echo a b c d e f g
 ---
 (command (word "echo") (word "a") (word "b") (word "c") (word "d") (word "e") (word "f") (word "g"))
