@@ -1,0 +1,13 @@
+#! Suite 50: Escaping
+
+# === Heredoc ===
+
+=== heredoc with literal separator line
+cat <<EOF
+\---
+EOF
+---
+(command (word "cat") (redirect_heredoc "EOF"))
+---
+
+

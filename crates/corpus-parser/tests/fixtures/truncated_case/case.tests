@@ -1,0 +1,7 @@
+#! Suite 99: Truncated
+# === Group ===
+=== broken case
+some input
+---
+some expected output
+---

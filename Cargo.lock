@@ -1288,6 +1288,7 @@ dependencies = [
  "assert_cmd",
  "clap",
  "directories",
+ "gix",
  "inceptool-driver-claude",
  "inceptool-driver-gemini",
  "inceptool-engine",
@@ -1304,6 +1305,14 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "inceptool-corpus-parser"
+version = "0.1.0"
+dependencies = [
+ "rstest",
+ "thiserror",
 ]
 
 [[package]]
@@ -1376,7 +1385,6 @@ dependencies = [
  "indoc",
  "regex",
  "rstest",
- "serde",
  "serde-saphyr",
  "serde_json",
  "tempfile",

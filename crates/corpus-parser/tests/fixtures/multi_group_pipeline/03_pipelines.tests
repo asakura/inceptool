@@ -1,0 +1,27 @@
+#! Suite 3: Pipelines
+
+# === Basic ===
+
+=== simple pipeline
+echo foo | cat
+---
+(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+---
+
+
+=== triple pipeline
+echo foo | grep bar | wc -l
+---
+(pipeline (command (word "echo") (word "foo")) (command (word "grep") (word "bar")) (command (word "wc") (word "-l")))
+---
+
+
+# === With paths ===
+
+=== with absolute paths
+/usr/bin/cat file | /usr/bin/grep foo
+---
+(pipeline (command (word "/usr/bin/cat") (word "file")) (command (word "/usr/bin/grep") (word "foo")))
+---
+
+
