@@ -76,14 +76,7 @@ impl fmt::Debug for BuildError {
 
 /// Generates a test function for parsing assertions for a single test group.
 #[must_use = "returns the generated test function token stream"]
-fn generate_test_fn(
-    suite_num: u32,
-    suite_name_clean: &str,
-    group: &TestGroup<'_>,
-) -> proc_macro2::TokenStream {
-    let group_name_clean = to_ident_fragment(&group.name);
-    let test_fn_name = format_ident!("s{}_{}_{}", suite_num, suite_name_clean, group_name_clean);
-
+fn generate_test_fn(group: &TestGroup<'_>) -> proc_macro2::TokenStream {
     let case_tokens = group.cases.iter().map(|c| {
         let ident = format_ident!("{}", to_ident_fragment(&c.name));
         let input = &c.input;
@@ -95,7 +88,7 @@ fn generate_test_fn(
     quote! {
         #[rstest::rstest]
         #(#case_tokens)*
-        fn #test_fn_name(#[case] input: &str, #[case] expected: &str) -> Result<(), TestError> {
+        fn parses(#[case] input: &str, #[case] expected: &str) -> Result<(), TestError> {
             let actual = inceptool_parable::render_program_ast(input)
                 .map_err(|e| TestError::Failure(format!("Parse error: {e:?}")))?;
 
@@ -116,19 +109,7 @@ fn generate_test_fn(
 
 /// Generates a test function for round-trip assertions for a single test group.
 #[must_use = "returns the generated roundtrip test function token stream"]
-fn generate_roundtrip_test_fn(
-    suite_num: u32,
-    suite_name_clean: &str,
-    group: &TestGroup<'_>,
-) -> proc_macro2::TokenStream {
-    let group_name_clean = to_ident_fragment(&group.name);
-    let test_fn_name = format_ident!(
-        "s{}_{}_{}_roundtrip",
-        suite_num,
-        suite_name_clean,
-        group_name_clean
-    );
-
+fn generate_roundtrip_test_fn(group: &TestGroup<'_>) -> proc_macro2::TokenStream {
     let case_tokens = group.cases.iter().map(|c| {
         let ident = format_ident!("{}", to_ident_fragment(&c.name));
         let input = &c.input;
@@ -139,7 +120,7 @@ fn generate_roundtrip_test_fn(
     quote! {
         #[rstest::rstest]
         #(#case_tokens)*
-        fn #test_fn_name(#[case] input: &str) -> Result<(), TestError> {
+        fn roundtrips(#[case] input: &str) -> Result<(), TestError> {
             let parsed = inceptool_parable::parse_program(input)
                 .map_err(|e| TestError::Failure(format!("Parse error: {e:?}")))?;
 
@@ -204,15 +185,32 @@ fn main() -> Result<(), BuildError> {
             }
 
             let suite_name_clean = to_ident_fragment(&suite.name);
+            let suite_mod_name = format_ident!("suite_{}_{}", suite.number, suite_name_clean);
+            let mut group_modules = Vec::new();
 
             for group in &suite.groups {
-                test_modules.push(generate_test_fn(suite.number, &suite_name_clean, group));
-                test_modules.push(generate_roundtrip_test_fn(
-                    suite.number,
-                    &suite_name_clean,
-                    group,
-                ));
+                let group_name_clean = format_ident!("{}", to_ident_fragment(&group.name));
+                let parse_fn = generate_test_fn(group);
+                let roundtrip_fn = generate_roundtrip_test_fn(group);
+
+                group_modules.push(quote! {
+                    mod #group_name_clean {
+                        use super::*;
+
+                        #parse_fn
+
+                        #roundtrip_fn
+                    }
+                });
             }
+
+            test_modules.push(quote! {
+                mod #suite_mod_name {
+                    use super::*;
+
+                    #(#group_modules)*
+                }
+            });
         }
     }
 
