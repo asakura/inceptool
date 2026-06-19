@@ -1,52 +1,52 @@
 #! Suite 4: Lists
 
-# === AND lists ===
+# === AND ===
 
-=== simple AND
+=== simple
 echo foo && echo bar
 ---
 (and (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
 ---
 
 
-=== double AND
+=== double
 cmd1 && cmd2 && cmd3
 ---
 (and (and (command (word "cmd1")) (command (word "cmd2"))) (command (word "cmd3")))
 ---
 
 
-=== with no spaces
+=== no spaces
 echo foo&&echo bar
 ---
 (and (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
 ---
 
 
-=== with complex commands
+=== complex commands
 grep pattern file && echo "found" && notify-send "done"
 ---
 (and (and (command (word "grep") (word "pattern") (word "file")) (command (word "echo") (word "\"found\""))) (command (word "notify-send") (word "\"done\"")))
 ---
 
 
-# === OR lists ===
+# === OR ===
 
-=== simple OR
+=== simple
 echo foo || echo bar
 ---
 (or (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
 ---
 
 
-=== double OR
+=== double
 cmd1 || cmd2 || cmd3
 ---
 (or (or (command (word "cmd1")) (command (word "cmd2"))) (command (word "cmd3")))
 ---
 
 
-=== with no spaces
+=== no spaces
 echo foo||echo bar
 ---
 (or (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
@@ -60,7 +60,7 @@ command || exit 1
 ---
 
 
-# === Sequential lists ===
+# === Sequential ===
 
 === simple
 echo foo ; echo bar
@@ -69,28 +69,28 @@ echo foo ; echo bar
 ---
 
 
-=== double sequential
+=== double
 cmd1 ; cmd2 ; cmd3
 ---
 (semi (semi (command (word "cmd1")) (command (word "cmd2"))) (command (word "cmd3")))
 ---
 
 
-=== with no space before
+=== no space before
 echo foo; echo bar
 ---
 (semi (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
 ---
 
 
-=== with no spaces
+=== no spaces
 echo foo;echo bar
 ---
 (semi (command (word "echo") (word "foo")) (command (word "echo") (word "bar")))
 ---
 
 
-=== newline separated commands
+=== newline separated
 echo foo
 echo bar
 ---
@@ -114,7 +114,7 @@ echo foo ;
 
 # === Background ===
 
-=== simple background
+=== simple
 echo foo &
 ---
 (bg (command (word "echo") (word "foo")))
@@ -128,14 +128,14 @@ echo foo&
 ---
 
 
-=== with command after
+=== command after
 sleep 10 & echo started
 ---
 (bg (command (word "sleep") (word "10")) (command (word "echo") (word "started")))
 ---
 
 
-=== multiple backgrounds
+=== multiple
 cmd1 & cmd2 & cmd3 &
 ---
 (bg (bg (bg (command (word "cmd1")) (command (word "cmd2"))) (command (word "cmd3"))))
@@ -172,7 +172,7 @@ cmd1 && cmd2 ; cmd3
 ---
 
 
-=== complex mixed
+=== complex
 a && b || c ; d & e
 ---
 (bg (semi (or (and (command (word "a")) (command (word "b"))) (command (word "c"))) (command (word "d"))) (command (word "e")))
@@ -200,7 +200,7 @@ cmd1 ; cmd2 &
 ---
 
 
-=== with trailing semicolon after AND chain
+=== trailing semicolon after AND chain
 cmd1 && cmd2;
 ---
 (and (command (word "cmd1")) (command (word "cmd2")))
@@ -214,7 +214,7 @@ cmd1 & cmd2 && cmd3
 ---
 
 
-# === Pipelines in lists ===
+# === Pipelines ===
 
 === AND after
 echo foo | grep foo && echo found
@@ -230,21 +230,21 @@ cat file | grep pattern || echo "not found"
 ---
 
 
-=== multiple pipelines with AND
+=== multiple with AND
 ls | head && ps | head
 ---
 (and (pipeline (command (word "ls")) (command (word "head"))) (pipeline (command (word "ps")) (command (word "head"))))
 ---
 
 
-=== pipeline in background
+=== in background
 find . -name "*.log" | xargs rm &
 ---
 (bg (pipeline (command (word "find") (word ".") (word "-name") (word "\"*.log\"")) (command (word "xargs") (word "rm"))))
 ---
 
 
-# === Whitespace variations ===
+# === Whitespace ===
 
 === space only before AND
 cmd1&& cmd2
@@ -274,9 +274,9 @@ cmd1   &   cmd2
 ---
 
 
-# === From tree-sitter-bash ===
+# === Tree sitter bash ===
 
-=== complex list from tree-sitter
+=== complex
 a | b && c && d ; e f g || h i
 ---
 (semi (and (and (pipeline (command (word "a")) (command (word "b"))) (command (word "c"))) (command (word "d"))) (or (command (word "e") (word "f") (word "g")) (command (word "h") (word "i"))))
@@ -285,21 +285,21 @@ a | b && c && d ; e f g || h i
 
 # === Edge cases ===
 
-=== cd then command pattern
+=== cd then command
 cd /foo ; bar
 ---
 (semi (command (word "cd") (word "/foo")) (command (word "bar")))
 ---
 
 
-=== true and increment pattern
+=== true and increment
 true && echo yes
 ---
 (and (command (word "true")) (command (word "echo") (word "yes")))
 ---
 
 
-=== false or fallback pattern
+=== false or fallback
 false || echo fallback
 ---
 (or (command (word "false")) (command (word "echo") (word "fallback")))

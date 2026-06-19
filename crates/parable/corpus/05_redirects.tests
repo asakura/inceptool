@@ -2,42 +2,42 @@
 
 # === Output ===
 
-=== output redirect
+=== simple
 echo foo > file.txt
 ---
 (redirected (command (word "echo") (word "foo")) (redirect ">" (word "file.txt")))
 ---
 
 
-=== output redirect no space before
+=== simple no space before
 echo foo> file.txt
 ---
 (redirected (command (word "echo") (word "foo")) (redirect ">" (word "file.txt")))
 ---
 
 
-=== output redirect no space after
+=== simple no space after
 echo foo >file.txt
 ---
 (redirected (command (word "echo") (word "foo")) (redirect ">" (word "file.txt")))
 ---
 
 
-=== output redirect no spaces
+=== simple no spaces
 echo foo>file.txt
 ---
 (redirected (command (word "echo") (word "foo")) (redirect ">" (word "file.txt")))
 ---
 
 
-=== output to dev null
+=== to dev null
 whoami > /dev/null
 ---
 (redirected (command (word "whoami")) (redirect ">" (word "/dev/null")))
 ---
 
 
-=== output redirect quoted target
+=== simple quoted target
 echo foo > "file with spaces.txt"
 ---
 (redirected (command (word "echo") (word "foo")) (redirect ">" (word "\"file with spaces.txt\"")))
@@ -46,21 +46,21 @@ echo foo > "file with spaces.txt"
 
 # === Append ===
 
-=== append redirect
+=== simple
 echo foo >> file.txt
 ---
 (redirected (command (word "echo") (word "foo")) (redirect ">>" (word "file.txt")))
 ---
 
 
-=== append no spaces
+=== no spaces
 echo foo>>file.txt
 ---
 (redirected (command (word "echo") (word "foo")) (redirect ">>" (word "file.txt")))
 ---
 
 
-=== append to log
+=== to log
 date >> /var/log/myapp.log
 ---
 (redirected (command (word "date")) (redirect ">>" (word "/var/log/myapp.log")))
@@ -69,21 +69,21 @@ date >> /var/log/myapp.log
 
 # === Input ===
 
-=== input redirect
+=== simple
 cat < file.txt
 ---
 (redirected (command (word "cat")) (redirect "<" (word "file.txt")))
 ---
 
 
-=== input redirect no spaces
+=== simple no spaces
 cat<file.txt
 ---
 (redirected (command (word "cat")) (redirect "<" (word "file.txt")))
 ---
 
 
-=== input with arguments
+=== with arguments
 wc -l < input.txt
 ---
 (redirected (command (word "wc") (word "-l")) (redirect "<" (word "input.txt")))
@@ -99,7 +99,7 @@ sort < unsorted.txt
 
 # === File descriptor ===
 
-=== stderr redirect
+=== stderr
 cmd 2> errors.txt
 ---
 (redirected (command (word "cmd")) (redirect (fd 2) ">" (word "errors.txt")))
@@ -127,14 +127,14 @@ cmd > out.txt 2> err.txt
 ---
 
 
-=== fd3 redirect
+=== fd3
 cmd 3> custom.txt
 ---
 (redirected (command (word "cmd")) (redirect (fd 3) ">" (word "custom.txt")))
 ---
 
 
-=== fd9 redirect
+=== fd9
 cmd 9> fd9.txt
 ---
 (redirected (command (word "cmd")) (redirect (fd 9) ">" (word "fd9.txt")))
@@ -180,21 +180,21 @@ cmd < in.txt > out.txt
 ---
 
 
-=== three redirects
+=== three
 cmd < in.txt > out.txt 2> err.txt
 ---
 (redirected (command (word "cmd")) (redirect "<" (word "in.txt")) (redirect ">" (word "out.txt")) (redirect (fd 2) ">" (word "err.txt")))
 ---
 
 
-=== redirect before command args
+=== before command args
 < input.txt cat
 ---
 (redirected (command (word "cat")) (redirect "<" (word "input.txt")))
 ---
 
 
-=== redirect between args
+=== between args
 cat < input.txt -n
 ---
 (redirected (command (word "cat") (word "-n")) (redirect "<" (word "input.txt")))
@@ -203,67 +203,67 @@ cat < input.txt -n
 
 # === Here strings ===
 
-=== here string simple
+=== simple
 cat <<< "hello"
 ---
 (redirected (command (word "cat")) (redirect "<<<" (word "\"hello\"")))
 ---
 
 
-=== here string single quoted
+=== single quoted
 cat <<< 'hello world'
 ---
 (redirected (command (word "cat")) (redirect "<<<" (word "'hello world'")))
 ---
 
 
-=== here string bare word
+=== bare word
 cat <<< hello
 ---
 (redirected (command (word "cat")) (redirect "<<<" (word "hello")))
 ---
 
 
-=== here string with fd
+=== with fd
 cat 0<<< "hello"
 ---
 (redirected (command (word "cat")) (redirect (fd 0) "<<<" (word "\"hello\"")))
 ---
 
 
-# === With special targets ===
+# === Special targets ===
 
-=== redirect to path with spaces quoted
+=== path with spaces quoted
 cmd > "/path/with spaces/file.txt"
 ---
 (redirected (command (word "cmd")) (redirect ">" (word "\"/path/with spaces/file.txt\"")))
 ---
 
 
-=== redirect to glob pattern
+=== glob pattern
 cmd > *.log
 ---
 (redirected (command (word "cmd")) (redirect ">" (word "*.log")))
 ---
 
 
-=== redirect to path with dots
+=== path with dots
 cmd > ../output/file.txt
 ---
 (redirected (command (word "cmd")) (redirect ">" (word "../output/file.txt")))
 ---
 
 
-# === From tree-sitter-bash ===
+# === Tree sitter bash ===
 
-=== redirect at start
+=== at start
 2>&1 whoami
 ---
 (redirected (command (word "whoami")) (redirect (fd 2) ">&" (fd 1)))
 ---
 
 
-=== redirect stderr to stdout for echo
+=== stderr to stdout for echo
 echo "foobar" >&2
 ---
 (redirected (command (word "echo") (word "\"foobar\"")) (redirect ">&" (fd 2)))
@@ -272,30 +272,30 @@ echo "foobar" >&2
 
 # === Noclobber override ===
 
-=== noclobber override
+=== simple
 whoami >| /dev/null
 ---
 (redirected (command (word "whoami")) (redirect ">|" (word "/dev/null")))
 ---
 
 
-# === Combined stdout/stderr ===
+# === Combined ===
 
-=== combined redirect to dev null
+=== to dev null
 ls &>/dev/null
 ---
 (redirected (command (word "ls")) (redirect "&>" (word "/dev/null")))
 ---
 
 
-=== combined redirect to file
+=== to file
 cmd &> output.log
 ---
 (redirected (command (word "cmd")) (redirect "&>" (word "output.log")))
 ---
 
 
-=== combined redirect append
+=== append
 cmd &>> output.log
 ---
 (redirected (command (word "cmd")) (redirect "&>>" (word "output.log")))
@@ -304,100 +304,100 @@ cmd &>> output.log
 
 # === Combined edge cases ===
 
-=== combined redirect no space
+=== no space
 cmd &>file.log
 ---
 (redirected (command (word "cmd")) (redirect "&>" (word "file.log")))
 ---
 
 
-=== combined append no space
+=== append no space
 cmd &>>file.log
 ---
 (redirected (command (word "cmd")) (redirect "&>>" (word "file.log")))
 ---
 
 
-=== alternative combined form
+=== alternative form
 cmd >& output.log
 ---
 (redirected (command (word "cmd")) (redirect ">&" (word "output.log")))
 ---
 
 
-=== alternative combined no space
+=== alternative no space
 cmd >&output.log
 ---
 (redirected (command (word "cmd")) (redirect ">&" (word "output.log")))
 ---
 
 
-=== combined with other redirect
+=== with other redirect
 cmd &> out.log < in.txt
 ---
 (redirected (command (word "cmd")) (redirect "&>" (word "out.log")) (redirect "<" (word "in.txt")))
 ---
 
 
-=== combined after other redirect
+=== after other redirect
 cmd < in.txt &> out.log
 ---
 (redirected (command (word "cmd")) (redirect "<" (word "in.txt")) (redirect "&>" (word "out.log")))
 ---
 
 
-=== combined before command
+=== before command
 &> log.txt cmd
 ---
 (redirected (command (word "cmd")) (redirect "&>" (word "log.txt")))
 ---
 
 
-# === Close file descriptor ===
+# === Close ===
 
-=== close stdout
+=== stdout
 cmd >&-
 ---
 (redirected (command (word "cmd")) (redirect ">&" (close)))
 ---
 
 
-=== close stderr
+=== stderr
 cmd 2>&-
 ---
 (redirected (command (word "cmd")) (redirect (fd 2) ">&" (close)))
 ---
 
 
-=== close stdin
+=== stdin
 cmd <&-
 ---
 (redirected (command (word "cmd")) (redirect "<&" (close)))
 ---
 
 
-=== close fd3
+=== fd3
 cmd 3>&-
 ---
 (redirected (command (word "cmd")) (redirect (fd 3) ">&" (close)))
 ---
 
 
-=== close input fd3
+=== input fd3
 cmd 3<&-
 ---
 (redirected (command (word "cmd")) (redirect (fd 3) "<&" (close)))
 ---
 
 
-=== close after dup
+=== after dup
 cmd 3>&1 3>&-
 ---
 (redirected (command (word "cmd")) (redirect (fd 3) ">&" (fd 1)) (redirect (fd 3) ">&" (close)))
 ---
 
 
-# === Move file descriptor (dup and close) ===
+# === Move operations ===
 # 
 # Bash's `N<&M-`/`N>&M-` "move" a source fd into the target and close the source in one step.
 # `M-` lexes as a single non-numeric word (the lexer has no notion of this suffix), so
@@ -405,23 +405,23 @@ cmd 3>&1 3>&-
 # move/close semantics — not yet supported, tracked as a known gap rather than silently
 # misparsed.
 
-=== move fd input
+=== input
 cmd 3<&0-
 ---
 (redirected (command (word "cmd")) (redirect (fd 3) "<&" (word "0-")))
 ---
 
 
-=== move fd output
+=== output
 cmd 3>&1-
 ---
 (redirected (command (word "cmd")) (redirect (fd 3) ">&" (word "1-")))
 ---
 
 
-# === Mixed complex patterns ===
+# === Complex ===
 
-=== multiple combined redirects
+=== multiple combined
 cmd &> out1.log 2>&1 &>> out2.log
 ---
 (redirected (command (word "cmd")) (redirect "&>" (word "out1.log")) (redirect (fd 2) ">&" (fd 1)) (redirect "&>>" (word "out2.log")))
@@ -473,7 +473,7 @@ cmd 2>&1 &> file.log
 === combined in brace group
 { cmd &> log.txt; }
 ---
-(brace_group (redirected (command (word "cmd")) (redirect "&>" (word "log.txt"))))
+(brace-group (redirected (command (word "cmd")) (redirect "&>" (word "log.txt"))))
 ---
 
 

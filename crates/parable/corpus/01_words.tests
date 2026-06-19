@@ -230,65 +230,65 @@ foo[0]
 ---
 
 
-=== with single quotes inside
+=== containing single quotes
 "it's fine"
 ---
 (command (word "\"it's fine\""))
 ---
 
 
-=== with escaped quote
+=== escaped quote
 "say \"hello\""
 ---
 (command (word "\"say \\\"hello\\\"\""))
 ---
 
 
-=== with escaped backslash
+=== escaped backslash
 "path\\to\\file"
 ---
 (command (word "\"path\\\\to\\\\file\""))
 ---
 
 
-=== with newline escape
+=== newline escape
 "line1\nline2"
 ---
 (command (word "\"line1\\nline2\""))
 ---
 
 
-=== adjacent double quoted
+=== adjacent double quotes
 "foo""bar"
 ---
 (command (word "\"foo\"\"bar\""))
 ---
 
 
-# === Mixed quoting ===
+# === Mixed quotes ===
 
-=== mixed quotes adjacent
+=== adjacent
 'single'"double"
 ---
 (command (word "'single'\"double\""))
 ---
 
 
-=== unquoted with single quoted
+=== unquoted and single quoted
 foo'bar'baz
 ---
 (command (word "foo'bar'baz"))
 ---
 
 
-=== unquoted with double quoted
+=== unquoted and double quoted
 foo"bar"baz
 ---
 (command (word "foo\"bar\"baz"))
 ---
 
 
-=== complex mixed quoting
+=== complex combination
 foo'bar'"baz"qux
 ---
 (command (word "foo'bar'\"baz\"qux"))
