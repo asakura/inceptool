@@ -1,0 +1,275 @@
+#! Suite 6: Compound commands
+
+# === Subshells ===
+
+=== simple
+(echo foo)
+---
+(subshell (command (word "echo") (word "foo")))
+---
+
+
+=== multiple commands
+(echo foo; echo bar)
+---
+(subshell (semi (command (word "echo") (word "foo")) (command (word "echo") (word "bar"))))
+---
+
+
+=== and
+(cmd1 && cmd2)
+---
+(subshell (and (command (word "cmd1")) (command (word "cmd2"))))
+---
+
+
+=== or
+(cmd1 || cmd2)
+---
+(subshell (or (command (word "cmd1")) (command (word "cmd2"))))
+---
+
+
+=== pipeline
+(echo foo | cat)
+---
+(subshell (pipeline (command (word "echo") (word "foo")) (command (word "cat"))))
+---
+
+
+=== complex pipeline
+(cat file | grep pattern | head -5)
+---
+(subshell (pipeline (command (word "cat") (word "file")) (command (word "grep") (word "pattern")) (command (word "head") (word "-5"))))
+---
+
+
+=== no spaces
+(echo foo)
+---
+(subshell (command (word "echo") (word "foo")))
+---
+
+
+# === Nested subshells ===
+# Note: (( is arithmetic command, use spaces for nested subshells: ( (cmd) )
+
+=== simple
+( (echo foo) )
+---
+(subshell (subshell (command (word "echo") (word "foo"))))
+---
+
+
+=== triple nesting
+( ( (echo foo) ) )
+---
+(subshell (subshell (subshell (command (word "echo") (word "foo")))))
+---
+
+
+=== nested list
+( (echo a; echo b) )
+---
+(subshell (subshell (semi (command (word "echo") (word "a")) (command (word "echo") (word "b")))))
+---
+
+
+# === Subshells in pipelines ===
+
+=== start
+(echo foo) | cat
+---
+(pipeline (subshell (command (word "echo") (word "foo"))) (command (word "cat")))
+---
+
+
+=== end
+echo foo | (cat)
+---
+(pipeline (command (word "echo") (word "foo")) (subshell (command (word "cat"))))
+---
+
+
+=== middle
+echo foo | (grep foo) | wc -l
+---
+(pipeline (command (word "echo") (word "foo")) (subshell (command (word "grep") (word "foo"))) (command (word "wc") (word "-l")))
+---
+
+
+=== multiple
+(echo foo) | (cat) | (wc)
+---
+(pipeline (subshell (command (word "echo") (word "foo"))) (subshell (command (word "cat"))) (subshell (command (word "wc"))))
+---
+
+
+# === Subshells in lists ===
+
+=== AND
+(echo foo) && echo bar
+---
+(and (subshell (command (word "echo") (word "foo"))) (command (word "echo") (word "bar")))
+---
+
+
+=== OR
+(false) || echo fallback
+---
+(or (subshell (command (word "false"))) (command (word "echo") (word "fallback")))
+---
+
+
+=== background
+(sleep 10) &
+---
+(bg (subshell (command (word "sleep") (word "10"))))
+---
+
+
+=== with cd
+(cd /tmp && ls)
+---
+(subshell (and (command (word "cd") (word "/tmp")) (command (word "ls"))))
+---
+
+
+# === Brace groups ===
+
+=== simple
+{ echo foo; }
+---
+(brace-group (command (word "echo") (word "foo")))
+---
+
+
+=== multiple commands
+{ echo foo; echo bar; }
+---
+(brace-group (semi (command (word "echo") (word "foo")) (command (word "echo") (word "bar"))))
+---
+
+
+=== AND
+{ cmd1 && cmd2; }
+---
+(brace-group (and (command (word "cmd1")) (command (word "cmd2"))))
+---
+
+
+=== OR
+{ cmd1 || cmd2; }
+---
+(brace-group (or (command (word "cmd1")) (command (word "cmd2"))))
+---
+
+
+=== pipeline
+{ echo foo | cat; }
+---
+(brace-group (pipeline (command (word "echo") (word "foo")) (command (word "cat"))))
+---
+
+
+=== complex list
+{ echo a && echo b || echo c; }
+---
+(brace-group (or (and (command (word "echo") (word "a")) (command (word "echo") (word "b"))) (command (word "echo") (word "c"))))
+---
+
+
+# === Nested brace groups ===
+
+=== simple
+{ { echo foo; }; }
+---
+(brace-group (brace-group (command (word "echo") (word "foo"))))
+---
+
+
+=== inside subshell
+({ echo foo; })
+---
+(subshell (brace-group (command (word "echo") (word "foo"))))
+---
+
+
+=== subshell inside
+{ (echo foo); }
+---
+(brace-group (subshell (command (word "echo") (word "foo"))))
+---
+
+
+=== subshell inside no space
+{(echo foo)}
+---
+(brace-group (subshell (command (word "echo") (word "foo"))))
+---
+
+
+# === Brace groups in pipelines ===
+
+=== simple
+{ echo foo; } | cat
+---
+(pipeline (brace-group (command (word "echo") (word "foo"))) (command (word "cat")))
+---
+
+
+=== at end
+echo foo | { cat; }
+---
+(pipeline (command (word "echo") (word "foo")) (brace-group (command (word "cat"))))
+---
+
+
+# === Brace groups in lists ===
+
+=== AND
+{ echo foo; } && echo bar
+---
+(and (brace-group (command (word "echo") (word "foo"))) (command (word "echo") (word "bar")))
+---
+
+
+=== OR
+{ false; } || echo fallback
+---
+(or (brace-group (command (word "false"))) (command (word "echo") (word "fallback")))
+---
+
+
+# === Tree sitter bash ===
+
+=== background with path
+( ./start-server --port=80 ) &
+---
+(bg (subshell (command (word "./start-server") (word "--port=80"))))
+---
+
+
+=== brace with or fallback
+{ echo "b"; return 0; }
+---
+(brace-group (semi (command (word "echo") (word "\"b\"")) (command (word "return") (word "0"))))
+---
+
+
+# === Complex ===
+
+=== subshell and brace mixed
+(echo a) && { echo b; }
+---
+(and (subshell (command (word "echo") (word "a"))) (brace-group (command (word "echo") (word "b"))))
+---
+
+
+=== pipeline with both types
+{ echo a; } | (cat) | { wc; }
+---
+(pipeline (brace-group (command (word "echo") (word "a"))) (subshell (command (word "cat"))) (brace-group (command (word "wc"))))
+---
+
+

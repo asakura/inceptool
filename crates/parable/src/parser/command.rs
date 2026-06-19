@@ -128,6 +128,21 @@ fn parse_and_or<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> 
 /// backgrounding is meaningful even with nothing following it.
 #[must_use = "parses a command list; discarding ignores syntax structures"]
 pub(super) fn parse_list<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
+    parse_list_until(input, |_| false)
+}
+
+/// Parses a `list`, like [`parse_list`], but stops folding once `stop` reports the next token
+/// starts the caller's own closing delimiter — used by `grouping::parse_brace_group` so a
+/// trailing `;` before `}` doesn't make this function try to parse one `and_or` too many and
+/// hand `}` (which lexes as a plain [`Token::Word`]) to [`parse_base_command`] as a command name.
+#[must_use = "parses a command list; discarding ignores syntax structures"]
+pub(super) fn parse_list_until<'a, F>(
+    input: &mut ParserStream<'a>,
+    stop: F,
+) -> ModalResult<Statement<'a>>
+where
+    F: Fn(&ParserStream<'a>) -> bool,
+{
     let mut current = parse_and_or(input)?;
 
     loop {
@@ -141,7 +156,11 @@ pub(super) fn parse_list<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statem
             break;
         };
 
-        let next = parse_and_or(input).ok();
+        let next = if stop(input) {
+            None
+        } else {
+            parse_and_or(input).ok()
+        };
 
         current = match (sep, next) {
             (Token::Amp, next) => Statement::Background {

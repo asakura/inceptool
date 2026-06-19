@@ -453,7 +453,7 @@ impl fmt::Debug for Statement<'_> {
                 write!(f, ")")
             }
             Statement::BraceGroup { body } => {
-                write!(f, "(brace_group")?;
+                write!(f, "(brace-group")?;
 
                 for stmt in body {
                     write!(f, " {stmt:?}")?;
