@@ -1,6 +1,9 @@
 //! Security-rule scanning over a parsed script — see [`Engine`] and [`Rule`].
 
-use crate::{taint::Environment, types::Statement};
+use crate::{
+    taint::Environment,
+    types::{Spanned, Statement},
+};
 
 use std::{borrow::Cow, fmt};
 
@@ -59,7 +62,12 @@ pub trait Rule {
     fn id(&self) -> &'static str;
 
     /// Checks `stmt`, pushing a [`Finding`] for each problem found.
-    fn check<'a>(&self, stmt: &Statement<'a>, env: &Environment, findings: &mut Vec<Finding<'a>>);
+    fn check<'a>(
+        &self,
+        stmt: &Spanned<Statement<'a>>,
+        env: &Environment,
+        findings: &mut Vec<Finding<'a>>,
+    );
 }
 
 /// Runs a set of [`Rule`]s over a script's statements, threading one [`Environment`] through
@@ -95,7 +103,7 @@ impl<'r> Engine<'r> {
     /// Walks `statements` (and their nested bodies) in source order, running every registered
     /// rule against each one, and returns every finding produced.
     #[must_use = "running the engine has no effect unless the caller inspects the findings"]
-    pub fn run<'a>(&self, statements: &[Statement<'a>]) -> Vec<Finding<'a>> {
+    pub fn run<'a>(&self, statements: &[Spanned<Statement<'a>>]) -> Vec<Finding<'a>> {
         let mut env = Environment::new();
         let mut findings = Vec::new();
         self.visit_all(statements, &mut env, &mut findings);
@@ -104,7 +112,7 @@ impl<'r> Engine<'r> {
 
     fn visit_all<'a>(
         &self,
-        statements: &[Statement<'a>],
+        statements: &[Spanned<Statement<'a>>],
         env: &mut Environment,
         findings: &mut Vec<Finding<'a>>,
     ) {
@@ -115,7 +123,7 @@ impl<'r> Engine<'r> {
 
     fn visit<'a>(
         &self,
-        stmt: &Statement<'a>,
+        stmt: &Spanned<Statement<'a>>,
         env: &mut Environment,
         findings: &mut Vec<Finding<'a>>,
     ) {
@@ -125,7 +133,7 @@ impl<'r> Engine<'r> {
 
         env.apply_statement(stmt);
 
-        match stmt {
+        match &stmt.inner {
             Statement::Command { .. } => {}
             Statement::ForLoop { body, .. } => self.visit(body, env, findings),
             Statement::If {
@@ -188,8 +196,13 @@ impl Rule for TaintedDangerousCommand {
         "tainted-dangerous-command"
     }
 
-    fn check<'a>(&self, stmt: &Statement<'a>, env: &Environment, findings: &mut Vec<Finding<'a>>) {
-        let Statement::Command { name, args } = stmt else {
+    fn check<'a>(
+        &self,
+        stmt: &Spanned<Statement<'a>>,
+        env: &Environment,
+        findings: &mut Vec<Finding<'a>>,
+    ) {
+        let Statement::Command { name, args } = &stmt.inner else {
             return;
         };
 
@@ -225,9 +238,15 @@ mod tests {
 
         #[rstest]
         fn flags_eval_of_tainted_positional_param() -> Result<(), TestError> {
-            let statements = vec![Statement::Command {
-                name: "eval".into(),
-                args: vec![Expr::VarRef("1")],
+            let statements = vec![Spanned {
+                inner: Statement::Command {
+                    name: "eval".into(),
+                    args: vec![Spanned {
+                        inner: Expr::VarRef("1"),
+                        span: 0..0,
+                    }],
+                },
+                span: 0..0,
             }];
 
             let rule = TaintedDangerousCommand;
@@ -246,9 +265,15 @@ mod tests {
 
         #[rstest]
         fn does_not_flag_eval_of_constant() -> Result<(), TestError> {
-            let statements = vec![Statement::Command {
-                name: "eval".into(),
-                args: vec![Expr::Literal("echo hi".into())],
+            let statements = vec![Spanned {
+                inner: Statement::Command {
+                    name: "eval".into(),
+                    args: vec![Spanned {
+                        inner: Expr::Literal("echo hi".into()),
+                        span: 0..0,
+                    }],
+                },
+                span: 0..0,
             }];
 
             let rule = TaintedDangerousCommand;
@@ -262,13 +287,22 @@ mod tests {
         #[rstest]
         fn flags_eval_of_variable_assigned_from_positional_param() -> Result<(), TestError> {
             let statements = vec![
-                Statement::Command {
-                    name: "cmd=$1".into(),
-                    args: vec![],
+                Spanned {
+                    inner: Statement::Command {
+                        name: "cmd=$1".into(),
+                        args: vec![],
+                    },
+                    span: 0..0,
                 },
-                Statement::Command {
-                    name: "eval".into(),
-                    args: vec![Expr::VarRef("cmd")],
+                Spanned {
+                    inner: Statement::Command {
+                        name: "eval".into(),
+                        args: vec![Spanned {
+                            inner: Expr::VarRef("cmd"),
+                            span: 0..0,
+                        }],
+                    },
+                    span: 0..0,
                 },
             ];
 
@@ -282,9 +316,15 @@ mod tests {
 
         #[rstest]
         fn does_not_flag_ordinary_commands() -> Result<(), TestError> {
-            let statements = vec![Statement::Command {
-                name: "echo".into(),
-                args: vec![Expr::VarRef("1")],
+            let statements = vec![Spanned {
+                inner: Statement::Command {
+                    name: "echo".into(),
+                    args: vec![Spanned {
+                        inner: Expr::VarRef("1"),
+                        span: 0..0,
+                    }],
+                },
+                span: 0..0,
             }];
 
             let rule = TaintedDangerousCommand;
@@ -297,16 +337,28 @@ mod tests {
 
         #[rstest]
         fn finds_taint_inside_nested_if_body() -> Result<(), TestError> {
-            let statements = vec![Statement::If {
-                condition: Box::new(Statement::Command {
-                    name: "true".into(),
-                    args: vec![],
-                }),
-                then_branch: Box::new(Statement::Command {
-                    name: "eval".into(),
-                    args: vec![Expr::VarRef("1")],
-                }),
-                else_branch: None,
+            let statements = vec![Spanned {
+                inner: Statement::If {
+                    condition: Box::new(Spanned {
+                        inner: Statement::Command {
+                            name: "true".into(),
+                            args: vec![],
+                        },
+                        span: 0..0,
+                    }),
+                    then_branch: Box::new(Spanned {
+                        inner: Statement::Command {
+                            name: "eval".into(),
+                            args: vec![Spanned {
+                                inner: Expr::VarRef("1"),
+                                span: 0..0,
+                            }],
+                        },
+                        span: 0..0,
+                    }),
+                    else_branch: None,
+                },
+                span: 0..0,
             }];
 
             let rule = TaintedDangerousCommand;

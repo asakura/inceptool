@@ -51,7 +51,8 @@ pub mod types;
 pub use error::{ParseError, ParseErrorDisplay};
 pub use stream::TokenStream;
 pub use types::{
-    Expr, LexerState, LogicalOp, PipeOp, Redirect, RedirectKind, RedirectTarget, Statement, Token,
+    Expr, LexerState, LogicalOp, PipeOp, Redirect, RedirectKind, RedirectTarget, Spanned,
+    Statement, Token,
 };
 
 use parser::parse_statement;
@@ -65,7 +66,7 @@ use winnow::stream::Stream as _;
 ///
 /// Returns an error if parsing fails before the token stream is exhausted.
 #[must_use = "parses the token stream; discarding ignores syntax structures or errors"]
-fn parse_statements<'a>(stream: &mut TokenStream<'a>) -> ModalResult<Vec<Statement<'a>>> {
+fn parse_statements<'a>(stream: &mut TokenStream<'a>) -> ModalResult<Vec<Spanned<Statement<'a>>>> {
     let mut statements = Vec::new();
 
     while stream.peek_token().is_some() {
@@ -78,7 +79,7 @@ fn parse_statements<'a>(stream: &mut TokenStream<'a>) -> ModalResult<Vec<Stateme
 /// Renders `statements` in the `{:?}`-debug form used to compare against corpus-test
 /// expectations, one statement per line.
 #[must_use = "builds the rendered AST; discarding it loses the rendered output"]
-fn render_statements(statements: &[Statement<'_>]) -> String {
+fn render_statements(statements: &[Spanned<Statement<'_>>]) -> String {
     statements
         .iter()
         .map(|s| format!("{s:?}"))
@@ -95,7 +96,7 @@ fn render_statements(statements: &[Statement<'_>]) -> String {
 ///
 /// Returns an error if lexing or parsing fails before end of input is reached.
 #[must_use = "parses the program; discarding ignores syntax structures or errors"]
-pub fn parse_program(input: &str) -> ModalResult<Vec<Statement<'_>>> {
+pub fn parse_program(input: &str) -> ModalResult<Vec<Spanned<Statement<'_>>>> {
     let mut stream = TokenStream::new(input);
     let parsed = parse_statements(&mut stream);
 
