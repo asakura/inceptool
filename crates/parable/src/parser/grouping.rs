@@ -2,10 +2,10 @@
 
 use super::{
     command::parse_list_until,
-    {ParserStream, at_keyword},
+    {ParserStream, at_keyword, spanned},
 };
 
-use crate::types::{Statement, Token};
+use crate::types::{Spanned, Statement, Token};
 
 use winnow::{
     ModalResult, Parser as _, combinator::cut_err, error::StrContext, stream::Stream as _,
@@ -17,7 +17,10 @@ use winnow::{
 const KW_RBRACE: &str = "}";
 
 #[must_use = "parses a subshell; discarding ignores syntax structures"]
-pub(super) fn parse_subshell<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
+pub(super) fn parse_subshell<'a>(
+    input: &mut ParserStream<'a>,
+) -> ModalResult<Spanned<Statement<'a>>> {
+    let start_offset = input.current_span_start();
     any.verify(|t| matches!(t, Token::LParen))
         .void()
         .parse_next(input)?;
@@ -29,9 +32,13 @@ pub(super) fn parse_subshell<'a>(input: &mut ParserStream<'a>) -> ModalResult<St
             .void()
             .parse_next(rest)?;
 
-        Ok(Statement::Subshell {
-            body: Box::new(body),
-        })
+        Ok(spanned(
+            start_offset,
+            rest,
+            Statement::Subshell {
+                body: Box::new(body),
+            },
+        ))
     })
     .context(StrContext::Label("subshell"))
     .parse_next(input)
@@ -47,7 +54,10 @@ pub(super) fn parse_subshell<'a>(input: &mut ParserStream<'a>) -> ModalResult<St
 /// same pattern `control_flow` uses for `done`/`fi`/`else` — to stop before trying to fold one
 /// `and_or` too many and handing `}` to `parse_base_command` as a bogus command name.
 #[must_use = "parses a brace group; discarding ignores syntax structures"]
-pub(super) fn parse_brace_group<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
+pub(super) fn parse_brace_group<'a>(
+    input: &mut ParserStream<'a>,
+) -> ModalResult<Spanned<Statement<'a>>> {
+    let start_offset = input.current_span_start();
     any.verify(|t| matches!(t, Token::LBrace) || matches!(t, Token::Word(w) if w.as_ref() == "{"))
         .void()
         .parse_next(input)?;
@@ -61,9 +71,13 @@ pub(super) fn parse_brace_group<'a>(input: &mut ParserStream<'a>) -> ModalResult
         .void()
         .parse_next(rest)?;
 
-        Ok(Statement::BraceGroup {
-            body: Box::new(body),
-        })
+        Ok(spanned(
+            start_offset,
+            rest,
+            Statement::BraceGroup {
+                body: Box::new(body),
+            },
+        ))
     })
     .context(StrContext::Label("brace group"))
     .parse_next(input)
@@ -72,3 +86,62 @@ pub(super) fn parse_brace_group<'a>(input: &mut ParserStream<'a>) -> ModalResult
 // `parse_subshell`'s rejection of an empty `()` and propagation of a malformed nested compound
 // command's error are covered by the "Syntax errors" group in `corpus/06_compound.tests`,
 // rather than duplicated here.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::stream::TokenStream;
+
+    #[derive(Debug, thiserror::Error)]
+    enum TestError {
+        #[error("Test failure: {0}")]
+        Failure(String),
+    }
+
+    mod parse_subshell {
+        use super::*;
+
+        use rstest::rstest;
+
+        #[rstest]
+        fn span_covers_the_parens_and_body() -> Result<(), TestError> {
+            let mut stream = TokenStream::new("(echo a)");
+            let parsed = super::parse_subshell(&mut stream)
+                .map_err(|e| TestError::Failure(e.to_string()))?;
+
+            assert_eq!(parsed.span, 0..8);
+
+            let Statement::Subshell { body } = parsed.inner else {
+                return Err(TestError::Failure("expected a Subshell statement".into()));
+            };
+
+            assert_eq!(body.span, 1..7);
+
+            Ok(())
+        }
+    }
+
+    mod parse_brace_group {
+        use super::*;
+
+        use rstest::rstest;
+
+        #[rstest]
+        fn span_covers_the_braces_and_body() -> Result<(), TestError> {
+            let mut stream = TokenStream::new("{ echo a; }");
+            let parsed = super::parse_brace_group(&mut stream)
+                .map_err(|e| TestError::Failure(e.to_string()))?;
+
+            assert_eq!(parsed.span, 0..11);
+
+            let Statement::BraceGroup { body } = parsed.inner else {
+                return Err(TestError::Failure("expected a BraceGroup statement".into()));
+            };
+
+            assert_eq!(body.span, 2..8);
+
+            Ok(())
+        }
+    }
+}
