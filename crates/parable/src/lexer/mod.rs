@@ -53,10 +53,6 @@
     clippy::multiple_inherent_impl,
     reason = "methods are split across files by category"
 )]
-#![expect(
-    clippy::field_scoped_visibility_modifiers,
-    reason = "fields are shared within the module hierarchy"
-)]
 
 mod operator;
 mod traits;
