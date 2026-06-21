@@ -257,7 +257,7 @@ fn tool_names_match(tool_names: &[&str], event_tool_name: Option<&str>) -> bool 
 ///
 /// `PermissionRequest` is handled separately because its decision is conveyed via
 /// `behavior` (a [`PermissionBehavior`](inceptool_protocol::PermissionBehavior)),
-/// not the generic [`Decision`](inceptool_protocol::Decision) accessor.
+/// not the generic [`inceptool_protocol::Decision`] accessor.
 ///
 /// Only [`Decision::Deny`] and [`Decision::Block`] are terminal decisions: they
 /// immediately abort the pipeline. [`Decision::Allow`] and [`Decision::Ask`] are

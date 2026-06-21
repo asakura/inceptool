@@ -152,7 +152,7 @@ fn short_rev(rev: &str) -> &str {
 /// Returns the contents of `file_path` as committed at `HEAD`, or `None` if that
 /// can't be determined (not a git repository, file untracked, no `HEAD`, etc.).
 ///
-/// Discovers the enclosing repository via [`gix::discover`], then peels `HEAD`
+/// Discovers the enclosing repository via [`gix::discover()`], then peels `HEAD`
 /// down to its tree and looks up the blob at `file_path`'s location relative to
 /// the repository's working directory.
 fn get_head_content(file_path: &str) -> Option<String> {

@@ -1,5 +1,5 @@
 //! Redirection operators (`<`, `>`, `>>`, `>|`, `<>`, `<&`, `>&`, `&>`, `&>>`, `<<<`) attached to
-//! a [`Statement`] via [`Statement::Redirected`] — see [`parse_redirect`].
+//! a [`crate::Statement`] via [`crate::Statement::Redirected`] — see `parse_redirect`.
 //!
 //! Heredocs (`<<`, `<<-`) are deliberately not handled here: capturing their body requires the
 //! lexer to switch into a line-scanning mode keyed off the delimiter word
