@@ -11,7 +11,7 @@ use crate::types::{LogicalOp, PipeOp, Spanned, Statement, Token};
 
 use winnow::{
     ModalResult, Parser as _,
-    combinator::{alt, opt},
+    combinator::{alt, cut_err, opt},
     token::any,
 };
 
@@ -84,7 +84,12 @@ fn parse_pipeline<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<State
             Token::PipeAmp => PipeOp::StdoutStderr,
             _ => PipeOp::Stdout,
         };
-        let next_cmd = parse_command(input)?;
+        skip_newlines(input);
+        let next_cmd = cut_err(super::expect_command(
+            super::Expected::Command,
+            super::parse_command,
+        ))
+        .parse_next(input)?;
         tail.push((op, next_cmd));
     }
 
@@ -131,7 +136,12 @@ fn parse_and_or<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<Stateme
         // this `?` propagate (rather than swallowing the error and silently ending the chain)
         // matters once it's a `Cut` error from a malformed compound command: see
         // `parser::control_flow`'s empty-body tests for what silently swallowing it used to do.
-        let right = parse_pipeline(input)?;
+        skip_newlines(input);
+        let right = cut_err(super::expect_command(
+            super::Expected::Command,
+            parse_pipeline,
+        ))
+        .parse_next(input)?;
 
         current = spanned(
             start_offset,
@@ -153,7 +163,7 @@ fn parse_and_or<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<Stateme
 /// backgrounding is meaningful even with nothing following it.
 #[must_use = "parses a command list; discarding ignores syntax structures"]
 pub(super) fn parse_list<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<Statement<'a>>> {
-    parse_list_until(input, |_| false)
+    parse_list_until(super::Expected::Command, input, |_| false)
 }
 
 /// Parses a `list`, like [`parse_list`], but stops folding once `stop` reports the next token
@@ -162,6 +172,7 @@ pub(super) fn parse_list<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanne
 /// hand `}` (which lexes as a plain [`Token::Word`]) to [`parse_base_command`] as a command name.
 #[must_use = "parses a command list; discarding ignores syntax structures"]
 pub(super) fn parse_list_until<'a, F>(
+    expected: super::Expected,
     input: &mut ParserStream<'a>,
     stop: F,
 ) -> ModalResult<Spanned<Statement<'a>>>
@@ -171,7 +182,7 @@ where
     let start_offset = input.current_span_start();
     skip_newlines(input);
 
-    let mut current = parse_and_or(input)?;
+    let mut current = cut_err(super::expect_command(expected, parse_and_or)).parse_next(input)?;
 
     loop {
         let sep_result: ModalResult<Token<'_>> = any

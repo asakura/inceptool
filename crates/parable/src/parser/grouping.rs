@@ -1,6 +1,7 @@
 //! Subshells (`(...)`) and brace groups (`{ ...; }`) — [`parse_subshell`], [`parse_brace_group`].
 
 use super::{
+    Expected,
     command::parse_list_until,
     {ParserStream, at_keyword, spanned},
 };
@@ -8,7 +9,10 @@ use super::{
 use crate::types::{Spanned, Statement, Token};
 
 use winnow::{
-    ModalResult, Parser as _, combinator::cut_err, error::StrContext, stream::Stream as _,
+    ModalResult, Parser as _,
+    combinator::cut_err,
+    error::{StrContext, StrContextValue},
+    stream::Stream as _,
     token::any,
 };
 
@@ -23,13 +27,17 @@ pub(super) fn parse_subshell<'a>(
     let start_offset = input.current_span_start();
     any.verify(|t| matches!(t, Token::LParen))
         .void()
+        .context(StrContext::Expected(StrContextValue::CharLiteral('(')))
         .parse_next(input)?;
 
     cut_err(|rest: &mut ParserStream<'a>| {
-        let body = parse_list_until(rest, |inp| matches!(inp.peek_token(), Some(Token::RParen)))?;
+        let body = parse_list_until(Expected::Standalone("subshell body"), rest, |inp| {
+            matches!(inp.peek_token(), Some(Token::RParen))
+        })?;
 
         any.verify(|t| matches!(t, Token::RParen))
             .void()
+            .context(StrContext::Expected(StrContextValue::CharLiteral(')')))
             .parse_next(rest)?;
 
         Ok(spanned(
@@ -60,15 +68,19 @@ pub(super) fn parse_brace_group<'a>(
     let start_offset = input.current_span_start();
     any.verify(|t| matches!(t, Token::LBrace) || matches!(t, Token::Word(w) if w.as_ref() == "{"))
         .void()
+        .context(StrContext::Expected(StrContextValue::CharLiteral('{')))
         .parse_next(input)?;
 
     cut_err(|rest: &mut ParserStream<'a>| {
-        let body = parse_list_until(rest, |inp| at_keyword(inp, KW_RBRACE))?;
+        let body = parse_list_until(Expected::Standalone("brace group body"), rest, |inp| {
+            at_keyword(inp, KW_RBRACE)
+        })?;
 
         any.verify(|t| {
             matches!(t, Token::RBrace) || matches!(t, Token::Word(w) if w.as_ref() == "}")
         })
         .void()
+        .context(StrContext::Expected(StrContextValue::CharLiteral('}')))
         .parse_next(rest)?;
 
         Ok(spanned(

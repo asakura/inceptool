@@ -566,35 +566,35 @@ if cat <<< "test"; then echo yes; fi
 === empty then body is a syntax error
 if true; then ; fi
 --- <error>
-Parse error: if statement
+Parse error at line 1, column 15: missing if body, but found `;`
 ---
 
 
 === empty else body is a syntax error
 if true; then echo x; else ; fi
 --- <error>
-Parse error: if statement
+Parse error at line 1, column 28: missing else body, but found `;`
 ---
 
 
 === if without then is a syntax error
 if true; echo x; fi
 --- <error>
-Parse error: if statement
+Parse error at line 1, column 20: expected `then` for the if statement, but found end of file
 ---
 
 
 === if without fi is a syntax error
 if true; then echo x
 --- <error>
-Parse error: if statement
+Parse error at line 1, column 21: expected `fi` for the if statement, but found end of file
 ---
 
 
 === elif without then is a syntax error
 if a; then b; elif c; d; fi
 --- <error>
-Parse error: if statement
+Parse error at line 1, column 28: expected `then` for the if statement, but found end of file
 ---
 
 

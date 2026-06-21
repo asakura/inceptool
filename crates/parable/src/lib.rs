@@ -48,7 +48,7 @@ pub mod stream;
 pub mod taint;
 pub mod types;
 
-pub use error::{ParseError, ParseErrorDisplay};
+pub use error::ParseError;
 pub use stream::TokenStream;
 pub use types::{
     Expr, LexerState, LogicalOp, PipeOp, Redirect, RedirectKind, RedirectTarget, Spanned,
@@ -57,7 +57,6 @@ pub use types::{
 
 use parser::parse_statement;
 
-use winnow::ModalResult;
 use winnow::stream::Stream as _;
 
 /// Parses a full token `stream` into its top-level statements.
@@ -66,7 +65,9 @@ use winnow::stream::Stream as _;
 ///
 /// Returns an error if parsing fails before the token stream is exhausted.
 #[must_use = "parses the token stream; discarding ignores syntax structures or errors"]
-fn parse_statements<'a>(stream: &mut TokenStream<'a>) -> ModalResult<Vec<Spanned<Statement<'a>>>> {
+fn parse_statements<'a>(
+    stream: &mut TokenStream<'a>,
+) -> winnow::ModalResult<Vec<Spanned<Statement<'a>>>> {
     let mut statements = Vec::new();
 
     while stream.peek_token().is_some() {
@@ -96,15 +97,24 @@ fn render_statements(statements: &[Spanned<Statement<'_>>]) -> String {
 ///
 /// Returns an error if lexing or parsing fails before end of input is reached.
 #[must_use = "parses the program; discarding ignores syntax structures or errors"]
-pub fn parse_program(input: &str) -> ModalResult<Vec<Spanned<Statement<'_>>>> {
+pub fn parse_program(input: &str) -> Result<Vec<Spanned<Statement<'_>>>, ParseError<'_>> {
     let mut stream = TokenStream::new(input);
     let parsed = parse_statements(&mut stream);
 
     if let Some(lex_error) = stream.take_lex_error() {
-        return Err(lex_error);
+        let offset = stream.current_span_start();
+        return Err(ParseError::from_lex_error(input, &lex_error, offset));
     }
 
-    parsed
+    match parsed {
+        Ok(statements) => Ok(statements),
+        Err(err_mode) => {
+            let offset = stream.current_span_start();
+            let found = stream.peek_token();
+
+            Err(ParseError::from_winnow(input, &err_mode, offset, found))
+        }
+    }
 }
 
 /// Lexes and parses `input` into its top-level statements, rendering the resulting AST
@@ -114,6 +124,38 @@ pub fn parse_program(input: &str) -> ModalResult<Vec<Spanned<Statement<'_>>>> {
 ///
 /// Returns an error if lexing or parsing fails before end of input is reached.
 #[must_use = "parses the program; discarding ignores syntax structures or errors"]
-pub fn render_program_ast(input: &str) -> ModalResult<String> {
+pub fn render_program_ast(input: &str) -> Result<String, ParseError<'_>> {
     Ok(render_statements(&parse_program(input)?))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod parse_program {
+        use super::*;
+
+        use core::assert_matches;
+        use rstest::rstest;
+
+        #[rstest]
+        fn a_lex_failure_reports_a_lexer_error() {
+            // U+000B (vertical tab) is whitespace per `char::is_whitespace` but not skipped by
+            // the lexer's `skip_whitespace` (spaces/tabs only), nor claimed by any operator, so
+            // `parse_word` backtracks having consumed zero characters — see `lexer::word`'s Edge
+            // Cases doc. This is the only path that currently reaches `take_lex_error`, since
+            // every other lex failure is itself a `parse_word`/`parse_operator` backtrack that
+            // bottoms out the same way.
+            let result = parse_program("echo a\u{B}b");
+
+            assert_matches!(
+                result,
+                Err(ParseError::Lexer {
+                    line: 1,
+                    column: 7,
+                    expected: None
+                })
+            );
+        }
+    }
 }

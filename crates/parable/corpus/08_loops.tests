@@ -837,56 +837,56 @@ for x in a b; { echo $x; }
 === empty while body is a syntax error
 while true; do ; done
 --- <error>
-Parse error: while loop
+Parse error at line 1, column 16: missing loop body, but found `;`
 ---
 
 
 === empty until body is a syntax error
 until true; do ; done
 --- <error>
-Parse error: until loop
+Parse error at line 1, column 16: missing loop body, but found `;`
 ---
 
 
 === empty for body is a syntax error
 for x in 1; do ; done
 --- <error>
-Parse error: for loop
+Parse error at line 1, column 16: missing for loop body, but found `;`
 ---
 
 
 === for with in clause requires a separator before do
 for x in a b do echo $x; done
 --- <error>
-Parse error: for loop
+Parse error at line 1, column 26: expected `{` for the for loop, but found `done`
 ---
 
 
 === while without do is a syntax error
 while true; echo x; done
 --- <error>
-Parse error: while loop
+Parse error at line 1, column 25: expected `do` for the while loop, but found end of file
 ---
 
 
 === while without done is a syntax error
 while true; do echo x
 --- <error>
-Parse error: while loop
+Parse error at line 1, column 22: expected `done` for the while loop, but found end of file
 ---
 
 
 === until without do is a syntax error
 until true; echo x; done
 --- <error>
-Parse error: until loop
+Parse error at line 1, column 25: expected `do` for the until loop, but found end of file
 ---
 
 
 === for without do or done is a syntax error
 for x in a
 --- <error>
-Parse error: for loop
+Parse error at line 1, column 11: malformed for loop, but found end of file
 ---
 
 

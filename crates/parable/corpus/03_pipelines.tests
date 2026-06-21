@@ -189,14 +189,14 @@ cmd1|&cmd2
 === dangling pipe is a syntax error
 echo a |
 --- <error>
-Parse error: invalid syntax
+Parse error at line 1, column 9: expected a command, but found end of file
 ---
 
 
 === dangling pipe amp is a syntax error
 echo a |&
 --- <error>
-Parse error: invalid syntax
+Parse error at line 1, column 10: expected a command, but found end of file
 ---
 
 

@@ -1,6 +1,7 @@
 //! `case`/`in`/`esac` — [`parse_case`].
 
 use super::{
+    Expected,
     command::parse_list_until,
     word::{parse_literal, parse_pattern_word},
     {ParserStream, at_keyword, consume_keyword, skip_newlines, spanned},
@@ -11,7 +12,7 @@ use crate::types::{CaseArm, Spanned, Statement, Token};
 use winnow::{
     ModalResult, Parser as _,
     combinator::{cut_err, opt},
-    error::StrContext,
+    error::{StrContext, StrContextValue},
     stream::Stream as _,
     token::any,
 };
@@ -78,6 +79,7 @@ fn parse_case_arm<'a>(input: &mut ParserStream<'a>) -> ModalResult<CaseArm<'a>> 
 
     let _: Token<'_> = any
         .verify(|t: &Token<'_>| matches!(t, Token::RParen))
+        .context(StrContext::Expected(StrContextValue::CharLiteral(')')))
         .parse_next(input)?;
 
     skip_newlines(input);
@@ -85,9 +87,11 @@ fn parse_case_arm<'a>(input: &mut ParserStream<'a>) -> ModalResult<CaseArm<'a>> 
     let body = if at_arm_terminator(input) || at_keyword(input, KW_ESAC) {
         None
     } else {
-        Some(Box::new(parse_list_until(input, |inp| {
-            at_keyword(inp, KW_ESAC)
-        })?))
+        Some(Box::new(parse_list_until(
+            Expected::Standalone("case arm body"),
+            input,
+            |inp| at_keyword(inp, KW_ESAC),
+        )?))
     };
 
     skip_newlines(input);

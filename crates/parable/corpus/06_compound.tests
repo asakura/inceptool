@@ -278,28 +278,28 @@ echo foo | { cat; }
 === empty subshell is a syntax error
 ()
 --- <error>
-Parse error: subshell
+Parse error at line 1, column 2: missing subshell body, but found `)`
 ---
 
 
 === malformed compound command inside a subshell is a syntax error not a garbage parse
 (if true; then ; fi)
 --- <error>
-Parse error: subshell: if statement
+Parse error at line 1, column 16: missing if body, but found `;`
 ---
 
 
 === unterminated subshell is a syntax error
 (echo a
 --- <error>
-Parse error: subshell
+Parse error at line 1, column 8: expected `)` for the subshell, but found end of file
 ---
 
 
 === unterminated brace group is a syntax error
 { echo a;
 --- <error>
-Parse error: brace group
+Parse error at line 1, column 10: expected `}` for the brace group, but found end of file
 ---
 
 

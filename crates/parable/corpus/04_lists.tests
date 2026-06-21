@@ -314,14 +314,14 @@ false || echo fallback
 === malformed right operand of and is a syntax error not a dropped operand
 true && if true; then ; fi
 --- <error>
-Parse error: if statement
+Parse error at line 1, column 23: missing if body, but found `;`
 ---
 
 
 === malformed statement after separator is a syntax error not a dropped statement
 echo a; if true; then ; fi
 --- <error>
-Parse error: if statement
+Parse error at line 1, column 23: missing if body, but found `;`
 ---
 
 
@@ -332,14 +332,14 @@ Parse error: if statement
 === dangling and is a syntax error
 echo a &&
 --- <error>
-Parse error: invalid syntax
+Parse error at line 1, column 10: expected a command, but found end of file
 ---
 
 
 === dangling or is a syntax error
 echo a ||
 --- <error>
-Parse error: invalid syntax
+Parse error at line 1, column 10: expected a command, but found end of file
 ---
 
 

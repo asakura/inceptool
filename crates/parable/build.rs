@@ -108,9 +108,7 @@ fn generate_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStream {
         #(#case_tokens)*
         fn parses(#[case] input: &str, #[case] expected: &str) -> Result<(), TestError> {
             let actual = inceptool_parable::render_program_ast(input).map_err(|e| {
-                TestError::Failure(format!(
-                    "Parse error: {}", inceptool_parable::ParseErrorDisplay(&e)
-                ))
+                TestError::Failure(e.to_string())
             })?;
 
             if actual != expected {
@@ -144,9 +142,7 @@ fn generate_roundtrip_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStr
         #(#case_tokens)*
         fn roundtrips(#[case] input: &str) -> Result<(), TestError> {
             let parsed = inceptool_parable::parse_program(input).map_err(|e| {
-                TestError::Failure(format!(
-                    "Parse error: {}", inceptool_parable::ParseErrorDisplay(&e)
-                ))
+                TestError::Failure(e.to_string())
             })?;
 
             let rendered = parsed
@@ -157,8 +153,7 @@ fn generate_roundtrip_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStr
 
             let reparsed = inceptool_parable::parse_program(&rendered).map_err(|e| {
                 TestError::Failure(format!(
-                    "Re-parse error on rendered bash:\n{rendered}\nError: {}",
-                    inceptool_parable::ParseErrorDisplay(&e)
+                    "Re-parse error on rendered bash:\n{rendered}\n{e}"
                 ))
             })?;
 
@@ -250,8 +245,7 @@ fn generate_error_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStream 
                     )))
                 }
                 Err(e) => {
-                    let actual_message =
-                        format!("Parse error: {}", inceptool_parable::ParseErrorDisplay(&e));
+                    let actual_message = e.to_string();
 
                     if actual_message != expected_message {
                         return Err(TestError::Failure(format!(

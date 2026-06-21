@@ -2,6 +2,7 @@
 //! [`parse_until`].
 
 use super::{
+    Expected,
     command::parse_list_until,
     word::parse_literal,
     {ParserStream, at_keyword, consume_keyword, skip_newlines, spanned},
@@ -12,7 +13,7 @@ use crate::types::{Expr, Spanned, SpecialParam, Statement, Token};
 use winnow::{
     ModalResult, Parser as _,
     combinator::{cut_err, opt},
-    error::StrContext,
+    error::{StrContext, StrContextValue},
     token::any,
 };
 
@@ -52,6 +53,7 @@ fn consume_brace(
         is_brace_token(t) || matches!(t, Token::Word(w) if w.as_ref() == word)
     })
     .void()
+    .context(StrContext::Expected(StrContextValue::StringLiteral(word)))
     .parse_next(input)
 }
 
@@ -136,7 +138,9 @@ pub(super) fn parse_for_loop<'a>(
 
         let body = if at_keyword(rest, KW_DO) {
             consume_keyword(rest, KW_DO)?;
-            let body = parse_list_until(rest, |inp| at_keyword(inp, KW_DONE))?;
+            let body = parse_list_until(Expected::Standalone("for loop body"), rest, |inp| {
+                at_keyword(inp, KW_DONE)
+            })?;
             consume_keyword(rest, KW_DONE)?;
             body
         } else {
@@ -144,7 +148,9 @@ pub(super) fn parse_for_loop<'a>(
             // are just alternate delimiters here, not a real brace-group statement, so `body`
             // isn't wrapped in `Statement::BraceGroup`.
             consume_lbrace(rest)?;
-            let body = parse_list_until(rest, |inp| at_keyword(inp, KW_RBRACE))?;
+            let body = parse_list_until(Expected::Standalone("for loop body"), rest, |inp| {
+                at_keyword(inp, KW_RBRACE)
+            })?;
             consume_rbrace(rest)?;
             body
         };
@@ -169,9 +175,11 @@ pub(super) fn parse_for_loop<'a>(
 fn parse_if_head<'a>(
     input: &mut ParserStream<'a>,
 ) -> ModalResult<(Spanned<Statement<'a>>, Spanned<Statement<'a>>)> {
-    let condition = parse_list_until(input, |inp| at_keyword(inp, KW_THEN))?;
+    let condition = parse_list_until(Expected::Standalone("if condition"), input, |inp| {
+        at_keyword(inp, KW_THEN)
+    })?;
     consume_keyword(input, KW_THEN)?;
-    let then_branch = parse_list_until(input, |inp| {
+    let then_branch = parse_list_until(Expected::Standalone("if body"), input, |inp| {
         at_keyword(inp, KW_ELIF) || at_keyword(inp, KW_ELSE) || at_keyword(inp, KW_FI)
     })?;
 
@@ -203,7 +211,9 @@ fn parse_else_clause<'a>(
         ))))
     } else if at_keyword(input, KW_ELSE) {
         consume_keyword(input, KW_ELSE)?;
-        let branch = parse_list_until(input, |inp| at_keyword(inp, KW_FI))?;
+        let branch = parse_list_until(Expected::Standalone("else body"), input, |inp| {
+            at_keyword(inp, KW_FI)
+        })?;
 
         Ok(Some(Box::new(branch)))
     } else {
@@ -249,9 +259,13 @@ fn parse_loop_clause<'a>(
     consume_keyword(input, head_keyword)?;
 
     cut_err(|rest: &mut ParserStream<'a>| {
-        let condition = parse_list_until(rest, |inp| at_keyword(inp, KW_DO))?;
+        let condition = parse_list_until(Expected::Standalone("loop condition"), rest, |inp| {
+            at_keyword(inp, KW_DO)
+        })?;
         consume_keyword(rest, KW_DO)?;
-        let body = parse_list_until(rest, |inp| at_keyword(inp, KW_DONE))?;
+        let body = parse_list_until(Expected::Standalone("loop body"), rest, |inp| {
+            at_keyword(inp, KW_DONE)
+        })?;
         consume_keyword(rest, KW_DONE)?;
 
         Ok((condition, body))
