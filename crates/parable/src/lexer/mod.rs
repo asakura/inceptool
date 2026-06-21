@@ -49,6 +49,15 @@
 //!   characters (e.g. the cursor sits on a character `parse_operator` already rejected),
 //!   `parse_word` backtracks instead of returning [`Token::Word`] with empty content.
 
+#![expect(
+    clippy::multiple_inherent_impl,
+    reason = "methods are split across files by category"
+)]
+#![expect(
+    clippy::field_scoped_visibility_modifiers,
+    reason = "fields are shared within the module hierarchy"
+)]
+
 mod operator;
 mod traits;
 mod word;
@@ -57,14 +66,20 @@ use crate::types::{LexerState, Token};
 
 use winnow::{ModalResult, Parser as _, combinator::alt, stream::Stateful, token::take_while};
 
-/// The character-level [`winnow::stream::Stream`] consumed by [`LexerStream::lex_token`], pairing the lexer's raw `&str`
-/// cursor with [`LexerState`] so context (e.g. heredoc delimiters) can travel alongside it.
+/// The character-level [`winnow::stream::Stream`] consumed by [`LexerStream::lex_token`].
+///
+/// Pairs the lexer's raw `&str` cursor with [`LexerState`] so context (e.g. heredoc
+/// delimiters) can travel alongside it.
 ///
 /// Wraps a winnow [`Stateful`] rather than aliasing it directly, so the crate can hang its own
 /// constructor and trait impls off this type — not possible through a type alias to a foreign
 /// type. Every `Stream`/`StreamIsPartial`/`Compare`/`Offset` method is a thin forward to
 /// the wrapped [`Stateful`], which already implements them correctly.
 #[derive(Debug, Clone)]
+#[expect(
+    clippy::field_scoped_visibility_modifiers,
+    reason = "shared within module hierarchy"
+)]
 pub struct LexerStream<'a>(pub(crate) Stateful<&'a str, LexerState<'a>>);
 
 impl AsRef<str> for LexerStream<'_> {
@@ -100,7 +115,7 @@ impl<'a> LexerStream<'a> {
     /// Returns an error if the token cannot be parsed.
     #[must_use = "lexes the next token; failure to use leaves stream state unchanged"]
     pub(crate) fn lex_token_with_start(&mut self) -> ModalResult<(usize, Token<'a>)> {
-        use winnow::stream::Stream;
+        use winnow::stream::Stream as _;
         self.skip_whitespace()?;
 
         let start = self.eof_offset();
