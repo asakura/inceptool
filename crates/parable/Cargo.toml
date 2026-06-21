@@ -10,9 +10,13 @@ keywords = ["parser", "bash"]
 categories = ["parsing"]
 
 [dependencies]
+miette = { workspace = true, optional = true }
 smallvec.workspace = true
 thiserror.workspace = true
 winnow.workspace = true
+
+[features]
+miette = ["dep:miette"]
 
 [dev-dependencies]
 rstest.workspace = true

@@ -1353,6 +1353,7 @@ name = "inceptool-parable"
 version = "0.1.0"
 dependencies = [
  "inceptool-corpus-parser",
+ "miette",
  "proc-macro2",
  "quote",
  "rstest",
