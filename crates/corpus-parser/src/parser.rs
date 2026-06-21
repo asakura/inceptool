@@ -23,11 +23,11 @@
 //! - Lone `\r` characters (classic Mac line endings) are treated as whitespace at
 //!   the top-level dispatch but are NOT normalized within test case content.
 //! - A case's `input`/`expected` text can contain a literal `---` or `===` line by
-//!   escaping it as `\---`/`\===` (see [`unescape_delimiter_lines`]); like CRLF
+//!   escaping it as `\---` or `\===` (see `unescape_delimiter_lines`); like CRLF
 //!   normalization, this falls back to an owned copy only when an escape is
 //!   actually present.
 //! - A case may use `--- <error>` instead of the bare `---` separator
-//!   ([`ERROR_INPUT_SEPARATOR`]) to mark itself negative: `input` must fail to
+//!   (`ERROR_INPUT_SEPARATOR`) to mark itself negative: `input` must fail to
 //!   parse, and the `expected` section holds the exact error message it must
 //!   produce instead of an AST (see [`crate::types::CaseExpectation`]).
 
@@ -315,6 +315,47 @@ fn skip_comment<'a>(
     Ok(None)
 }
 
+/// The prefix [`ERROR_INPUT_SEPARATOR`] and [`INPUT_SEPARATOR`] share, exploited by
+/// [`find_case_separator`] to scan for either in a single pass.
+const SEPARATOR_COMMON_PREFIX: &str = "\n---";
+
+/// Finds this case's separator in `text` — whichever of [`ERROR_INPUT_SEPARATOR`]/
+/// [`INPUT_SEPARATOR`] occurs first — and which [`CaseExpectation`] it marks. Checking one
+/// pattern unconditionally before the other would let a `--- <error>` belonging to some later
+/// case in the file outrun a nearer bare `---` and swallow everything in between, so whichever
+/// is *first* must win.
+///
+/// Both separators start with [`SEPARATOR_COMMON_PREFIX`], so this scans for that shared prefix
+/// once, classifying each occurrence found (and resuming the scan past it if it's neither
+/// separator verbatim), rather than running two independent full scans of `text` — one per
+/// separator — the way two separate [`str::find`] calls would.
+///
+/// Returns the separator's start offset, its byte length, and the [`CaseExpectation`] it marks.
+#[must_use = "finding the separator has no effect unless the caller uses the result"]
+fn find_case_separator(text: &str) -> Option<(usize, usize, CaseExpectation)> {
+    let mut search_from = 0;
+
+    loop {
+        let found_at = text.get(search_from..)?.find(SEPARATOR_COMMON_PREFIX)?;
+        let candidate = search_from.saturating_add(found_at);
+        let rest = text.get(candidate..)?;
+
+        if rest.starts_with(ERROR_INPUT_SEPARATOR) {
+            return Some((
+                candidate,
+                ERROR_INPUT_SEPARATOR.len(),
+                CaseExpectation::FailsToParse,
+            ));
+        }
+
+        if rest.starts_with(INPUT_SEPARATOR) {
+            return Some((candidate, INPUT_SEPARATOR.len(), CaseExpectation::Parses));
+        }
+
+        search_from = candidate.saturating_add(SEPARATOR_COMMON_PREFIX.len());
+    }
+}
+
 /// Parses a single `=== name` test case block, pushing it to the last group.
 ///
 /// Returns the remaining content after the parsed case.
@@ -348,33 +389,15 @@ fn parse_case<'a>(
         )
     })?;
 
-    // Whichever separator occurs first in `after_header` is this case's own boundary; checking
-    // one pattern unconditionally before the other would let a `--- <error>` belonging to some
-    // later case in the file outrun a nearer bare `---` and swallow everything in between.
-    let error_pos = after_header.find(ERROR_INPUT_SEPARATOR);
-    let bare_pos = after_header.find(INPUT_SEPARATOR);
-
-    let (separator_pos, separator_len, expectation) = match (error_pos, bare_pos) {
-        (Some(error_pos), Some(bare_pos)) if error_pos < bare_pos => (
-            error_pos,
-            ERROR_INPUT_SEPARATOR.len(),
-            CaseExpectation::FailsToParse,
-        ),
-        (Some(error_pos), None) => (
-            error_pos,
-            ERROR_INPUT_SEPARATOR.len(),
-            CaseExpectation::FailsToParse,
-        ),
-        (_, Some(bare_pos)) => (bare_pos, INPUT_SEPARATOR.len(), CaseExpectation::Parses),
-        (None, None) => {
-            return Err(CorpusParseError::new(
+    let (separator_pos, separator_len, expectation) = find_case_separator(after_header)
+        .ok_or_else(|| {
+            CorpusParseError::new(
                 file_stem,
                 CorpusParseErrorKind::MissingInputSeparator {
                     case: case_name.into(),
                 },
-            ));
-        }
-    };
+            )
+        })?;
 
     let (input, after_separator) = after_header.split_at(separator_pos);
     let (_, after_input) = after_separator.split_at(separator_len);
@@ -947,6 +970,44 @@ mod tests {
             assert_matches!(err.kind, CorpusParseErrorKind::TruncatedComment);
 
             Ok(())
+        }
+    }
+
+    mod find_case_separator_fn {
+        use super::*;
+
+        #[rstest]
+        #[case::bare_only("a\n---\nb", 1, 5, CaseExpectation::Parses)]
+        #[case::error_only("a\n--- <error>\nb", 1, 13, CaseExpectation::FailsToParse)]
+        #[case::bare_before_error("a\n---\nb\n--- <error>\nc", 1, 5, CaseExpectation::Parses)]
+        #[case::error_before_bare(
+            "a\n--- <error>\nb\n---\nc",
+            1,
+            13,
+            CaseExpectation::FailsToParse
+        )]
+        #[case::near_miss_prefix_is_skipped("a\n----\nb\n---\nc", 8, 5, CaseExpectation::Parses)]
+        fn finds_the_earliest_separator(
+            #[case] input: &str,
+            #[case] expected_pos: usize,
+            #[case] expected_len: usize,
+            #[case] expected_expectation: CaseExpectation,
+        ) -> Result<(), TestError> {
+            let (pos, len, expectation) = find_case_separator(input)
+                .ok_or_else(|| TestError::Failure("expected a separator".into()))?;
+
+            assert_eq!(pos, expected_pos);
+            assert_eq!(len, expected_len);
+            assert_eq!(expectation, expected_expectation);
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case::no_separator("just text, no separator at all")]
+        #[case::near_miss_only("a\n----\nb")]
+        fn returns_none_when_absent(#[case] input: &str) {
+            assert!(find_case_separator(input).is_none());
         }
     }
 
