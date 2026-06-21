@@ -4,10 +4,10 @@
 use super::{
     command::parse_list_until,
     word::parse_literal,
-    {ParserStream, at_keyword, consume_keyword, skip_newlines},
+    {ParserStream, at_keyword, consume_keyword, skip_newlines, spanned},
 };
 
-use crate::types::{Expr, Statement, Token};
+use crate::types::{Expr, Spanned, Statement, Token};
 
 use winnow::{
     ModalResult, Parser as _,
@@ -33,47 +33,50 @@ const KW_LBRACE: &str = "{";
 const KW_RBRACE: &str = "}";
 
 /// Consumes one `;`/newline separator, failing if neither is next.
-///
-/// Single call site each in [`parse_for_loop`] (its `in`-clause path) and [`parse_loop_clause`],
-/// not two — but kept as its own named function rather than inlined, since both call sites also
-/// reach it conditionally through [`opt`]/plain `?`, and naming the operation here documents the
-/// shared grammar rule (`;`/newline is the only valid separator) once instead of letting the
-/// `Token::Semi`/`Token::Newline` check drift between call sites.
 fn consume_separator(input: &mut ParserStream<'_>) -> ModalResult<()> {
     any.verify(|t: &Token<'_>| matches!(t, Token::Semi) || matches!(t, Token::Newline))
         .void()
         .parse_next(input)
 }
 
-/// Consumes a `{`, lexed as a plain [`Token::Word`] rather than its own token kind — see
-/// `grouping::parse_brace_group`'s doc for why both [`Token::LBrace`] and `Word("{")` are checked.
-///
-/// Single call site, like [`consume_rbrace`] — kept separate from [`parse_for_loop`] anyway
-/// because it pairs the two token shapes `{` can take, which is a fact about the lexer, not
-/// about the for-loop grammar calling it.
-fn consume_lbrace(input: &mut ParserStream<'_>) -> ModalResult<()> {
+/// Consumes a `{`/`}` brace, accepting either its dedicated [`Token`] variant or the plain
+/// [`Token::Word`] shape the lexer produces when it can't yet tell a brace apart from an
+/// ordinary word (see `grouping::parse_brace_group`'s doc for why both shapes are checked).
+/// Shared by [`consume_lbrace`]/[`consume_rbrace`], which just supply which brace this is.
+fn consume_brace(
+    input: &mut ParserStream<'_>,
+    is_brace_token: fn(&Token<'_>) -> bool,
+    word: &'static str,
+) -> ModalResult<()> {
     any.verify(|t: &Token<'_>| {
-        matches!(t, Token::LBrace) || matches!(t, Token::Word(w) if w.as_ref() == KW_LBRACE)
+        is_brace_token(t) || matches!(t, Token::Word(w) if w.as_ref() == word)
     })
     .void()
     .parse_next(input)
+}
+
+/// Consumes a `{`, lexed as a plain [`Token::Word`] rather than its own token kind — see
+/// [`consume_brace`]. Single call site, in [`parse_for_loop`]'s `{ ... }`-as-`do`/`done` Bash
+/// extension.
+fn consume_lbrace(input: &mut ParserStream<'_>) -> ModalResult<()> {
+    consume_brace(input, |t| matches!(t, Token::LBrace), KW_LBRACE)
 }
 
 /// Consumes a `}` — see [`consume_lbrace`].
 fn consume_rbrace(input: &mut ParserStream<'_>) -> ModalResult<()> {
-    any.verify(|t: &Token<'_>| {
-        matches!(t, Token::RBrace) || matches!(t, Token::Word(w) if w.as_ref() == KW_RBRACE)
-    })
-    .void()
-    .parse_next(input)
+    consume_brace(input, |t| matches!(t, Token::RBrace), KW_RBRACE)
 }
 
 #[must_use = "parses a loop statement; discarding ignores syntax structures"]
-pub(super) fn parse_for_loop<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
+pub(super) fn parse_for_loop<'a>(
+    input: &mut ParserStream<'a>,
+) -> ModalResult<Spanned<Statement<'a>>> {
+    let start_offset = input.current_span_start();
     consume_keyword(input, KW_FOR)?;
 
     cut_err(|rest: &mut ParserStream<'a>| {
         let variable = parse_literal(rest)?;
+        let implicit_iterable_at = rest.previous_span_end();
 
         skip_newlines(rest);
 
@@ -94,8 +97,15 @@ pub(super) fn parse_for_loop<'a>(input: &mut ParserStream<'a>) -> ModalResult<St
 
             items
         } else {
-            // No `in` clause: Bash defaults to iterating the positional parameters.
-            vec![Expr::Literal(Cow::Borrowed("\"$@\""))]
+            // No `in` clause: Bash defaults to iterating the positional parameters. This crate's
+            // convention for a synthetic AST node with no corresponding source text is a
+            // zero-width span placed where the (absent) construct would have appeared — here,
+            // immediately after `variable` — rather than reusing some unrelated token's span, so
+            // a diagnostic anchored on it points at the actual gap in the source.
+            vec![Spanned {
+                inner: Expr::Literal(Cow::Borrowed("\"$@\"")),
+                span: implicit_iterable_at..implicit_iterable_at,
+            }]
         };
 
         if has_in_clause {
@@ -121,11 +131,15 @@ pub(super) fn parse_for_loop<'a>(input: &mut ParserStream<'a>) -> ModalResult<St
             body
         };
 
-        Ok(Statement::ForLoop {
-            variable,
-            iterable,
-            body: Box::new(body),
-        })
+        Ok(spanned(
+            start_offset,
+            rest,
+            Statement::ForLoop {
+                variable,
+                iterable,
+                body: Box::new(body),
+            },
+        ))
     })
     .context(StrContext::Label("for loop"))
     .parse_next(input)
@@ -134,7 +148,9 @@ pub(super) fn parse_for_loop<'a>(input: &mut ParserStream<'a>) -> ModalResult<St
 /// Parses the `<condition>; then <then_branch>` shared by `if` and each `elif` clause — the
 /// leading `if`/`elif` keyword itself is the caller's responsibility, since callers need to peek
 /// it before deciding to call this at all.
-fn parse_if_head<'a>(input: &mut ParserStream<'a>) -> ModalResult<(Statement<'a>, Statement<'a>)> {
+fn parse_if_head<'a>(
+    input: &mut ParserStream<'a>,
+) -> ModalResult<(Spanned<Statement<'a>>, Spanned<Statement<'a>>)> {
     let condition = parse_list_until(input, |inp| at_keyword(inp, KW_THEN))?;
     consume_keyword(input, KW_THEN)?;
     let then_branch = parse_list_until(input, |inp| {
@@ -149,17 +165,24 @@ fn parse_if_head<'a>(input: &mut ParserStream<'a>) -> ModalResult<(Statement<'a>
 /// recursing for any further `elif`/`else` — see [`crate::types::Statement::If`] for why that's
 /// the right shape (it's also exactly what a literal `else if ...; fi` produces, so the two
 /// forms are AST-indistinguishable).
-fn parse_else_clause<'a>(input: &mut ParserStream<'a>) -> ModalResult<Option<Box<Statement<'a>>>> {
+fn parse_else_clause<'a>(
+    input: &mut ParserStream<'a>,
+) -> ModalResult<Option<Box<Spanned<Statement<'a>>>>> {
+    let start_offset = input.current_span_start();
     if at_keyword(input, KW_ELIF) {
         consume_keyword(input, KW_ELIF)?;
         let (condition, then_branch) = parse_if_head(input)?;
         let else_branch = parse_else_clause(input)?;
 
-        Ok(Some(Box::new(Statement::If {
-            condition: Box::new(condition),
-            then_branch: Box::new(then_branch),
-            else_branch,
-        })))
+        Ok(Some(Box::new(spanned(
+            start_offset,
+            input,
+            Statement::If {
+                condition: Box::new(condition),
+                then_branch: Box::new(then_branch),
+                else_branch,
+            },
+        ))))
     } else if at_keyword(input, KW_ELSE) {
         consume_keyword(input, KW_ELSE)?;
         let branch = parse_list_until(input, |inp| at_keyword(inp, KW_FI))?;
@@ -171,7 +194,8 @@ fn parse_else_clause<'a>(input: &mut ParserStream<'a>) -> ModalResult<Option<Box
 }
 
 #[must_use = "parses an if statement; discarding ignores syntax structures"]
-pub(super) fn parse_if<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
+pub(super) fn parse_if<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<Statement<'a>>> {
+    let start_offset = input.current_span_start();
     consume_keyword(input, KW_IF)?;
 
     cut_err(|rest: &mut ParserStream<'a>| {
@@ -180,11 +204,15 @@ pub(super) fn parse_if<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statemen
 
         consume_keyword(rest, KW_FI)?;
 
-        Ok(Statement::If {
-            condition: Box::new(condition),
-            then_branch: Box::new(then_branch),
-            else_branch,
-        })
+        Ok(spanned(
+            start_offset,
+            rest,
+            Statement::If {
+                condition: Box::new(condition),
+                then_branch: Box::new(then_branch),
+                else_branch,
+            },
+        ))
     })
     .context(StrContext::Label("if statement"))
     .parse_next(input)
@@ -199,7 +227,7 @@ fn parse_loop_clause<'a>(
     input: &mut ParserStream<'a>,
     head_keyword: &'static str,
     label: &'static str,
-) -> ModalResult<(Statement<'a>, Statement<'a>)> {
+) -> ModalResult<(Spanned<Statement<'a>>, Spanned<Statement<'a>>)> {
     consume_keyword(input, head_keyword)?;
 
     cut_err(|rest: &mut ParserStream<'a>| {
@@ -215,26 +243,77 @@ fn parse_loop_clause<'a>(
 }
 
 #[must_use = "parses a while statement; discarding ignores syntax structures"]
-pub(super) fn parse_while<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
+pub(super) fn parse_while<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<Statement<'a>>> {
+    let start_offset = input.current_span_start();
     let (condition, body) = parse_loop_clause(input, KW_WHILE, "while loop")?;
 
-    Ok(Statement::While {
-        condition: Box::new(condition),
-        body: Box::new(body),
-    })
+    Ok(spanned(
+        start_offset,
+        input,
+        Statement::While {
+            condition: Box::new(condition),
+            body: Box::new(body),
+        },
+    ))
 }
 
 #[must_use = "parses an until statement; discarding ignores syntax structures"]
-pub(super) fn parse_until<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
+pub(super) fn parse_until<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<Statement<'a>>> {
+    let start_offset = input.current_span_start();
     let (condition, body) = parse_loop_clause(input, KW_UNTIL, "until loop")?;
 
-    Ok(Statement::Until {
-        condition: Box::new(condition),
-        body: Box::new(body),
-    })
+    Ok(spanned(
+        start_offset,
+        input,
+        Statement::Until {
+            condition: Box::new(condition),
+            body: Box::new(body),
+        },
+    ))
 }
 
 // `parse_for_loop`'s conditional separator and every construct's empty-body rejection (plus
 // error propagation through `&&` and `;`) are covered by the corpus's "Syntax errors" groups in
 // `corpus/04_lists.tests`, `corpus/07_if_expr.tests`, and `corpus/08_loops.tests`, rather than
 // duplicated here.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::stream::TokenStream;
+
+    #[derive(Debug, thiserror::Error)]
+    enum TestError {
+        #[error("Test failure: {0}")]
+        Failure(String),
+    }
+
+    mod parse_for_loop {
+        use super::*;
+
+        use rstest::rstest;
+
+        #[rstest]
+        fn implicit_iterable_span_anchors_after_the_loop_variable() -> Result<(), TestError> {
+            let mut stream = TokenStream::new("for x do echo $x; done");
+            let parsed = super::parse_for_loop(&mut stream)
+                .map_err(|e| TestError::Failure(e.to_string()))?;
+
+            let Statement::ForLoop { iterable, .. } = parsed.inner else {
+                return Err(TestError::Failure("expected a ForLoop statement".into()));
+            };
+
+            let [iterable] = iterable.as_slice() else {
+                return Err(TestError::Failure(
+                    "expected exactly one implicit iterable".into(),
+                ));
+            };
+
+            // Anchored right after `x` (offset 5), not at the `for` keyword (offset 0).
+            assert_eq!(iterable.span, 5..5);
+
+            Ok(())
+        }
+    }
+}
