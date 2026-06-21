@@ -173,8 +173,12 @@ pub enum Statement<'a> {
     /// Two or more commands connected by `|`/`|&`, each command's stdout (and, for `|&`,
     /// stderr) feeding the next's stdin.
     Pipeline {
-        /// The piped commands, in left-to-right order.
-        commands: Vec<Self>,
+        /// The first command in the pipeline.
+        head: Box<Self>,
+        /// Each subsequent stage: the pipe operator that connects it from the previous stage,
+        /// paired with the command itself. Always non-empty (a single-command pipeline is never
+        /// built — the parser returns the bare command instead).
+        tail: Vec<(PipeOp, Self)>,
     },
     /// A `(...)` subshell: `body` runs in a forked copy of the shell, so its side effects
     /// (variable assignments, `cd`, ...) don't affect the parent.
@@ -252,6 +256,16 @@ pub enum LogicalOp {
     And,
     /// `||` — run `right` only if `left` exits with failure.
     Or,
+}
+
+/// Which pipe operator connects two adjacent stages in a [`Statement::Pipeline`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PipeOp {
+    /// `|` — connects the left command's stdout to the right command's stdin.
+    Stdout,
+    /// `|&` — connects both stdout and stderr of the left command to the right command's stdin
+    /// (Bash shorthand for `2>&1 |`).
+    StdoutStderr,
 }
 
 /// One I/O redirection attached to a [`Statement`] via [`Statement::Redirected`].
@@ -374,11 +388,15 @@ impl fmt::Debug for Statement<'_> {
 
                 write!(f, ")")
             }
-            Statement::Pipeline { commands } => {
-                write!(f, "(pipeline")?;
+            Statement::Pipeline { head, tail } => {
+                write!(f, "(pipeline {head:?}")?;
 
-                for cmd in commands {
-                    write!(f, " {cmd:?}")?;
+                for (pipe, cmd) in tail {
+                    let op = match pipe {
+                        PipeOp::Stdout => "|",
+                        PipeOp::StdoutStderr => "|&",
+                    };
+                    write!(f, " ({op} {cmd:?})")?;
                 }
 
                 write!(f, ")")
@@ -630,13 +648,15 @@ impl fmt::Display for Statement<'_> {
 
                 write!(f, "esac")
             }
-            Statement::Pipeline { commands } => {
-                for (i, cmd) in commands.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " | ")?;
-                    }
+            Statement::Pipeline { head, tail } => {
+                write!(f, "{head}")?;
 
-                    write!(f, "{cmd}")?;
+                for (pipe, cmd) in tail {
+                    let op = match pipe {
+                        PipeOp::Stdout => "|",
+                        PipeOp::StdoutStderr => "|&",
+                    };
+                    write!(f, " {op} {cmd}")?;
                 }
 
                 Ok(())

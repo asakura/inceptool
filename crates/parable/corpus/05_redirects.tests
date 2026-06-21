@@ -438,7 +438,7 @@ cmd &> log.txt <<< "input"
 === combined in pipeline
 cmd1 &> /dev/null | cmd2
 ---
-(pipeline (redirected (command (word "cmd1")) (redirect "&>" (word "/dev/null"))) (command (word "cmd2")))
+(pipeline (redirected (command (word "cmd1")) (redirect "&>" (word "/dev/null"))) (| (command (word "cmd2"))))
 ---
 
 

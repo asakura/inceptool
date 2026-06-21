@@ -28,7 +28,7 @@ if [ -f file ]; then cat file; fi
 === if with pipeline condition
 if echo foo | grep foo; then echo found; fi
 ---
-(if (pipeline (command (word "echo") (word "foo")) (command (word "grep") (word "foo"))) (command (word "echo") (word "found")))
+(if (pipeline (command (word "echo") (word "foo")) (| (command (word "grep") (word "foo")))) (command (word "echo") (word "found")))
 ---
 
 
@@ -132,7 +132,7 @@ if a; then echo a; elif b; then echo b; elif c; then echo c; elif d; then echo d
 === elif with complex conditions
 if cat file | grep a; then echo a; elif cat file | grep b; then echo b; else exit; fi
 ---
-(if (pipeline (command (word "cat") (word "file")) (command (word "grep") (word "a"))) (command (word "echo") (word "a")) (if (pipeline (command (word "cat") (word "file")) (command (word "grep") (word "b"))) (command (word "echo") (word "b")) (command (word "exit"))))
+(if (pipeline (command (word "cat") (word "file")) (| (command (word "grep") (word "a")))) (command (word "echo") (word "a")) (if (pipeline (command (word "cat") (word "file")) (| (command (word "grep") (word "b")))) (command (word "echo") (word "b")) (command (word "exit"))))
 ---
 
 
@@ -237,7 +237,7 @@ fi
 === if in pipeline
 if true; then echo yes; fi | cat
 ---
-(pipeline (if (command (word "true")) (command (word "echo") (word "yes"))) (command (word "cat")))
+(pipeline (if (command (word "true")) (command (word "echo") (word "yes"))) (| (command (word "cat"))))
 ---
 
 
@@ -279,7 +279,7 @@ if a; then echo a; fi; if b; then echo b; fi
 === if in complex pipeline
 echo start | if true; then cat; fi | wc -l
 ---
-(pipeline (command (word "echo") (word "start")) (if (command (word "true")) (command (word "cat"))) (command (word "wc") (word "-l")))
+(pipeline (command (word "echo") (word "start")) (| (if (command (word "true")) (command (word "cat")))) (| (command (word "wc") (word "-l"))))
 ---
 
 
@@ -519,7 +519,7 @@ if true; then cat < in.txt > out.txt; fi
 === pipeline with redirects in body
 if true; then cat file | grep foo > matches.txt; fi
 ---
-(if (command (word "true")) (pipeline (command (word "cat") (word "file")) (redirected (command (word "grep") (word "foo")) (redirect ">" (word "matches.txt")))))
+(if (command (word "true")) (pipeline (command (word "cat") (word "file")) (| (redirected (command (word "grep") (word "foo")) (redirect ">" (word "matches.txt"))))))
 ---
 
 
@@ -549,7 +549,7 @@ if [ -r "$file" ] && [ -s "$file" ]; then cat "$file"; fi
 === complex elif with pipelines
 if cat a | grep x; then echo ax; elif cat b | grep x; then echo bx; elif cat c | grep x; then echo cx; else echo none; fi
 ---
-(if (pipeline (command (word "cat") (word "a")) (command (word "grep") (word "x"))) (command (word "echo") (word "ax")) (if (pipeline (command (word "cat") (word "b")) (command (word "grep") (word "x"))) (command (word "echo") (word "bx")) (if (pipeline (command (word "cat") (word "c")) (command (word "grep") (word "x"))) (command (word "echo") (word "cx")) (command (word "echo") (word "none")))))
+(if (pipeline (command (word "cat") (word "a")) (| (command (word "grep") (word "x")))) (command (word "echo") (word "ax")) (if (pipeline (command (word "cat") (word "b")) (| (command (word "grep") (word "x")))) (command (word "echo") (word "bx")) (if (pipeline (command (word "cat") (word "c")) (| (command (word "grep") (word "x")))) (command (word "echo") (word "cx")) (command (word "echo") (word "none")))))
 ---
 
 

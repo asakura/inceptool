@@ -5,28 +5,28 @@
 === simple
 echo foo | cat
 ---
-(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+(pipeline (command (word "echo") (word "foo")) (| (command (word "cat"))))
 ---
 
 
 === triple
 echo foo | grep bar | wc -l
 ---
-(pipeline (command (word "echo") (word "foo")) (command (word "grep") (word "bar")) (command (word "wc") (word "-l")))
+(pipeline (command (word "echo") (word "foo")) (| (command (word "grep") (word "bar"))) (| (command (word "wc") (word "-l"))))
 ---
 
 
 === quad
 cat file | grep pattern | sort | uniq
 ---
-(pipeline (command (word "cat") (word "file")) (command (word "grep") (word "pattern")) (command (word "sort")) (command (word "uniq")))
+(pipeline (command (word "cat") (word "file")) (| (command (word "grep") (word "pattern"))) (| (command (word "sort"))) (| (command (word "uniq"))))
 ---
 
 
 === five stage
 ps aux | grep python | awk '{print $2}' | head -5 | xargs echo
 ---
-(pipeline (command (word "ps") (word "aux")) (command (word "grep") (word "python")) (command (word "awk") (word "'{print $2}'")) (command (word "head") (word "-5")) (command (word "xargs") (word "echo")))
+(pipeline (command (word "ps") (word "aux")) (| (command (word "grep") (word "python"))) (| (command (word "awk") (word "'{print $2}'"))) (| (command (word "head") (word "-5"))) (| (command (word "xargs") (word "echo"))))
 ---
 
 
@@ -35,14 +35,14 @@ ps aux | grep python | awk '{print $2}' | head -5 | xargs echo
 === absolute
 /usr/bin/cat file | /usr/bin/grep foo
 ---
-(pipeline (command (word "/usr/bin/cat") (word "file")) (command (word "/usr/bin/grep") (word "foo")))
+(pipeline (command (word "/usr/bin/cat") (word "file")) (| (command (word "/usr/bin/grep") (word "foo"))))
 ---
 
 
 === relative
 ./generate | ./process | ./output
 ---
-(pipeline (command (word "./generate")) (command (word "./process")) (command (word "./output")))
+(pipeline (command (word "./generate")) (| (command (word "./process"))) (| (command (word "./output"))))
 ---
 
 
@@ -51,28 +51,28 @@ ps aux | grep python | awk '{print $2}' | head -5 | xargs echo
 === many
 ls -la /tmp | grep -v total | head -n 10
 ---
-(pipeline (command (word "ls") (word "-la") (word "/tmp")) (command (word "grep") (word "-v") (word "total")) (command (word "head") (word "-n") (word "10")))
+(pipeline (command (word "ls") (word "-la") (word "/tmp")) (| (command (word "grep") (word "-v") (word "total"))) (| (command (word "head") (word "-n") (word "10"))))
 ---
 
 
 === quoted
 echo "hello world" | grep hello
 ---
-(pipeline (command (word "echo") (word "\"hello world\"")) (command (word "grep") (word "hello")))
+(pipeline (command (word "echo") (word "\"hello world\"")) (| (command (word "grep") (word "hello"))))
 ---
 
 
 === single quoted
 echo 'pattern with spaces' | grep 'pattern'
 ---
-(pipeline (command (word "echo") (word "'pattern with spaces'")) (command (word "grep") (word "'pattern'")))
+(pipeline (command (word "echo") (word "'pattern with spaces'")) (| (command (word "grep") (word "'pattern'"))))
 ---
 
 
 === mixed quotes
 echo "foo" | grep 'foo' | cat
 ---
-(pipeline (command (word "echo") (word "\"foo\"")) (command (word "grep") (word "'foo'")) (command (word "cat")))
+(pipeline (command (word "echo") (word "\"foo\"")) (| (command (word "grep") (word "'foo'"))) (| (command (word "cat"))))
 ---
 
 
@@ -81,14 +81,14 @@ echo "foo" | grep 'foo' | cat
 === glob patterns
 ls *.txt | wc -l
 ---
-(pipeline (command (word "ls") (word "*.txt")) (command (word "wc") (word "-l")))
+(pipeline (command (word "ls") (word "*.txt")) (| (command (word "wc") (word "-l"))))
 ---
 
 
 === equals in args
 env | grep PATH=
 ---
-(pipeline (command (word "env")) (command (word "grep") (word "PATH=")))
+(pipeline (command (word "env")) (| (command (word "grep") (word "PATH="))))
 ---
 
 
@@ -97,28 +97,28 @@ env | grep PATH=
 === no spaces around
 echo foo|cat
 ---
-(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+(pipeline (command (word "echo") (word "foo")) (| (command (word "cat"))))
 ---
 
 
 === space only before pipe
 echo foo |cat
 ---
-(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+(pipeline (command (word "echo") (word "foo")) (| (command (word "cat"))))
 ---
 
 
 === space only after pipe
 echo foo| cat
 ---
-(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+(pipeline (command (word "echo") (word "foo")) (| (command (word "cat"))))
 ---
 
 
 === multiple spaces
 echo foo  |  cat
 ---
-(pipeline (command (word "echo") (word "foo")) (command (word "cat")))
+(pipeline (command (word "echo") (word "foo")) (| (command (word "cat"))))
 ---
 
 
@@ -127,14 +127,14 @@ echo foo  |  cat
 === with head
 cat foo | grep -v bar
 ---
-(pipeline (command (word "cat") (word "foo")) (command (word "grep") (word "-v") (word "bar")))
+(pipeline (command (word "cat") (word "foo")) (| (command (word "grep") (word "-v") (word "bar"))))
 ---
 
 
 === pipe to head
 cat baz | head -n 1
 ---
-(pipeline (command (word "cat") (word "baz")) (command (word "head") (word "-n") (word "1")))
+(pipeline (command (word "cat") (word "baz")) (| (command (word "head") (word "-n") (word "1"))))
 ---
 
 
@@ -155,6 +155,48 @@ Parse error: invalid syntax
 echo a |&
 --- <error>
 Parse error: invalid syntax
+---
+
+
+# === Stderr pipe ===
+
+# `|&` (stderr+stdout pipe) is implemented in the lexer and parse_pipeline but had zero corpus
+# coverage. parse_pipeline treats Token::Pipe and Token::PipeAmp identically — both extend the
+# commands Vec. The AST carries no record of which pipe flavour was used, so `|&` and `|` produce
+# identical (pipeline ...) output.
+
+=== simple
+cmd1 |& cmd2
+---
+(pipeline (command (word "cmd1")) (|& (command (word "cmd2"))))
+---
+
+
+=== stderr pipe triple
+cmd1 |& cmd2 |& cmd3
+---
+(pipeline (command (word "cmd1")) (|& (command (word "cmd2"))) (|& (command (word "cmd3"))))
+---
+
+
+=== stderr pipe with args
+ls -la |& grep error
+---
+(pipeline (command (word "ls") (word "-la")) (|& (command (word "grep") (word "error"))))
+---
+
+
+=== mixed pipe and stderr pipe
+cmd1 | cmd2 |& cmd3
+---
+(pipeline (command (word "cmd1")) (| (command (word "cmd2"))) (|& (command (word "cmd3"))))
+---
+
+
+=== stderr pipe no spaces
+cmd1|&cmd2
+---
+(pipeline (command (word "cmd1")) (|& (command (word "cmd2"))))
 ---
 
 

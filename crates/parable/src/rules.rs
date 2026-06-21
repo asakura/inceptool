@@ -151,7 +151,12 @@ impl<'r> Engine<'r> {
                     }
                 }
             }
-            Statement::Pipeline { commands } => self.visit_all(commands, env, findings),
+            Statement::Pipeline { head, tail } => {
+                self.visit(head, env, findings);
+                for (_, cmd) in tail {
+                    self.visit(cmd, env, findings);
+                }
+            }
             Statement::Subshell { body } | Statement::BraceGroup { body } => {
                 self.visit(body, env, findings);
             }

@@ -138,7 +138,7 @@ case $x in a) echo start; echo end;; esac
 === case with pipeline in body
 case $x in a) echo foo | cat;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (pipeline (command (word "echo") (word "foo")) (command (word "cat")))))
+(case (word "$x") (pattern ((word "a")) (pipeline (command (word "echo") (word "foo")) (| (command (word "cat"))))))
 ---
 
 
@@ -253,7 +253,7 @@ case $x in a) { echo brace; };; esac
 === case in pipeline
 case $x in a) echo a;; esac | cat
 ---
-(pipeline (case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a")))) (command (word "cat")))
+(pipeline (case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a")))) (| (command (word "cat"))))
 ---
 
 

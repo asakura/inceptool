@@ -72,7 +72,7 @@ while echo a; echo b; do echo body; break; done
 === while with pipeline in condition
 while cat file | grep pattern; do echo found; break; done
 ---
-(while (pipeline (command (word "cat") (word "file")) (command (word "grep") (word "pattern"))) (semi (command (word "echo") (word "found")) (command (word "break"))))
+(while (pipeline (command (word "cat") (word "file")) (| (command (word "grep") (word "pattern")))) (semi (command (word "echo") (word "found")) (command (word "break"))))
 ---
 
 
@@ -410,14 +410,14 @@ done
 === while in pipeline
 while read line; do echo $line; done | cat
 ---
-(pipeline (while (command (word "read") (word "line")) (command (word "echo") (word "$line"))) (command (word "cat")))
+(pipeline (while (command (word "read") (word "line")) (command (word "echo") (word "$line"))) (| (command (word "cat"))))
 ---
 
 
 === for in pipeline
 for x in a b c; do echo $x; done | wc -l
 ---
-(pipeline (for (word "x") (in (word "a") (word "b") (word "c")) (command (word "echo") (word "$x"))) (command (word "wc") (word "-l")))
+(pipeline (for (word "x") (in (word "a") (word "b") (word "c")) (command (word "echo") (word "$x"))) (| (command (word "wc") (word "-l"))))
 ---
 
 
@@ -452,14 +452,14 @@ for x in a; do echo $x; done; for y in b; do echo $y; done
 === loop in middle of pipeline
 echo input | while read x; do echo $x; done | cat
 ---
-(pipeline (command (word "echo") (word "input")) (while (command (word "read") (word "x")) (command (word "echo") (word "$x"))) (command (word "cat")))
+(pipeline (command (word "echo") (word "input")) (| (while (command (word "read") (word "x")) (command (word "echo") (word "$x")))) (| (command (word "cat"))))
 ---
 
 
 === multiple loops in pipeline
 for x in a; do echo $x; done | while read y; do echo $y; done
 ---
-(pipeline (for (word "x") (in (word "a")) (command (word "echo") (word "$x"))) (while (command (word "read") (word "y")) (command (word "echo") (word "$y"))))
+(pipeline (for (word "x") (in (word "a")) (command (word "echo") (word "$x"))) (| (while (command (word "read") (word "y")) (command (word "echo") (word "$y")))))
 ---
 
 

@@ -7,12 +7,11 @@ use super::{
     {ParserStream, parse_command, skip_newlines},
 };
 
-use crate::types::{LogicalOp, Statement, Token};
+use crate::types::{LogicalOp, PipeOp, Statement, Token};
 
 use winnow::{
     ModalResult, Parser as _,
     combinator::{alt, opt},
-    error::{ContextError, ErrMode},
     token::any,
 };
 
@@ -66,25 +65,30 @@ pub(super) fn parse_base_command<'a>(input: &mut ParserStream<'a>) -> ModalResul
 #[must_use = "parses a pipeline; discarding ignores syntax structures"]
 fn parse_pipeline<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
     let first = parse_command(input)?;
-    let mut commands = vec![first];
+    let mut tail: Vec<(PipeOp, Statement<'a>)> = Vec::new();
 
-    while let Ok(_pipe) = {
+    while let Ok(pipe_token) = {
         let res: ModalResult<Token<'_>> = any
-            .verify(|t| matches!(t, Token::Pipe) || matches!(t, Token::PipeAmp))
+            .verify(|t| matches!(t, Token::Pipe) | matches!(t, Token::PipeAmp))
             .parse_next(input);
 
         res
     } {
+        let op = match pipe_token {
+            Token::PipeAmp => PipeOp::StdoutStderr,
+            _ => PipeOp::Stdout,
+        };
         let next_cmd = parse_command(input)?;
-        commands.push(next_cmd);
+        tail.push((op, next_cmd));
     }
 
-    if commands.len() == 1 {
-        Ok(commands
-            .pop()
-            .ok_or_else(|| ErrMode::Backtrack(ContextError::new()))?)
+    if tail.is_empty() {
+        Ok(first)
     } else {
-        Ok(Statement::Pipeline { commands })
+        Ok(Statement::Pipeline {
+            head: Box::new(first),
+            tail,
+        })
     }
 }
 

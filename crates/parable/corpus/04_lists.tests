@@ -219,28 +219,28 @@ cmd1 & cmd2 && cmd3
 === AND after
 echo foo | grep foo && echo found
 ---
-(and (pipeline (command (word "echo") (word "foo")) (command (word "grep") (word "foo"))) (command (word "echo") (word "found")))
+(and (pipeline (command (word "echo") (word "foo")) (| (command (word "grep") (word "foo")))) (command (word "echo") (word "found")))
 ---
 
 
 === OR after
 cat file | grep pattern || echo "not found"
 ---
-(or (pipeline (command (word "cat") (word "file")) (command (word "grep") (word "pattern"))) (command (word "echo") (word "\"not found\"")))
+(or (pipeline (command (word "cat") (word "file")) (| (command (word "grep") (word "pattern")))) (command (word "echo") (word "\"not found\"")))
 ---
 
 
 === multiple with AND
 ls | head && ps | head
 ---
-(and (pipeline (command (word "ls")) (command (word "head"))) (pipeline (command (word "ps")) (command (word "head"))))
+(and (pipeline (command (word "ls")) (| (command (word "head")))) (pipeline (command (word "ps")) (| (command (word "head")))))
 ---
 
 
 === in background
 find . -name "*.log" | xargs rm &
 ---
-(bg (pipeline (command (word "find") (word ".") (word "-name") (word "\"*.log\"")) (command (word "xargs") (word "rm"))))
+(bg (pipeline (command (word "find") (word ".") (word "-name") (word "\"*.log\"")) (| (command (word "xargs") (word "rm")))))
 ---
 
 
@@ -279,7 +279,7 @@ cmd1   &   cmd2
 === complex
 a | b && c && d ; e f g || h i
 ---
-(semi (and (and (pipeline (command (word "a")) (command (word "b"))) (command (word "c"))) (command (word "d"))) (or (command (word "e") (word "f") (word "g")) (command (word "h") (word "i"))))
+(semi (and (and (pipeline (command (word "a")) (| (command (word "b")))) (command (word "c"))) (command (word "d"))) (or (command (word "e") (word "f") (word "g")) (command (word "h") (word "i"))))
 ---
 
 

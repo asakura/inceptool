@@ -33,14 +33,14 @@
 === pipeline
 (echo foo | cat)
 ---
-(subshell (pipeline (command (word "echo") (word "foo")) (command (word "cat"))))
+(subshell (pipeline (command (word "echo") (word "foo")) (| (command (word "cat")))))
 ---
 
 
 === complex pipeline
 (cat file | grep pattern | head -5)
 ---
-(subshell (pipeline (command (word "cat") (word "file")) (command (word "grep") (word "pattern")) (command (word "head") (word "-5"))))
+(subshell (pipeline (command (word "cat") (word "file")) (| (command (word "grep") (word "pattern"))) (| (command (word "head") (word "-5")))))
 ---
 
 
@@ -80,28 +80,28 @@
 === start
 (echo foo) | cat
 ---
-(pipeline (subshell (command (word "echo") (word "foo"))) (command (word "cat")))
+(pipeline (subshell (command (word "echo") (word "foo"))) (| (command (word "cat"))))
 ---
 
 
 === end
 echo foo | (cat)
 ---
-(pipeline (command (word "echo") (word "foo")) (subshell (command (word "cat"))))
+(pipeline (command (word "echo") (word "foo")) (| (subshell (command (word "cat")))))
 ---
 
 
 === middle
 echo foo | (grep foo) | wc -l
 ---
-(pipeline (command (word "echo") (word "foo")) (subshell (command (word "grep") (word "foo"))) (command (word "wc") (word "-l")))
+(pipeline (command (word "echo") (word "foo")) (| (subshell (command (word "grep") (word "foo")))) (| (command (word "wc") (word "-l"))))
 ---
 
 
 === multiple
 (echo foo) | (cat) | (wc)
 ---
-(pipeline (subshell (command (word "echo") (word "foo"))) (subshell (command (word "cat"))) (subshell (command (word "wc"))))
+(pipeline (subshell (command (word "echo") (word "foo"))) (| (subshell (command (word "cat")))) (| (subshell (command (word "wc")))))
 ---
 
 
@@ -168,7 +168,7 @@ echo foo | (grep foo) | wc -l
 === pipeline
 { echo foo | cat; }
 ---
-(brace-group (pipeline (command (word "echo") (word "foo")) (command (word "cat"))))
+(brace-group (pipeline (command (word "echo") (word "foo")) (| (command (word "cat")))))
 ---
 
 
@@ -214,14 +214,14 @@ echo foo | (grep foo) | wc -l
 === simple
 { echo foo; } | cat
 ---
-(pipeline (brace-group (command (word "echo") (word "foo"))) (command (word "cat")))
+(pipeline (brace-group (command (word "echo") (word "foo"))) (| (command (word "cat"))))
 ---
 
 
 === at end
 echo foo | { cat; }
 ---
-(pipeline (command (word "echo") (word "foo")) (brace-group (command (word "cat"))))
+(pipeline (command (word "echo") (word "foo")) (| (brace-group (command (word "cat")))))
 ---
 
 
@@ -269,7 +269,7 @@ echo foo | { cat; }
 === pipeline with both types
 { echo a; } | (cat) | { wc; }
 ---
-(pipeline (brace-group (command (word "echo") (word "a"))) (subshell (command (word "cat"))) (brace-group (command (word "wc"))))
+(pipeline (brace-group (command (word "echo") (word "a"))) (| (subshell (command (word "cat")))) (| (brace-group (command (word "wc")))))
 ---
 
 
