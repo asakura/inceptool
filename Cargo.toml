@@ -60,13 +60,13 @@ insta = { version = "1.48", default-features = false, features = [
   "json",
   "redactions",
 ] }
-miette = { version = "7.0", default-features = false, features = ["fancy"] }
+miette = { version = "7.6", default-features = false, features = ["fancy"] }
 predicates = { version = "3.1", default-features = false }
 proc-macro2 = { version = "1.0", default-features = false, features = [
   "span-locations",
 ] }
 quote = { version = "1.0", default-features = false }
-regex = { version = "1.10", default-features = false }
+regex = { version = "1.12", default-features = false }
 rstest = { version = "0.26", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 serde-saphyr = { version = "0.0", default-features = false, features = [
