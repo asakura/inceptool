@@ -3,7 +3,7 @@
 
 use super::ParserStream;
 
-use crate::types::{Expr, Spanned, Token};
+use crate::types::{Expr, Spanned, SpecialParam, Token};
 
 use winnow::{ModalResult, Parser as _, token::any};
 
@@ -214,10 +214,31 @@ fn scan_command_or_arithmetic(text: &str, after_dollar: usize) -> (ReferenceOutc
     (ReferenceOutcome::NotAReference, text.len())
 }
 
+/// Classifies a parameter name already recognized by [`scan_reference`]/[`scan_braced`] into
+/// the [`Expr`] variant matching what kind of reference it is: one of the seven punctuation
+/// special parameters, a run of digits (a positional parameter), or a plain identifier.
+#[must_use = "classifying a parameter has no effect unless the caller uses the result"]
+fn classify_param(name: &str) -> Expr<'_> {
+    match name {
+        "@" => Expr::SpecialParam(SpecialParam::AllArgs),
+        "*" => Expr::SpecialParam(SpecialParam::AllArgsStar),
+        "#" => Expr::SpecialParam(SpecialParam::ArgCount),
+        "?" => Expr::SpecialParam(SpecialParam::ExitStatus),
+        "$" => Expr::SpecialParam(SpecialParam::ShellPid),
+        "!" => Expr::SpecialParam(SpecialParam::LastBgPid),
+        "-" => Expr::SpecialParam(SpecialParam::Flags),
+        digits if !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit()) => {
+            Expr::Positional(digits)
+        }
+        _ => Expr::VarRef(name),
+    }
+}
+
 /// Converts a lexed word into an [`Expr`], splitting out `$NAME`/`${NAME}` references (see
-/// [`interpolation_segments`]) into [`Expr::VarRef`]s when the word isn't entirely literal.
-/// `base` is the word's own absolute start offset, used to turn each segment's
-/// `text`-relative span into an absolute one for [`Expr::Interpolated`]'s parts.
+/// [`interpolation_segments`]) into [`Expr::VarRef`]/[`Expr::Positional`]/[`Expr::SpecialParam`]
+/// (via [`classify_param`]) when the word isn't entirely literal. `base` is the word's own
+/// absolute start offset, used to turn each segment's `text`-relative span into an absolute one
+/// for [`Expr::Interpolated`]'s parts.
 #[must_use = "interpolates the word; discarding it drops the parsed structure"]
 fn interpolate(word: Cow<'_, str>, base: usize) -> Expr<'_> {
     let Cow::Borrowed(text) = word else {
@@ -231,7 +252,7 @@ fn interpolate(word: Cow<'_, str>, base: usize) -> Expr<'_> {
         .map(|(segment, span)| Spanned {
             inner: match segment {
                 Segment::Literal(s) => Expr::Literal(Cow::Borrowed(s)),
-                Segment::VarRef(name) => Expr::VarRef(name),
+                Segment::VarRef(name) => classify_param(name),
             },
             span: base.saturating_add(span.start)..base.saturating_add(span.end),
         });

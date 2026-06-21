@@ -1,7 +1,7 @@
 //! Best-effort taint tracking over resolved [`Expr`]s — see [`SymbolicValue`] and [`Environment`].
 
 use crate::parser::{Segment, interpolation_segments};
-use crate::types::{Expr, Spanned, Statement};
+use crate::types::{Expr, Spanned, SpecialParam, Statement};
 
 use std::collections::BTreeMap;
 
@@ -110,6 +110,16 @@ impl Environment {
                 }
             }
             Expr::VarRef(name) => self.lookup(name),
+            Expr::Positional(_)
+            | Expr::SpecialParam(
+                SpecialParam::AllArgs | SpecialParam::AllArgsStar | SpecialParam::ArgCount,
+            ) => SymbolicValue::Tainted(TaintSource::PositionalParam),
+            Expr::SpecialParam(
+                SpecialParam::ExitStatus
+                | SpecialParam::ShellPid
+                | SpecialParam::LastBgPid
+                | SpecialParam::Flags,
+            ) => SymbolicValue::Unknown,
             Expr::Interpolated(parts) => {
                 SymbolicValue::Concat(parts.iter().map(|part| self.resolve_expr(part)).collect())
             }

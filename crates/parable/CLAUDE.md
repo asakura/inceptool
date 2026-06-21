@@ -10,8 +10,8 @@ The root module orchestrates parsing and exports the public API.
   Thin wrapper around `parse_program` used by the corpus test suite — renders the
   resulting AST in the `{:?}`-debug form corpus fixtures compare against.
 - **Exports**: `Expr`, `LexerState`, `LogicalOp`, `PipeOp`, `Redirect`,
-  `RedirectKind`, `RedirectTarget`, `Spanned`, `Statement`, `Token`,
-  `TokenStream`, `ParseError`, `ParseErrorDisplay`.
+  `RedirectKind`, `RedirectTarget`, `Spanned`, `SpecialParam`, `Statement`,
+  `Token`, `TokenStream`, `ParseError`, `ParseErrorDisplay`.
 
 ## AST & Types ([`types.rs`](src/types.rs))
 
@@ -24,10 +24,11 @@ Contains the core Abstract Syntax Tree representations.
 - **`enum Statement<'a>`**: High-level execution nodes (`Command`,
   `ForLoop`, `If`, `While`, `Until`, `Case`, `Pipeline`, `Subshell`, `BraceGroup`,
   `AndOr`, `Sequence`, `Background`, `Redirected`).
-- **`enum Expr<'a>`**: `Literal`, `VarRef`, or `Interpolated(Vec<Spanned<Self>>)` —
-  each part of an interpolated word (e.g. `"prefix${x}suffix"`) carries its own
-  byte span, set once in `parser::word::interpolate`, rather than reusing the
-  whole word's span for every part.
+- **`enum Expr<'a>`**: `Literal`, `VarRef`, `Positional`, `SpecialParam`, or
+  `Interpolated(Vec<Spanned<Self>>)` — each part of an interpolated word
+  (e.g. `"prefix${x}suffix"`) carries its own byte span, set once in
+  `parser::word::interpolate`, rather than reusing the whole word's span for
+  every part.
 - **`struct Spanned<T>`**: Wraps an AST node with its exact byte `span: Range<usize>`.
   - `From<(T, Range<usize>)>` builds one from winnow's `.with_span()` shape
     (`.with_span().map(Spanned::from)`); there is no separate `Spanned::new`.
@@ -50,8 +51,8 @@ Contains the core Abstract Syntax Tree representations.
 - **`fn LexerStream::lex_token_with_start(&mut self) -> ModalResult<(usize, Token<'_>)>`**:
   Same, but also returns `eof_offset()` measured right after that whitespace
   skip and before the token itself — the position `stream::TokenStream` needs
-  to report a token's true *start*, as opposed to the *end of the previous
-  token* (which still includes the next token's upcoming whitespace). `lex_token`
+  to report a token's true _start_, as opposed to the _end of the previous
+  token_ (which still includes the next token's upcoming whitespace). `lex_token`
   is a thin wrapper that discards the offset.
 
 ### 2. Token Stream ([`stream.rs`](src/stream.rs))
@@ -64,7 +65,7 @@ Contains the core Abstract Syntax Tree representations.
   - `current_span_start(&self)`: Start offset of the next token — forces a
     peek if none is buffered yet, since whitespace is skipped lazily.
   - `previous_span_end(&self)`: End offset of the previously consumed token.
-  - These two diff against *different* internal lengths (`token_start_remaining`
+  - These two diff against _different_ internal lengths (`token_start_remaining`
     vs. `remaining_before` on the buffered `Lookahead`) precisely because
     whitespace can separate them; conflating the two was a real bug (see git
     history) where a node following whitespace reported the wrong start.
@@ -76,7 +77,8 @@ The parser is split into specialized `winnow` combinator submodules under [`pars
 - **`mod.rs`**:
   `parse_statement`, `parse_command` (the compound/base-command dispatch
   point). Also hosts two helpers shared across every sibling module:
-  - `spanned(start, input, inner) -> Spanned<T>`: builds `Spanned { inner, span: start..input.previous_span_end() }`,
+  - `spanned(start, input, inner) -> Spanned<T>`: builds
+    `Spanned { inner, span: start..input.previous_span_end() }`,
     replacing the hand-rolled version of that arithmetic at every call site.
   - `attach_redirects(stmt, trailing, start, input) -> Spanned<Statement>`:
     the one place that merges trailing redirects into an existing

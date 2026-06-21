@@ -72,7 +72,7 @@ if true; then echo yes; else echo no; fi
 === if else with test
 if [ "$x" = "y" ]; then echo match; else echo nomatch; fi
 ---
-(if (command (word "[") (word "\"$x\"") (word "=") (word "\"y\"") (word "]")) (command (word "echo") (word "match")) (command (word "echo") (word "nomatch")))
+(if (command (word "[") (word (interp "\"" (var "x") "\"")) (word "=") (word "\"y\"") (word "]")) (command (word "echo") (word "match")) (command (word "echo") (word "nomatch")))
 ---
 
 
@@ -346,7 +346,7 @@ if [ "$(uname)" = "Darwin" ]; then echo mac; fi
 === test with numeric comparison
 if [ "$x" -gt 10 ]; then echo big; fi
 ---
-(if (command (word "[") (word "\"$x\"") (word "-gt") (word "10") (word "]")) (command (word "echo") (word "big")))
+(if (command (word "[") (word (interp "\"" (var "x") "\"")) (word "-gt") (word "10") (word "]")) (command (word "echo") (word "big")))
 ---
 
 
@@ -519,7 +519,7 @@ if command -v git > /dev/null; then echo found; fi
 === file readable and not empty
 if [ -r "$file" ] && [ -s "$file" ]; then cat "$file"; fi
 ---
-(if (and (command (word "[") (word "-r") (word "\"$file\"") (word "]")) (command (word "[") (word "-s") (word "\"$file\"") (word "]"))) (command (word "cat") (word "\"$file\"")))
+(if (and (command (word "[") (word "-r") (word (interp "\"" (var "file") "\"")) (word "]")) (command (word "[") (word "-s") (word (interp "\"" (var "file") "\"")) (word "]"))) (command (word "cat") (word (interp "\"" (var "file") "\""))))
 ---
 
 

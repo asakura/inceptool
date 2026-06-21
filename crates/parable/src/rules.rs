@@ -242,7 +242,7 @@ mod tests {
                 inner: Statement::Command {
                     name: "eval".into(),
                     args: vec![Spanned {
-                        inner: Expr::VarRef("1"),
+                        inner: Expr::Positional("1"),
                         span: 0..0,
                     }],
                 },
@@ -320,7 +320,7 @@ mod tests {
                 inner: Statement::Command {
                     name: "echo".into(),
                     args: vec![Spanned {
-                        inner: Expr::VarRef("1"),
+                        inner: Expr::Positional("1"),
                         span: 0..0,
                     }],
                 },
@@ -350,7 +350,7 @@ mod tests {
                         inner: Statement::Command {
                             name: "eval".into(),
                             args: vec![Spanned {
-                                inner: Expr::VarRef("1"),
+                                inner: Expr::Positional("1"),
                                 span: 0..0,
                             }],
                         },

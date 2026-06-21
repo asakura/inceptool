@@ -295,4 +295,135 @@ foo'bar'"baz"qux
 ---
 
 
+# === Special parameters ===
+
+# These single-character special-parameter forms are implemented in the lexer/word scanner but
+# had zero corpus coverage. Each renders as a (word (special "X")), classified out of
+# Expr::VarRef into its own Expr::SpecialParam variant.
+
+=== all args
+echo $@
+---
+(command (word "echo") (word (special "@")))
+---
+
+
+=== all args star
+echo $*
+---
+(command (word "echo") (word (special "*")))
+---
+
+
+=== arg count
+echo $#
+---
+(command (word "echo") (word (special "#")))
+---
+
+
+=== exit status
+echo $?
+---
+(command (word "echo") (word (special "?")))
+---
+
+
+=== shell pid
+echo $$
+---
+(command (word "echo") (word (special "$")))
+---
+
+
+=== last background pid
+echo $!
+---
+(command (word "echo") (word (special "!")))
+---
+
+
+=== option flags
+echo $-
+---
+(command (word "echo") (word (special "-")))
+---
+
+
+=== special param as part of interpolation
+echo "pid=$$"
+---
+(command (word "echo") (word (interp "\"pid=" (special "$") "\"")))
+---
+
+
+=== multiple special params
+echo $@ $# $?
+---
+(command (word "echo") (word (special "@")) (word (special "#")) (word (special "?")))
+---
+
+
+# === Braced variable references ===
+
+# ${NAME} strips the braces in the AST (VarRef Display is "$NAME", not "${NAME}").
+# ${NAME:-default} contains an operator inside the braces → not a plain parameter name →
+# treated as an opaque Literal that preserves the full "${NAME:-default}" text verbatim.
+
+=== simple brace
+echo ${NAME}
+---
+(command (word "echo") (word (var "NAME")))
+---
+
+
+=== simple brace no space
+echo ${FOO}
+---
+(command (word "echo") (word (var "FOO")))
+---
+
+
+=== brace strips to same as bare ref
+echo ${VAR}
+---
+(command (word "echo") (word (var "VAR")))
+---
+
+
+=== default value operator is opaque literal
+echo ${NAME:-default}
+---
+(command (word "echo") (word "${NAME:-default}"))
+---
+
+
+=== assign default operator is opaque literal
+echo ${NAME:=default}
+---
+(command (word "echo") (word "${NAME:=default}"))
+---
+
+
+=== error operator is opaque literal
+echo ${NAME:?error}
+---
+(command (word "echo") (word "${NAME:?error}"))
+---
+
+
+=== alternate value operator is opaque literal
+echo ${NAME:+alt}
+---
+(command (word "echo") (word "${NAME:+alt}"))
+---
+
+
+=== length operator is opaque literal
+echo ${#NAME}
+---
+(command (word "echo") (word "${#NAME}"))
+---
+
+
 # eof

@@ -7,7 +7,7 @@ use super::{
     {ParserStream, at_keyword, consume_keyword, skip_newlines, spanned},
 };
 
-use crate::types::{Expr, Spanned, Statement, Token};
+use crate::types::{Expr, Spanned, SpecialParam, Statement, Token};
 
 use winnow::{
     ModalResult, Parser as _,
@@ -97,14 +97,32 @@ pub(super) fn parse_for_loop<'a>(
 
             items
         } else {
-            // No `in` clause: Bash defaults to iterating the positional parameters. This crate's
-            // convention for a synthetic AST node with no corresponding source text is a
+            // No `in` clause: Bash defaults to iterating the positional parameters, quoted
+            // (`"$@"`) so each one stays its own word. Built as the same `Interpolated` shape
+            // real parsing of `"$@"` would produce (rather than one opaque `Literal`) so this
+            // synthetic node round-trips identically to parsing its own rendered output. This
+            // crate's convention for a synthetic AST node with no corresponding source text is a
             // zero-width span placed where the (absent) construct would have appeared — here,
             // immediately after `variable` — rather than reusing some unrelated token's span, so
             // a diagnostic anchored on it points at the actual gap in the source.
+            let zero_width = implicit_iterable_at..implicit_iterable_at;
+
             vec![Spanned {
-                inner: Expr::Literal(Cow::Borrowed("\"$@\"")),
-                span: implicit_iterable_at..implicit_iterable_at,
+                inner: Expr::Interpolated(vec![
+                    Spanned {
+                        inner: Expr::Literal(Cow::Borrowed("\"")),
+                        span: zero_width.clone(),
+                    },
+                    Spanned {
+                        inner: Expr::SpecialParam(SpecialParam::AllArgs),
+                        span: zero_width.clone(),
+                    },
+                    Spanned {
+                        inner: Expr::Literal(Cow::Borrowed("\"")),
+                        span: zero_width.clone(),
+                    },
+                ]),
+                span: zero_width,
             }]
         };
 

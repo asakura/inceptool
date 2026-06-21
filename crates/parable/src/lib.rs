@@ -52,7 +52,7 @@ pub use error::{ParseError, ParseErrorDisplay};
 pub use stream::TokenStream;
 pub use types::{
     Expr, LexerState, LogicalOp, PipeOp, Redirect, RedirectKind, RedirectTarget, Spanned,
-    Statement, Token,
+    SpecialParam, Statement, Token,
 };
 
 use parser::parse_statement;

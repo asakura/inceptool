@@ -5,28 +5,28 @@
 === simple case
 case $x in a) echo a;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))))
 ---
 
 
 === case with multiple patterns
 case $x in a) echo a;; b) echo b;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 
 === case with default
 case $x in a) echo a;; *) echo default;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "*")) (command (word "echo") (word "default"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "*")) (command (word "echo") (word "default"))))
 ---
 
 
 === case with quoted word
 case "$var" in a) echo a;; esac
 ---
-(case (word "\"$var\"") (pattern ((word "a")) (command (word "echo") (word "a"))))
+(case (word (interp "\"" (var "var") "\"")) (pattern ((word "a")) (command (word "echo") (word "a"))))
 ---
 
 
@@ -40,119 +40,119 @@ case foo in foo) echo match;; esac
 === case with glob pattern
 case $x in *.txt) echo text;; esac
 ---
-(case (word "$x") (pattern ((word "*.txt")) (command (word "echo") (word "text"))))
+(case (word (var "x")) (pattern ((word "*.txt")) (command (word "echo") (word "text"))))
 ---
 
 
 === case with question mark glob
 case $x in file?) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "file?")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "file?")) (command (word "echo") (word "match"))))
 ---
 
 
 === case with bracket pattern
 case $x in [abc]) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "[abc]")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "[abc]")) (command (word "echo") (word "match"))))
 ---
 
 
 === case with bracket range
 case $x in [a-z]) echo lower;; esac
 ---
-(case (word "$x") (pattern ((word "[a-z]")) (command (word "echo") (word "lower"))))
+(case (word (var "x")) (pattern ((word "[a-z]")) (command (word "echo") (word "lower"))))
 ---
 
 
 === case with negated bracket
 case $x in [!0-9]) echo non-digit;; esac
 ---
-(case (word "$x") (pattern ((word "[!0-9]")) (command (word "echo") (word "non-digit"))))
+(case (word (var "x")) (pattern ((word "[!0-9]")) (command (word "echo") (word "non-digit"))))
 ---
 
 
 === case with or pattern
 case $x in a|b) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "a") (word "b")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "a") (word "b")) (command (word "echo") (word "match"))))
 ---
 
 
 === case with multiple or patterns
 case $x in a|b|c) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "a") (word "b") (word "c")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "a") (word "b") (word "c")) (command (word "echo") (word "match"))))
 ---
 
 
 === case with glob or pattern
 case $x in *.txt|*.md) echo doc;; esac
 ---
-(case (word "$x") (pattern ((word "*.txt") (word "*.md")) (command (word "echo") (word "doc"))))
+(case (word (var "x")) (pattern ((word "*.txt") (word "*.md")) (command (word "echo") (word "doc"))))
 ---
 
 
 === case with quoted pattern
 case $x in "hello") echo hi;; esac
 ---
-(case (word "$x") (pattern ((word "\"hello\"")) (command (word "echo") (word "hi"))))
+(case (word (var "x")) (pattern ((word "\"hello\"")) (command (word "echo") (word "hi"))))
 ---
 
 
 === case with single quoted pattern
 case $x in 'hello') echo hi;; esac
 ---
-(case (word "$x") (pattern ((word "'hello'")) (command (word "echo") (word "hi"))))
+(case (word (var "x")) (pattern ((word "'hello'")) (command (word "echo") (word "hi"))))
 ---
 
 
 === case with empty body
 case $x in a) ;; esac
 ---
-(case (word "$x") (pattern ((word "a")) ()))
+(case (word (var "x")) (pattern ((word "a")) ()))
 ---
 
 
 === case with colon body
 case $x in a) :;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word ":"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word ":"))))
 ---
 
 
 === case with true body
 case $x in a) true;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "true"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "true"))))
 ---
 
 
 === case with multiple commands
 case $x in a) echo start; echo end;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (semi (command (word "echo") (word "start")) (command (word "echo") (word "end")))))
+(case (word (var "x")) (pattern ((word "a")) (semi (command (word "echo") (word "start")) (command (word "echo") (word "end")))))
 ---
 
 
 === case with pipeline in body
 case $x in a) echo foo | cat;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (pipeline (command (word "echo") (word "foo")) (| (command (word "cat"))))))
+(case (word (var "x")) (pattern ((word "a")) (pipeline (command (word "echo") (word "foo")) (| (command (word "cat"))))))
 ---
 
 
 === case with and list in body
 case $x in a) cmd1 && cmd2;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (and (command (word "cmd1")) (command (word "cmd2")))))
+(case (word (var "x")) (pattern ((word "a")) (and (command (word "cmd1")) (command (word "cmd2")))))
 ---
 
 
 === case with or list in body
 case $x in a) cmd1 || cmd2;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (or (command (word "cmd1")) (command (word "cmd2")))))
+(case (word (var "x")) (pattern ((word "a")) (or (command (word "cmd1")) (command (word "cmd2")))))
 ---
 
 
@@ -161,7 +161,7 @@ case $x in
 a) echo a;;
 esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))))
 ---
 
 
@@ -175,7 +175,7 @@ echo b
 ;;
 esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 
@@ -185,7 +185,7 @@ in
 a) echo a;;
 esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))))
 ---
 
 
@@ -197,168 +197,168 @@ echo end
 ;;
 esac
 ---
-(case (word "$x") (pattern ((word "a")) (semi (command (word "echo") (word "start")) (command (word "echo") (word "end")))))
+(case (word (var "x")) (pattern ((word "a")) (semi (command (word "echo") (word "start")) (command (word "echo") (word "end")))))
 ---
 
 
 === case with if in body
 case $x in a) if true; then echo yes; fi;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (if (command (word "true")) (command (word "echo") (word "yes")))))
+(case (word (var "x")) (pattern ((word "a")) (if (command (word "true")) (command (word "echo") (word "yes")))))
 ---
 
 
 === case with for in body
 case $x in a) for i in 1 2; do echo $i; done;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (for (word "i") (in (word "1") (word "2")) (command (word "echo") (word "$i")))))
+(case (word (var "x")) (pattern ((word "a")) (for (word "i") (in (word "1") (word "2")) (command (word "echo") (word (var "i"))))))
 ---
 
 
 === case with while in body
 case $x in a) while false; do echo no; done;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (while (command (word "false")) (command (word "echo") (word "no")))))
+(case (word (var "x")) (pattern ((word "a")) (while (command (word "false")) (command (word "echo") (word "no")))))
 ---
 
 
 === case with subshell in body
 case $x in a) (echo sub);; esac
 ---
-(case (word "$x") (pattern ((word "a")) (subshell (command (word "echo") (word "sub")))))
+(case (word (var "x")) (pattern ((word "a")) (subshell (command (word "echo") (word "sub")))))
 ---
 
 
 === case with brace group in body
 case $x in a) { echo brace; };; esac
 ---
-(case (word "$x") (pattern ((word "a")) (brace-group (command (word "echo") (word "brace")))))
+(case (word (var "x")) (pattern ((word "a")) (brace-group (command (word "echo") (word "brace")))))
 ---
 
 
 === case in subshell
 (case $x in a) echo a;; esac)
 ---
-(subshell (case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a")))))
+(subshell (case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a")))))
 ---
 
 
 === case in brace group
 { case $x in a) echo a;; esac; }
 ---
-(brace-group (case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a")))))
+(brace-group (case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a")))))
 ---
 
 
 === case in pipeline
 case $x in a) echo a;; esac | cat
 ---
-(pipeline (case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a")))) (| (command (word "cat"))))
+(pipeline (case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a")))) (| (command (word "cat"))))
 ---
 
 
 === case in and list
 case $x in a) echo a;; esac && echo done
 ---
-(and (case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a")))) (command (word "echo") (word "done")))
+(and (case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a")))) (command (word "echo") (word "done")))
 ---
 
 
 === case in if body
 if true; then case $x in a) echo a;; esac; fi
 ---
-(if (command (word "true")) (case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a")))))
+(if (command (word "true")) (case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a")))))
 ---
 
 
 === case in for body
 for i in 1; do case $i in 1) echo one;; esac; done
 ---
-(for (word "i") (in (word "1")) (case (word "$i") (pattern ((word "1")) (command (word "echo") (word "one")))))
+(for (word "i") (in (word "1")) (case (word (var "i")) (pattern ((word "1")) (command (word "echo") (word "one")))))
 ---
 
 
 === nested case
 case $x in a) case $y in b) echo ab;; esac;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (case (word "$y") (pattern ((word "b")) (command (word "echo") (word "ab"))))))
+(case (word (var "x")) (pattern ((word "a")) (case (word (var "y")) (pattern ((word "b")) (command (word "echo") (word "ab"))))))
 ---
 
 
 === case no spaces
 case $x in a)echo a;;esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))))
 ---
 
 
 === case extra spaces
 case   $x   in   a)   echo a  ;;   esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))))
 ---
 
 
 === case with tabs
 case	$x	in	a)	echo a;;	esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))))
 ---
 
 
 === option parsing
 case $1 in -h|--help) echo "Usage: ...";; -v|--version) echo "1.0";; esac
 ---
-(case (word "$1") (pattern ((word "-h") (word "--help")) (command (word "echo") (word "\"Usage: ...\""))) (pattern ((word "-v") (word "--version")) (command (word "echo") (word "\"1.0\""))))
+(case (word (positional "1")) (pattern ((word "-h") (word "--help")) (command (word "echo") (word "\"Usage: ...\""))) (pattern ((word "-v") (word "--version")) (command (word "echo") (word "\"1.0\""))))
 ---
 
 
 === file type check
 case $file in *.tar.gz) tar xzf "$file";; *.zip) unzip "$file";; *) echo "Unknown";; esac
 ---
-(case (word "$file") (pattern ((word "*.tar.gz")) (command (word "tar") (word "xzf") (word "\"$file\""))) (pattern ((word "*.zip")) (command (word "unzip") (word "\"$file\""))) (pattern ((word "*")) (command (word "echo") (word "\"Unknown\""))))
+(case (word (var "file")) (pattern ((word "*.tar.gz")) (command (word "tar") (word "xzf") (word (interp "\"" (var "file") "\"")))) (pattern ((word "*.zip")) (command (word "unzip") (word (interp "\"" (var "file") "\"")))) (pattern ((word "*")) (command (word "echo") (word "\"Unknown\""))))
 ---
 
 
 === yes no prompt
 case $answer in [Yy]*) echo "Yes";; [Nn]*) echo "No";; *) echo "Invalid";; esac
 ---
-(case (word "$answer") (pattern ((word "[Yy]*")) (command (word "echo") (word "\"Yes\""))) (pattern ((word "[Nn]*")) (command (word "echo") (word "\"No\""))) (pattern ((word "*")) (command (word "echo") (word "\"Invalid\""))))
+(case (word (var "answer")) (pattern ((word "[Yy]*")) (command (word "echo") (word "\"Yes\""))) (pattern ((word "[Nn]*")) (command (word "echo") (word "\"No\""))) (pattern ((word "*")) (command (word "echo") (word "\"Invalid\""))))
 ---
 
 
 === os detection
 case $OSTYPE in linux*) echo "Linux";; darwin*) echo "macOS";; msys*) echo "Windows";; esac
 ---
-(case (word "$OSTYPE") (pattern ((word "linux*")) (command (word "echo") (word "\"Linux\""))) (pattern ((word "darwin*")) (command (word "echo") (word "\"macOS\""))) (pattern ((word "msys*")) (command (word "echo") (word "\"Windows\""))))
+(case (word (var "OSTYPE")) (pattern ((word "linux*")) (command (word "echo") (word "\"Linux\""))) (pattern ((word "darwin*")) (command (word "echo") (word "\"macOS\""))) (pattern ((word "msys*")) (command (word "echo") (word "\"Windows\""))))
 ---
 
 
 === pattern with dash
 case $x in --) echo dashdash;; esac
 ---
-(case (word "$x") (pattern ((word "--")) (command (word "echo") (word "dashdash"))))
+(case (word (var "x")) (pattern ((word "--")) (command (word "echo") (word "dashdash"))))
 ---
 
 
 === pattern with equals
 case $x in a=b) echo assign;; esac
 ---
-(case (word "$x") (pattern ((word "a=b")) (command (word "echo") (word "assign"))))
+(case (word (var "x")) (pattern ((word "a=b")) (command (word "echo") (word "assign"))))
 ---
 
 
 === pattern with slash
 case $x in /usr/*) echo usr;; esac
 ---
-(case (word "$x") (pattern ((word "/usr/*")) (command (word "echo") (word "usr"))))
+(case (word (var "x")) (pattern ((word "/usr/*")) (command (word "echo") (word "usr"))))
 ---
 
 
 === pattern with dot
 case $x in .*) echo hidden;; esac
 ---
-(case (word "$x") (pattern ((word ".*")) (command (word "echo") (word "hidden"))))
+(case (word (var "x")) (pattern ((word ".*")) (command (word "echo") (word "hidden"))))
 ---
 
 
@@ -366,231 +366,231 @@ case $x in .*) echo hidden;; esac
 case $x in a) echo a;; *) echo default
 esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "*")) (command (word "echo") (word "default"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "*")) (command (word "echo") (word "default"))))
 ---
 
 
 === pattern with leading paren
 case $x in (a) echo a;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))))
 ---
 
 
 === multiple patterns with leading parens
 case $x in (a) echo a;; (b) echo b;; (*) echo default;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))) (pattern ((word "*")) (command (word "echo") (word "default"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))) (pattern ((word "*")) (command (word "echo") (word "default"))))
 ---
 
 
 === or pattern with leading paren
 case $x in (a|b|c) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "a") (word "b") (word "c")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "a") (word "b") (word "c")) (command (word "echo") (word "match"))))
 ---
 
 
 === esac is a valid pattern behind a leading paren
 case $x in (esac) echo a;; esac
 ---
-(case (word "$x") (pattern ((word "esac")) (command (word "echo") (word "a"))))
+(case (word (var "x")) (pattern ((word "esac")) (command (word "echo") (word "a"))))
 ---
 
 
 === esac is a valid non leading alternation pattern
 case $x in foo|esac) echo a;; esac
 ---
-(case (word "$x") (pattern ((word "foo") (word "esac")) (command (word "echo") (word "a"))))
+(case (word (var "x")) (pattern ((word "foo") (word "esac")) (command (word "echo") (word "a"))))
 ---
 
 
 === pattern is reserved word in
 case $x in in) echo in;; esac
 ---
-(case (word "$x") (pattern ((word "in")) (command (word "echo") (word "in"))))
+(case (word (var "x")) (pattern ((word "in")) (command (word "echo") (word "in"))))
 ---
 
 
 === pattern is reserved word do
 case $x in do) echo do;; esac
 ---
-(case (word "$x") (pattern ((word "do")) (command (word "echo") (word "do"))))
+(case (word (var "x")) (pattern ((word "do")) (command (word "echo") (word "do"))))
 ---
 
 
 === pattern is reserved word done
 case $x in done) echo done;; esac
 ---
-(case (word "$x") (pattern ((word "done")) (command (word "echo") (word "done"))))
+(case (word (var "x")) (pattern ((word "done")) (command (word "echo") (word "done"))))
 ---
 
 
 === pattern is reserved word if
 case $x in if) echo if;; esac
 ---
-(case (word "$x") (pattern ((word "if")) (command (word "echo") (word "if"))))
+(case (word (var "x")) (pattern ((word "if")) (command (word "echo") (word "if"))))
 ---
 
 
 === pattern is reserved word then
 case $x in then) echo then;; esac
 ---
-(case (word "$x") (pattern ((word "then")) (command (word "echo") (word "then"))))
+(case (word (var "x")) (pattern ((word "then")) (command (word "echo") (word "then"))))
 ---
 
 
 === pattern is reserved word fi
 case $x in fi) echo fi;; esac
 ---
-(case (word "$x") (pattern ((word "fi")) (command (word "echo") (word "fi"))))
+(case (word (var "x")) (pattern ((word "fi")) (command (word "echo") (word "fi"))))
 ---
 
 
 === pattern is reserved word case
 case $x in case) echo case;; esac
 ---
-(case (word "$x") (pattern ((word "case")) (command (word "echo") (word "case"))))
+(case (word (var "x")) (pattern ((word "case")) (command (word "echo") (word "case"))))
 ---
 
 
 === variable in pattern
 case $x in $pattern) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "$pattern")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "$pattern")) (command (word "echo") (word "match"))))
 ---
 
 
 === variable with glob in pattern
 case $x in $prefix*) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "$prefix*")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "$prefix*")) (command (word "echo") (word "match"))))
 ---
 
 
 === braced variable in pattern
 case $x in ${var}) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "${var}")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "${var}")) (command (word "echo") (word "match"))))
 ---
 
 
 === double star pattern
 case $x in **) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "**")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "**")) (command (word "echo") (word "match"))))
 ---
 
 
 === question star pattern
 case $x in ?*) echo nonempty;; esac
 ---
-(case (word "$x") (pattern ((word "?*")) (command (word "echo") (word "nonempty"))))
+(case (word (var "x")) (pattern ((word "?*")) (command (word "echo") (word "nonempty"))))
 ---
 
 
 === star question pattern
 case $x in *?) echo nonempty;; esac
 ---
-(case (word "$x") (pattern ((word "*?")) (command (word "echo") (word "nonempty"))))
+(case (word (var "x")) (pattern ((word "*?")) (command (word "echo") (word "nonempty"))))
 ---
 
 
 === multiple question marks
 case $x in ???) echo three;; esac
 ---
-(case (word "$x") (pattern ((word "???")) (command (word "echo") (word "three"))))
+(case (word (var "x")) (pattern ((word "???")) (command (word "echo") (word "three"))))
 ---
 
 
 === bracket with special chars
 case $x in [*?]) echo special;; esac
 ---
-(case (word "$x") (pattern ((word "[*?]")) (command (word "echo") (word "special"))))
+(case (word (var "x")) (pattern ((word "[*?]")) (command (word "echo") (word "special"))))
 ---
 
 
 === bracket with closing bracket first
 case $x in []abc]) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "[]abc]")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "[]abc]")) (command (word "echo") (word "match"))))
 ---
 
 
 === bracket with hyphen
 case $x in [-abc]) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "[-abc]")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "[-abc]")) (command (word "echo") (word "match"))))
 ---
 
 
 === bracket with hyphen at end
 case $x in [abc-]) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "[abc-]")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "[abc-]")) (command (word "echo") (word "match"))))
 ---
 
 
 === pattern starts with dash
 case $x in -*) echo option;; esac
 ---
-(case (word "$x") (pattern ((word "-*")) (command (word "echo") (word "option"))))
+(case (word (var "x")) (pattern ((word "-*")) (command (word "echo") (word "option"))))
 ---
 
 
 === pattern is single dash
 case $x in -) echo stdin;; esac
 ---
-(case (word "$x") (pattern ((word "-")) (command (word "echo") (word "stdin"))))
+(case (word (var "x")) (pattern ((word "-")) (command (word "echo") (word "stdin"))))
 ---
 
 
 === pattern with long option
 case $x in --*) echo long;; esac
 ---
-(case (word "$x") (pattern ((word "--*")) (command (word "echo") (word "long"))))
+(case (word (var "x")) (pattern ((word "--*")) (command (word "echo") (word "long"))))
 ---
 
 
 === five alternations
 case $x in a|b|c|d|e) echo match;; esac
 ---
-(case (word "$x") (pattern ((word "a") (word "b") (word "c") (word "d") (word "e")) (command (word "echo") (word "match"))))
+(case (word (var "x")) (pattern ((word "a") (word "b") (word "c") (word "d") (word "e")) (command (word "echo") (word "match"))))
 ---
 
 
 === ten alternations
 case $x in 0|1|2|3|4|5|6|7|8|9) echo digit;; esac
 ---
-(case (word "$x") (pattern ((word "0") (word "1") (word "2") (word "3") (word "4") (word "5") (word "6") (word "7") (word "8") (word "9")) (command (word "echo") (word "digit"))))
+(case (word (var "x")) (pattern ((word "0") (word "1") (word "2") (word "3") (word "4") (word "5") (word "6") (word "7") (word "8") (word "9")) (command (word "echo") (word "digit"))))
 ---
 
 
 === http response codes
 case $code in 2??) echo success;; 3??) echo redirect;; 4??) echo client_error;; 5??) echo server_error;; esac
 ---
-(case (word "$code") (pattern ((word "2??")) (command (word "echo") (word "success"))) (pattern ((word "3??")) (command (word "echo") (word "redirect"))) (pattern ((word "4??")) (command (word "echo") (word "client_error"))) (pattern ((word "5??")) (command (word "echo") (word "server_error"))))
+(case (word (var "code")) (pattern ((word "2??")) (command (word "echo") (word "success"))) (pattern ((word "3??")) (command (word "echo") (word "redirect"))) (pattern ((word "4??")) (command (word "echo") (word "client_error"))) (pattern ((word "5??")) (command (word "echo") (word "server_error"))))
 ---
 
 
 === semver parsing
 case $version in [0-9].*.*) echo valid;; *) echo invalid;; esac
 ---
-(case (word "$version") (pattern ((word "[0-9].*.*")) (command (word "echo") (word "valid"))) (pattern ((word "*")) (command (word "echo") (word "invalid"))))
+(case (word (var "version")) (pattern ((word "[0-9].*.*")) (command (word "echo") (word "valid"))) (pattern ((word "*")) (command (word "echo") (word "invalid"))))
 ---
 
 
 === path matching
 case $path in /*) echo absolute;; ./*) echo relative_dot;; ../*) echo parent;; *) echo relative;; esac
 ---
-(case (word "$path") (pattern ((word "/*")) (command (word "echo") (word "absolute"))) (pattern ((word "./*")) (command (word "echo") (word "relative_dot"))) (pattern ((word "../*")) (command (word "echo") (word "parent"))) (pattern ((word "*")) (command (word "echo") (word "relative"))))
+(case (word (var "path")) (pattern ((word "/*")) (command (word "echo") (word "absolute"))) (pattern ((word "./*")) (command (word "echo") (word "relative_dot"))) (pattern ((word "../*")) (command (word "echo") (word "parent"))) (pattern ((word "*")) (command (word "echo") (word "relative"))))
 ---
 
 
 === only default pattern
 case $x in *) echo always;; esac
 ---
-(case (word "$x") (pattern ((word "*")) (command (word "echo") (word "always"))))
+(case (word (var "x")) (pattern ((word "*")) (command (word "echo") (word "always"))))
 ---
 
 
@@ -600,91 +600,91 @@ a)
 ;;
 esac
 ---
-(case (word "$x") (pattern ((word "a")) ()))
+(case (word (var "x")) (pattern ((word "a")) ()))
 ---
 
 
 === multiple empty patterns
 case $x in a) ;; b) ;; c) ;; esac
 ---
-(case (word "$x") (pattern ((word "a")) ()) (pattern ((word "b")) ()) (pattern ((word "c")) ()))
+(case (word (var "x")) (pattern ((word "a")) ()) (pattern ((word "b")) ()) (pattern ((word "c")) ()))
 ---
 
 
 === triple nested case
 case $a in a) case $b in b) case $c in c) echo abc;; esac;; esac;; esac
 ---
-(case (word "$a") (pattern ((word "a")) (case (word "$b") (pattern ((word "b")) (case (word "$c") (pattern ((word "c")) (command (word "echo") (word "abc"))))))))
+(case (word (var "a")) (pattern ((word "a")) (case (word (var "b")) (pattern ((word "b")) (case (word (var "c")) (pattern ((word "c")) (command (word "echo") (word "abc"))))))))
 ---
 
 
 === case with assignment
 case $x in a) var=value;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "var=value"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "var=value"))))
 ---
 
 
 === case with export
 case $x in a) export VAR=value;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "export") (word "VAR=value"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "export") (word "VAR=value"))))
 ---
 
 
 === pattern for empty string
 case $x in "") echo empty;; esac
 ---
-(case (word "$x") (pattern ((word "\"\"")) (command (word "echo") (word "empty"))))
+(case (word (var "x")) (pattern ((word "\"\"")) (command (word "echo") (word "empty"))))
 ---
 
 
 === pattern for empty with single quotes
 case $x in '') echo empty;; esac
 ---
-(case (word "$x") (pattern ((word "''")) (command (word "echo") (word "empty"))))
+(case (word (var "x")) (pattern ((word "''")) (command (word "echo") (word "empty"))))
 ---
 
 
 === pattern with escaped star
 case $x in \*) echo literal_star;; esac
 ---
-(case (word "$x") (pattern ((word "\\*")) (command (word "echo") (word "literal_star"))))
+(case (word (var "x")) (pattern ((word "\\*")) (command (word "echo") (word "literal_star"))))
 ---
 
 
 === pattern with escaped question
 case $x in \?) echo literal_question;; esac
 ---
-(case (word "$x") (pattern ((word "\\?")) (command (word "echo") (word "literal_question"))))
+(case (word (var "x")) (pattern ((word "\\?")) (command (word "echo") (word "literal_question"))))
 ---
 
 
 === pattern with escaped bracket
 case $x in \[) echo literal_bracket;; esac
 ---
-(case (word "$x") (pattern ((word "\\[")) (command (word "echo") (word "literal_bracket"))))
+(case (word (var "x")) (pattern ((word "\\[")) (command (word "echo") (word "literal_bracket"))))
 ---
 
 
 === pattern with escaped pipe
 case $x in a\|b) echo literal_pipe;; esac
 ---
-(case (word "$x") (pattern ((word "a\\|b")) (command (word "echo") (word "literal_pipe"))))
+(case (word (var "x")) (pattern ((word "a\\|b")) (command (word "echo") (word "literal_pipe"))))
 ---
 
 
 === pattern with spaces in quotes
 case $x in "a b") echo spaces;; esac
 ---
-(case (word "$x") (pattern ((word "\"a b\"")) (command (word "echo") (word "spaces"))))
+(case (word (var "x")) (pattern ((word "\"a b\"")) (command (word "echo") (word "spaces"))))
 ---
 
 
 === pattern with tab in quotes
 case $x in "a	b") echo tab;; esac
 ---
-(case (word "$x") (pattern ((word "\"a\tb\"")) (command (word "echo") (word "tab"))))
+(case (word (var "x")) (pattern ((word "\"a\tb\"")) (command (word "echo") (word "tab"))))
 ---
 
 
@@ -719,56 +719,56 @@ case $((1+1)) in 2) echo match;; esac
 === alternation with different globs
 case $x in *.txt|*.TXT|*.Txt) echo text;; esac
 ---
-(case (word "$x") (pattern ((word "*.txt") (word "*.TXT") (word "*.Txt")) (command (word "echo") (word "text"))))
+(case (word (var "x")) (pattern ((word "*.txt") (word "*.TXT") (word "*.Txt")) (command (word "echo") (word "text"))))
 ---
 
 
 === pattern with complex body
 case $x in start) echo begin; for i in 1 2; do echo $i; done; echo end;; esac
 ---
-(case (word "$x") (pattern ((word "start")) (semi (semi (command (word "echo") (word "begin")) (for (word "i") (in (word "1") (word "2")) (command (word "echo") (word "$i")))) (command (word "echo") (word "end")))))
+(case (word (var "x")) (pattern ((word "start")) (semi (semi (command (word "echo") (word "begin")) (for (word "i") (in (word "1") (word "2")) (command (word "echo") (word (var "i"))))) (command (word "echo") (word "end")))))
 ---
 
 
 === case after semicolon
 echo before; case $x in a) echo a;; esac
 ---
-(semi (command (word "echo") (word "before")) (case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a")))))
+(semi (command (word "echo") (word "before")) (case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a")))))
 ---
 
 
 === case in background
 case $x in a) echo a;; esac &
 ---
-(bg (case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a")))))
+(bg (case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a")))))
 ---
 
 
 === pattern with hash
 case $x in \#*) echo comment;; esac
 ---
-(case (word "$x") (pattern ((word "\\#*")) (command (word "echo") (word "comment"))))
+(case (word (var "x")) (pattern ((word "\\#*")) (command (word "echo") (word "comment"))))
 ---
 
 
 === pattern with at
 case $x in @*) echo at;; esac
 ---
-(case (word "$x") (pattern ((word "@*")) (command (word "echo") (word "at"))))
+(case (word (var "x")) (pattern ((word "@*")) (command (word "echo") (word "at"))))
 ---
 
 
 === pattern with percent
 case $x in %*) echo job;; esac
 ---
-(case (word "$x") (pattern ((word "%*")) (command (word "echo") (word "job"))))
+(case (word (var "x")) (pattern ((word "%*")) (command (word "echo") (word "job"))))
 ---
 
 
 === pattern with caret
 case $x in ^*) echo caret;; esac
 ---
-(case (word "$x") (pattern ((word "^*")) (command (word "echo") (word "caret"))))
+(case (word (var "x")) (pattern ((word "^*")) (command (word "echo") (word "caret"))))
 ---
 
 
@@ -777,77 +777,77 @@ case $x in ^*) echo caret;; esac
 === fallthrough to next arm
 case $x in a) echo a;& b) echo b;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 
 === fallthrough to default
 case $x in a) echo a;& *) echo default;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "*")) (command (word "echo") (word "default"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "*")) (command (word "echo") (word "default"))))
 ---
 
 
 === multiple fallthrough
 case $x in a) echo a;& b) echo b;& c) echo c;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))) (pattern ((word "c")) (command (word "echo") (word "c"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))) (pattern ((word "c")) (command (word "echo") (word "c"))))
 ---
 
 
 === fallthrough with empty body
 case $x in a) ;& b) echo b;; esac
 ---
-(case (word "$x") (pattern ((word "a")) ()) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) ()) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 
 === continue testing next pattern
 case $x in a) echo a;;& b) echo b;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 
 === multiple continue testing
 case $x in a) echo a;;& b) echo b;;& c) echo c;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))) (pattern ((word "c")) (command (word "echo") (word "c"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))) (pattern ((word "c")) (command (word "echo") (word "c"))))
 ---
 
 
 === continue testing with empty body
 case $x in a) ;;& b) echo b;; esac
 ---
-(case (word "$x") (pattern ((word "a")) ()) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) ()) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 
 === mixed terminators
 case $x in a) echo a;& b) echo b;; c) echo c;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))) (pattern ((word "c")) (command (word "echo") (word "c"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))) (pattern ((word "c")) (command (word "echo") (word "c"))))
 ---
 
 
 === fallthrough then continue testing
 case $x in a) echo a;& b) echo b;;& c) echo c;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))) (pattern ((word "c")) (command (word "echo") (word "c"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))) (pattern ((word "c")) (command (word "echo") (word "c"))))
 ---
 
 
 === fallthrough with or pattern
 case $x in a|b) echo ab;& c) echo c;; esac
 ---
-(case (word "$x") (pattern ((word "a") (word "b")) (command (word "echo") (word "ab"))) (pattern ((word "c")) (command (word "echo") (word "c"))))
+(case (word (var "x")) (pattern ((word "a") (word "b")) (command (word "echo") (word "ab"))) (pattern ((word "c")) (command (word "echo") (word "c"))))
 ---
 
 
 === fallthrough no space
 case $x in a) echo a;&b) echo b;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 
@@ -857,28 +857,28 @@ case $x in a) echo a
 b) echo b
 ;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) (command (word "echo") (word "a"))) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 
 === nested case with fallthrough in outer
 case $x in a) case $y in 1) echo 1;; esac;& b) echo b;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (case (word "$y") (pattern ((word "1")) (command (word "echo") (word "1"))))) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) (case (word (var "y")) (pattern ((word "1")) (command (word "echo") (word "1"))))) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 
 === fallthrough with subshell body
 case $x in a) (echo a);& b) echo b;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (subshell (command (word "echo") (word "a")))) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) (subshell (command (word "echo") (word "a")))) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 
 === fallthrough with brace group body
 case $x in a) { echo a; };& b) echo b;; esac
 ---
-(case (word "$x") (pattern ((word "a")) (brace-group (command (word "echo") (word "a")))) (pattern ((word "b")) (command (word "echo") (word "b"))))
+(case (word (var "x")) (pattern ((word "a")) (brace-group (command (word "echo") (word "a")))) (pattern ((word "b")) (command (word "echo") (word "b"))))
 ---
 
 

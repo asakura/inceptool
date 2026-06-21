@@ -139,6 +139,8 @@ The final AST continues to hold references to the original `&'a str`, ensuring z
 pub enum Expr<'a> {
     Literal(Cow<'a, str>),
     VarRef(&'a str),
+    Positional(&'a str),
+    SpecialParam(SpecialParam),
     /// A word mixing literal text and `$NAME`/`${NAME}` references, e.g.
     /// `"prefix${x}suffix"` is `[Literal("prefix"), VarRef("x"), Literal("suffix")]`.
     Interpolated(Vec<Self>),
