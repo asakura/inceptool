@@ -205,6 +205,17 @@ nix build .#inceptool-aarch64-linux-musl
   protocol.
 - [`crates/driver-gemini`](crates/driver-gemini/README.md)
   (`inceptool-driver-gemini`) — same job, for Gemini CLI.
+- [`crates/parsers`](crates/parsers/README.md) (`inceptool-parsers`) —
+  zero-copy parsers for the external file formats (`flake.lock`,
+  `.pre-commit-config.yaml`, ...) `inceptool-stages` builds policy on top of.
 - [`crates/stages`](crates/stages/README.md) (`inceptool-stages`) — the
   built-in stages (guardrails, formatting, linting, summarization, and more)
   that ship with the `inceptool` binary.
+- [`crates/parable`](crates/parable/README.md) (`inceptool-parable`) — a
+  zero-copy, context-aware Bash parser with a taint-tracking rule engine on
+  top, for spotting shell-injection-shaped patterns (e.g. tainted input
+  reaching `eval`). Not yet wired into `inceptool-stages`.
+- [`crates/corpus-parser`](crates/corpus-parser/README.md)
+  (`inceptool-corpus-parser`) — parses the `.tests` corpus file format
+  `inceptool-parable`'s `build.rs` reads to generate its test suite; a
+  build-time dependency, not part of the runtime hook-processing pipeline.
