@@ -28,7 +28,9 @@
 //! 4. Partition each group's cases by [`CaseExpectation`] into positive
 //!    (expect a specific AST) and negative (expect a specific error message)
 //!    cases, and generate Rust test functions for whichever of the two are
-//!    present.
+//!    present. Additionally, every non-empty group emits a `bash_verifies`
+//!    function that cross-checks all cases (both polarities) against the real
+//!    `bash -n` binary, independently of [`inceptool_parable`]'s own parser.
 //! 5. Write all generated functions to a single file in `OUT_DIR`.
 //!
 //! ## Edge Cases
@@ -174,6 +176,49 @@ fn generate_roundtrip_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStr
     }
 }
 
+/// Generates a test function that cross-checks every case in a group — both
+/// [`CaseExpectation::Parses`] and [`CaseExpectation::FailsToParse`] cases — against the real
+/// `bash` binary via `bash -n`, independently of [`inceptool_parable`]'s own parser. This catches
+/// corpus cases that have drifted from actual Bash syntax in either direction.
+///
+/// The two-branch check uses `match (should_fail, rejected)` to cover all four combinations
+/// exhaustively, avoiding both `possible_missing_else` and `else_if_without_else` lints in the
+/// generated output.
+#[must_use = "returns the generated bash-verification test function token stream"]
+fn generate_bash_verify_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStream {
+    let case_tokens = cases.iter().map(|c| {
+        let ident = format_ident!("{}", to_ident_fragment(&c.name));
+        let input = &c.input;
+        let should_fail = c.expectation == CaseExpectation::FailsToParse;
+
+        quote! { #[case::#ident(#input, #should_fail)] }
+    });
+
+    quote! {
+        #[rstest::rstest]
+        #(#case_tokens)*
+        fn bash_verifies(#[case] input: &str, #[case] should_fail: bool) -> Result<(), TestError> {
+            use std::process::Command;
+
+            let output = Command::new("bash").arg("-n").arg("-c").arg(input).output()?;
+            let rejected = !output.status.success();
+
+            match (should_fail, rejected) {
+                (true, false) => Err(TestError::Failure(format!(
+                    "expected bash to reject this input as a syntax error, but it accepted it:\n{input}"
+                ))),
+                (false, true) => {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    Err(TestError::Failure(format!(
+                        "expected bash to accept this input, but it rejected it:\n{input}\nbash stderr:\n{stderr}"
+                    )))
+                }
+                (true, true) | (false, false) => Ok(()),
+            }
+        }
+    }
+}
+
 /// Generates a test function asserting that every case in `cases` — the subset of a group's
 /// cases with [`CaseExpectation::FailsToParse`] — fails to parse with the exact error message
 /// recorded as its `expected` text.
@@ -277,6 +322,10 @@ fn main() -> Result<(), BuildError> {
 
                 if !negative_cases.is_empty() {
                     group_fns.push(generate_error_test_fn(&negative_cases));
+                }
+
+                if !group.cases.is_empty() {
+                    group_fns.push(generate_bash_verify_test_fn(&group.cases));
                 }
 
                 group_modules.push(quote! {
