@@ -181,8 +181,9 @@ in `winnow::combinator::cut_err(...).context(StrContext::Label("..."))`: a `for`
 `{` can never mean anything *else* once recognized (no other `alt` branch could claim it), so any
 later failure — a missing `then`, an empty body, a dangling `;` — is reported as a real syntax
 error with a descriptive label, rather than recoverable `Backtrack` letting `alt` quietly fall
-through to `parse_base_command` and misparse the keyword as a literal command name. See
-`parser::error::ParseErrorDisplay` for how those labels render.
+through to `parse_base_command` and misparse the keyword as a literal command name. See §5 for
+how those `StrContext::Label`s, plus each construct's own `Expected` tag, turn into the final
+message text.
 
 `for`'s own grammar is a good example of why "match the keyword, then handle each clause" isn't
 a fixed template: Bash makes the `;`/newline separator before `do`/`{` *mandatory* when an `in`
@@ -192,41 +193,37 @@ applies, rather than enforcing one rule unconditionally.
 
 ## 5. Error Handling Compliance
 
-According to project policy, custom typed errors must be used via `thiserror` for library crates, avoiding `anyhow`.
+According to project policy, custom typed errors must be used via `thiserror` for library crates, avoiding `anyhow`. `parse_program` returns `Result<Vec<Spanned<Statement<'_>>>, ParseError<'_>>` — winnow's own `ErrMode<ContextError>` never leaks past `lib.rs`.
 
 ```rust
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]
 pub enum ParseError<'a> {
-    #[error("Lexical error at byte offset {offset}")]
+    #[error("Lexical error at line {line}, column {column}{}", /* expected, if any */)]
     Lexer {
-        offset: usize,
+        line: usize,
+        column: usize,
+        expected: Option<Cow<'a, str>>,
     },
-    #[error("Syntax error: expected {expected}, found {found:?}")]
+    #[error("Parse error at line {line}, column {column}: {expected}, but found {}", /* found, or "end of file" */)]
     Syntax {
-        expected: &'static str,
+        expected: Cow<'a, str>,
+        line: usize,
+        column: usize,
         found: Option<Token<'a>>,
-    }
+    },
 }
 ```
 
-*(Note: `winnow::ModalResult` provides highly optimized built-in error variants that can be seamlessly mapped into our custom `ParseError` at the pipeline boundaries).*
+Both variants are built from a winnow `ErrMode<ContextError>` — `Syntax` via `ParseError::from_winnow` (the parser's own failure), `Lexer` via `ParseError::from_lex_error` (the failure `TokenStream::take_lex_error` recovers, since a lex failure otherwise surfaces to the parser as ordinary stream exhaustion). Both funnel through a shared `describe_expected`, which reads back whatever `StrContext::Expected`/`StrContext::Label` winnow attached via `.context(...)` (§4.3) and classifies it into one of a closed `ExpectedMessage` enum's phrasings — by matching on `StrContextValue`'s own variant (is this a `Description` constructed by `parser::Expected::Command`/`Expected::Standalone("...")`, or a literal `StringLiteral`/`CharLiteral` from `consume_keyword`/`grouping.rs`?), not by guessing at the rendered text's shape. `expected` is `None` for every lexer failure today (the lexer's one failure site, `parse_word`'s zero-length scan, attaches no context), but isn't silently dropped if a future lexer combinator attaches one.
 
-`ParseError` itself is still aspirational — `parse_program` surfaces winnow's own
-`ModalResult`/`ErrMode<ContextError>` directly, and nothing in the crate constructs a
-`ParseError` today. What *is* live is `ParseErrorDisplay`, a thin `Display` wrapper around that
-raw error: it renders the `StrContext::Label`s every compound-command parser attaches via
-`.context(...)` (§4.3) as a breadcrumb from the outermost construct to the innermost one still
-active when parsing failed (e.g. `"if statement: while loop"`), falling back to `"invalid
-syntax"` when nothing ever committed to a construct at all. `build.rs`'s generated corpus tests
-use it for failure messages instead of `{:?}`, which exposes only the `Backtrack`/`Cut`
-plumbing and says nothing about *why* parsing failed.
+The found token's own rendering (`` `cmd` `` or `"end of file"`) is a separate small `Display` newtype, `FoundToken`, rather than reusing `Token`'s `Display` (which renders just the token's text) via an ad hoc `format!()` helper. Project convention throughout this module: `format!()` is reserved for `#[error(...)]` strings themselves; every other string is built through a `Display` impl rendered once via `.to_string()`.
 
 ## 6. Pipeline Orchestration
 
 `lib.rs` composes the fused stream and the parser behind two public entry points: `parse_program`, which returns the structured `Vec<Statement<'_>>`, and `render_program_ast`, a thin wrapper that renders it to the `{:?}`-debug text corpus tests compare against. The split exists because the AST itself — not its rendered text — is what the taint analysis and rule engine in §7 need to consume; `render_program_ast` remains for corpus tests and is no longer the only way out of the parser. There is no separate "tokenize the whole input" pass either way — lexing and parsing happen lazily, interleaved, as `parse_statements` runs.
 
 ```rust
-fn parse_statements<'a>(stream: &mut TokenStream<'a>) -> ModalResult<Vec<Statement<'a>>> {
+fn parse_statements<'a>(stream: &mut TokenStream<'a>) -> ModalResult<Vec<Spanned<Statement<'a>>>> {
     let mut statements = Vec::new();
 
     while stream.peek_token().is_some() {
@@ -236,25 +233,33 @@ fn parse_statements<'a>(stream: &mut TokenStream<'a>) -> ModalResult<Vec<Stateme
     Ok(statements)
 }
 
-fn render_statements(statements: &[Statement<'_>]) -> String { /* ... */ }
+fn render_statements(statements: &[Spanned<Statement<'_>>]) -> String { /* ... */ }
 
-pub fn parse_program(input: &str) -> ModalResult<Vec<Statement<'_>>> {
+pub fn parse_program(input: &str) -> Result<Vec<Spanned<Statement<'_>>>, ParseError<'_>> {
     let mut stream = TokenStream::new(input);
     let parsed = parse_statements(&mut stream);
 
     if let Some(lex_error) = stream.take_lex_error() {
-        return Err(lex_error);
+        let offset = stream.current_span_start();
+        return Err(ParseError::from_lex_error(input, &lex_error, offset));
     }
 
-    parsed
+    match parsed {
+        Ok(statements) => Ok(statements),
+        Err(err_mode) => {
+            let offset = stream.current_span_start();
+            let found = stream.peek_token();
+            Err(ParseError::from_winnow(input, &err_mode, offset, found))
+        }
+    }
 }
 
-pub fn render_program_ast(input: &str) -> ModalResult<String> {
+pub fn render_program_ast(input: &str) -> Result<String, ParseError<'_>> {
     Ok(render_statements(&parse_program(input)?))
 }
 ```
 
-After `parse_statements` returns, `take_lex_error()` is checked first and overrides the result if present: a stored lex failure means the parser silently treated unlexable input as end-of-stream, so neither an `Ok` nor a generic `Err` from `parse_statements` can be trusted over the real root cause.
+After `parse_statements` returns, `take_lex_error()` is checked first and overrides the result if present: a stored lex failure means the parser silently treated unlexable input as end-of-stream, so neither an `Ok` nor a generic `Err` from `parse_statements` can be trusted over the real root cause. The found token for the `Syntax` case is read via `stream.peek_token()` directly — the stream already lexed (and cached) the token at the failure position while computing `current_span_start()`, so there's no need to re-lex the remaining input from a fresh, contextless `LexerStream`.
 
 ## 7. Taint Analysis & Lint Rules
 
@@ -330,8 +335,8 @@ generates one nested module per suite/group, each holding up to three `rstest` f
    asserts the re-parsed AST's `Debug` rendering matches the original AST's.
 3. **`fails_to_parse`** — for every case marked negative via the corpus's `--- <error>` separator
    (`CaseExpectation::FailsToParse`, from `inceptool-corpus-parser`): asserts `parse_program(input)`
-   returns `Err` *and* that `format!("Parse error: {}", ParseErrorDisplay(&e))` matches the case's
-   `expected` text verbatim. This is how the corpus expresses negative cases — empty
+   returns `Err` *and* that the returned `ParseError`'s own `Display` (`e.to_string()`) matches the
+   case's `expected` text verbatim. This is how the corpus expresses negative cases — empty
    `if`/`while`/`for` bodies, dangling `&&`/`|`, unterminated `(`/`{`/`case`, and similar syntax
    errors — alongside the positive ones, pinning not just *that* parsing must fail but *why*,
    the same way `parses` pins the exact AST for positive cases.
@@ -352,9 +357,9 @@ graph LR
 
 `Debug` and `Display` are deliberately kept separate per `Statement`/`Expr`: `Debug` is the canonical, fully-parenthesized AST dump used to pin down parser output in corpus tests; `Display` is the inverse — it regenerates valid Bash source from the AST. The round-trip test exists to keep these two renderings honest against each other: if `Display` ever drops or misrenders information that `Debug` shows the parser captured, re-parsing the `Display` output will produce a different AST and `roundtrips` fails, even though `parses` still passes for the same case. (This caught a real bug: `CaseArm`'s `Display` used to omit the optional leading `(` before a pattern, which is fine for most patterns but ambiguous when the pattern is the bare word `esac` — `Display` now always emits it.)
 
-Test failure messages use `ParseErrorDisplay` (§5) rather than `{:?}` on the raw error, so a
-broken corpus case reports *why* parsing failed (or unexpectedly succeeded), not just that it
-did.
+Test failure messages use `ParseError`'s own `Display` (§5) rather than `{:?}` on the raw error,
+so a broken corpus case reports *why* parsing failed (or unexpectedly succeeded), not just that
+it did.
 
 *(Redirects (`<`, `>`, `>>`, `>|`, `<>`, `<&`, `>&`, `&>`, `&>>`, `<<<`) are modeled via
 `Statement::Redirected` and round-trip correctly. Remaining gap: heredocs (`<<`, `<<-`) aren't
