@@ -477,4 +477,84 @@ cmd 2>&1 &> file.log
 ---
 
 
+# === Read-write ===
+
+# `<>` (InputOutput) is implemented in token_to_kind and parse_target but had zero corpus
+# coverage. It opens the file for both reading and writing on the given fd (default: fd 0).
+
+=== simple
+cmd <> file
+---
+(redirected (command (word "cmd")) (redirect "<>" (word "file")))
+---
+
+
+=== with explicit fd 0
+cmd 0<> file
+---
+(redirected (command (word "cmd")) (redirect (fd 0) "<>" (word "file")))
+---
+
+
+=== with non-zero fd
+cmd 3<> scratch.tmp
+---
+(redirected (command (word "cmd")) (redirect (fd 3) "<>" (word "scratch.tmp")))
+---
+
+
+=== no spaces
+cmd<>file
+---
+(redirected (command (word "cmd")) (redirect "<>" (word "file")))
+---
+
+
+=== with path
+cmd <> /dev/tcp/host/port
+---
+(redirected (command (word "cmd")) (redirect "<>" (word "/dev/tcp/host/port")))
+---
+
+
+# === Duplicate input ===
+
+# `<&N` (DuplicateInput) is implemented in parse_dup_target but coverage only existed for the
+# close form (`<&-`). These cases test the non-close fd-target form.
+
+=== stdin from fd 3
+cmd <&3
+---
+(redirected (command (word "cmd")) (redirect "<&" (fd 3)))
+---
+
+
+=== stdin from fd 0
+cmd <&0
+---
+(redirected (command (word "cmd")) (redirect "<&" (fd 0)))
+---
+
+
+=== with explicit fd prefix
+cmd 0<&3
+---
+(redirected (command (word "cmd")) (redirect (fd 0) "<&" (fd 3)))
+---
+
+
+=== fd 4 from fd 1
+cmd 4<&1
+---
+(redirected (command (word "cmd")) (redirect (fd 4) "<&" (fd 1)))
+---
+
+
+=== combined with output redirect
+cmd <&3 > out.txt
+---
+(redirected (command (word "cmd")) (redirect "<&" (fd 3)) (redirect ">" (word "out.txt")))
+---
+
+
 # eof
