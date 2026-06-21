@@ -479,9 +479,6 @@ cmd 2>&1 &> file.log
 
 # === Read-write ===
 
-# `<>` (InputOutput) is implemented in token_to_kind and parse_target but had zero corpus
-# coverage. It opens the file for both reading and writing on the given fd (default: fd 0).
-
 === simple
 cmd <> file
 ---
@@ -518,9 +515,6 @@ cmd <> /dev/tcp/host/port
 
 
 # === Duplicate input ===
-
-# `<&N` (DuplicateInput) is implemented in parse_dup_target but coverage only existed for the
-# close form (`<&-`). These cases test the non-close fd-target form.
 
 === stdin from fd 3
 cmd <&3

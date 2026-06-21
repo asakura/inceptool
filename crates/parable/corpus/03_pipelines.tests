@@ -138,26 +138,6 @@ cat baz | head -n 1
 ---
 
 
-# === Syntax errors ===
-
-# `|`/`|&` requires a command on both sides; once the operator is consumed, a missing
-# right-hand side is a syntax error, not silently "no more pipeline" (which would otherwise
-# return just the left-hand command, discarding the operator).
-
-=== dangling pipe is a syntax error
-echo a |
---- <error>
-Parse error: invalid syntax
----
-
-
-=== dangling pipe amp is a syntax error
-echo a |&
---- <error>
-Parse error: invalid syntax
----
-
-
 # === Stderr pipe ===
 
 # `|&` (stderr+stdout pipe) is implemented in the lexer and parse_pipeline but had zero corpus
@@ -197,6 +177,26 @@ cmd1 | cmd2 |& cmd3
 cmd1|&cmd2
 ---
 (pipeline (command (word "cmd1")) (|& (command (word "cmd2"))))
+---
+
+
+# === Syntax errors ===
+
+# `|`/`|&` requires a command on both sides; once the operator is consumed, a missing
+# right-hand side is a syntax error, not silently "no more pipeline" (which would otherwise
+# return just the left-hand command, discarding the operator).
+
+=== dangling pipe is a syntax error
+echo a |
+--- <error>
+Parse error: invalid syntax
+---
+
+
+=== dangling pipe amp is a syntax error
+echo a |&
+--- <error>
+Parse error: invalid syntax
 ---
 
 

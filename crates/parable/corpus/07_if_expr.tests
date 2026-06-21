@@ -1,7 +1,5 @@
 #! Suite 7: If statements
 
-# Comprehensive edge cases from tree-sitter-bash, Oil Shell, POSIX spec
-
 # === Basic if/then/fi ===
 
 === simple if
@@ -338,18 +336,6 @@ if false; then echo yes; else (echo no); fi
 
 # === Complex conditions ===
 
-
-
-
-
-
-
-
-
-
-
-
-
 === test with string comparison
 if [ "$(uname)" = "Darwin" ]; then echo mac; fi
 ---
@@ -370,15 +356,6 @@ if [ -f file ] && [ -r file ]; then cat file; fi
 (if (and (command (word "[") (word "-f") (word "file") (word "]")) (command (word "[") (word "-r") (word "file") (word "]"))) (command (word "cat") (word "file")))
 ---
 
-
-
-
-
-
-
-
-# NOTE: (( )) arithmetic expressions require special parsing
-# Currently parsed as nested subshells - proper (( )) support is future work
 
 # === Whitespace variations ===
 
@@ -621,3 +598,4 @@ Parse error: if statement
 ---
 
 
+# eof

@@ -1,7 +1,5 @@
 #! Suite 8: Loops
 
-# Comprehensive edge cases from tree-sitter-bash, Oil Shell, POSIX spec
-
 # === Basic while loops ===
 
 === simple while
@@ -806,9 +804,6 @@ for f in *.txt; do test -f "$f" && cat "$f"; done
 ---
 
 
-
-
-
 === for over command output
 for user in $(cut -d: -f1 /etc/passwd); do echo $user; done
 ---
@@ -895,6 +890,4 @@ Parse error: for loop
 ---
 
 
-
-
-
+# eof
