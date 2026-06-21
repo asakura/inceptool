@@ -1,7 +1,7 @@
 //! Best-effort taint tracking over resolved [`Expr`]s — see [`SymbolicValue`] and [`Environment`].
 
 use crate::parser::{Segment, interpolation_segments};
-use crate::types::{Expr, Statement};
+use crate::types::{Expr, Spanned, Statement};
 
 use std::collections::BTreeMap;
 
@@ -95,8 +95,8 @@ impl Environment {
 
     /// Resolves `expr` against this environment.
     #[must_use = "resolving an expression has no effect unless the caller uses the result"]
-    pub fn resolve_expr(&self, expr: &Expr<'_>) -> SymbolicValue {
-        match expr {
+    pub fn resolve_expr(&self, expr: &Spanned<Expr<'_>>) -> SymbolicValue {
+        match &expr.inner {
             Expr::Literal(text) => {
                 // The parser folds command/arithmetic substitution and fancy `${...}` forms
                 // back into plain literal text rather than fragmenting the AST over them (see
@@ -125,8 +125,8 @@ impl Environment {
     /// lexer has no notion of assignment words, so `x=$1` is just one opaque command-name
     /// token), so its `$NAME` references are split out here directly via
     /// `interpolation_segments` instead of walking an already-structured [`Expr`].
-    pub fn apply_statement(&mut self, stmt: &Statement<'_>) {
-        let Statement::Command { name, args } = stmt else {
+    pub fn apply_statement(&mut self, stmt: &Spanned<Statement<'_>>) {
+        let Statement::Command { name, args } = &stmt.inner else {
             return;
         };
 
@@ -148,7 +148,7 @@ impl Environment {
 fn resolve_text(text: &str, lookup: impl Fn(&str) -> SymbolicValue) -> SymbolicValue {
     let mut parts = interpolation_segments(text)
         .into_iter()
-        .map(|segment| match segment {
+        .map(|(segment, _)| match segment {
             Segment::Literal(s) if contains_unresolved_construct(s) => SymbolicValue::Unknown,
             Segment::Literal(s) => SymbolicValue::Constant(s.to_owned()),
             Segment::VarRef(name) => lookup(name),
@@ -256,9 +256,12 @@ mod tests {
         #[rstest]
         fn assignment_from_positional_param_taints_the_variable() -> Result<(), TestError> {
             let mut env = Environment::new();
-            env.apply_statement(&Statement::Command {
-                name: "x=$1".into(),
-                args: vec![],
+            env.apply_statement(&Spanned {
+                inner: Statement::Command {
+                    name: "x=$1".into(),
+                    args: vec![],
+                },
+                span: 0..0,
             });
             assert_eq!(
                 env.lookup("x"),
@@ -270,9 +273,12 @@ mod tests {
         #[rstest]
         fn assignment_from_constant_is_not_tainted() -> Result<(), TestError> {
             let mut env = Environment::new();
-            env.apply_statement(&Statement::Command {
-                name: "x=hello".into(),
-                args: vec![],
+            env.apply_statement(&Spanned {
+                inner: Statement::Command {
+                    name: "x=hello".into(),
+                    args: vec![],
+                },
+                span: 0..0,
             });
             assert!(!env.lookup("x").is_tainted());
             Ok(())
@@ -281,15 +287,36 @@ mod tests {
         #[rstest]
         fn taint_propagates_through_concatenation() -> Result<(), TestError> {
             let mut env = Environment::new();
-            env.apply_statement(&Statement::Command {
-                name: "x=$1".into(),
-                args: vec![],
+            env.apply_statement(&Spanned {
+                inner: Statement::Command {
+                    name: "x=$1".into(),
+                    args: vec![],
+                },
+                span: 0..0,
             });
+
+            env.apply_statement(&Spanned {
+                inner: Statement::Command {
+                    name: "y=$x".into(),
+                    args: vec![],
+                },
+                span: 0..0,
+            });
+
             assert!(
-                env.resolve_expr(&Expr::Interpolated(vec![
-                    Expr::Literal("prefix-".into()),
-                    Expr::VarRef("x"),
-                ]))
+                env.resolve_expr(&Spanned {
+                    inner: Expr::Interpolated(vec![
+                        Spanned {
+                            inner: Expr::Literal("prefix-".into()),
+                            span: 0..0,
+                        },
+                        Spanned {
+                            inner: Expr::VarRef("y"),
+                            span: 0..0,
+                        },
+                    ]),
+                    span: 0..0
+                })
                 .is_tainted()
             );
             Ok(())
@@ -298,9 +325,15 @@ mod tests {
         #[rstest]
         fn command_with_args_is_not_an_assignment() -> Result<(), TestError> {
             let mut env = Environment::new();
-            env.apply_statement(&Statement::Command {
-                name: "x=5".into(),
-                args: vec![Expr::Literal("extra".into())],
+            env.apply_statement(&Spanned {
+                inner: Statement::Command {
+                    name: "x=5".into(),
+                    args: vec![Spanned {
+                        inner: Expr::Literal("extra".into()),
+                        span: 0..0,
+                    }],
+                },
+                span: 0..0,
             });
             assert_eq!(env.lookup("x"), SymbolicValue::Unknown);
             Ok(())

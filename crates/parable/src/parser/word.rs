@@ -3,11 +3,12 @@
 
 use super::ParserStream;
 
-use crate::types::{Expr, Token};
+use crate::types::{Expr, Spanned, Token};
 
 use winnow::{ModalResult, Parser as _, token::any};
 
 use std::borrow::Cow;
+use std::ops::Range;
 
 /// One segment of a word split by [`interpolation_segments`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,9 +32,11 @@ enum ReferenceOutcome<'a> {
 }
 
 /// Splits `text` into literal and variable-reference segments, honoring single-quote
-/// literalness (Bash doesn't expand `$x` inside `'...'`) and `\$` escaping.
+/// literalness (Bash doesn't expand `$x` inside `'...'`) and `\$` escaping. Each segment is
+/// paired with its byte span within `text` — a `VarRef`'s span covers the whole reference
+/// (`$NAME`/`${NAME}`), not just the name itself.
 #[must_use = "splitting text has no effect unless the caller uses the resulting segments"]
-pub fn interpolation_segments(text: &str) -> Vec<Segment<'_>> {
+pub fn interpolation_segments(text: &str) -> Vec<(Segment<'_>, Range<usize>)> {
     let mut segments = Vec::new();
     let mut literal_start = 0_usize;
     let mut in_single = false;
@@ -67,12 +70,13 @@ pub fn interpolation_segments(text: &str) -> Vec<Segment<'_>> {
                 cursor = cursor.saturating_add(char_len);
             }
             '$' => {
+                let dollar_start = cursor;
                 let after_dollar = cursor.saturating_add(char_len);
                 let (outcome, next_cursor) = scan_reference(text, after_dollar);
 
                 if let ReferenceOutcome::VarRef(name) = outcome {
-                    push_literal_segment(&mut segments, text, literal_start, cursor);
-                    segments.push(Segment::VarRef(name));
+                    push_literal_segment(&mut segments, text, literal_start, dollar_start);
+                    segments.push((Segment::VarRef(name), dollar_start..next_cursor));
                     literal_start = next_cursor;
                 }
 
@@ -91,13 +95,13 @@ pub fn interpolation_segments(text: &str) -> Vec<Segment<'_>> {
 
 /// Pushes `text[start..end]` as a literal segment, unless it's empty.
 fn push_literal_segment<'a>(
-    segments: &mut Vec<Segment<'a>>,
+    segments: &mut Vec<(Segment<'a>, Range<usize>)>,
     text: &'a str,
     start: usize,
     end: usize,
 ) {
     if let Some(literal) = text.get(start..end).filter(|s| !s.is_empty()) {
-        segments.push(Segment::Literal(literal));
+        segments.push((Segment::Literal(literal), start..end));
     }
 }
 
@@ -212,8 +216,10 @@ fn scan_command_or_arithmetic(text: &str, after_dollar: usize) -> (ReferenceOutc
 
 /// Converts a lexed word into an [`Expr`], splitting out `$NAME`/`${NAME}` references (see
 /// [`interpolation_segments`]) into [`Expr::VarRef`]s when the word isn't entirely literal.
+/// `base` is the word's own absolute start offset, used to turn each segment's
+/// `text`-relative span into an absolute one for [`Expr::Interpolated`]'s parts.
 #[must_use = "interpolates the word; discarding it drops the parsed structure"]
-fn interpolate(word: Cow<'_, str>) -> Expr<'_> {
+fn interpolate(word: Cow<'_, str>, base: usize) -> Expr<'_> {
     let Cow::Borrowed(text) = word else {
         // Never produced by the current lexer (which only ever borrows), but a `Cow::Owned`
         // word can't be split into `'a`-lived segments, so fall back to one opaque literal.
@@ -222,14 +228,17 @@ fn interpolate(word: Cow<'_, str>) -> Expr<'_> {
 
     let mut parts = interpolation_segments(text)
         .into_iter()
-        .map(|segment| match segment {
-            Segment::Literal(s) => Expr::Literal(Cow::Borrowed(s)),
-            Segment::VarRef(name) => Expr::VarRef(name),
+        .map(|(segment, span)| Spanned {
+            inner: match segment {
+                Segment::Literal(s) => Expr::Literal(Cow::Borrowed(s)),
+                Segment::VarRef(name) => Expr::VarRef(name),
+            },
+            span: base.saturating_add(span.start)..base.saturating_add(span.end),
         });
 
     match (parts.next(), parts.next()) {
         (None, _) => Expr::Literal(Cow::Borrowed("")),
-        (Some(only), None) => only,
+        (Some(only), None) => only.inner,
         (Some(first), Some(second)) => {
             let mut all = vec![first, second];
             all.extend(parts);
@@ -239,12 +248,20 @@ fn interpolate(word: Cow<'_, str>) -> Expr<'_> {
 }
 
 #[must_use = "parses a literal; discarding ignores syntax structures"]
-pub(super) fn parse_literal<'a>(input: &mut ParserStream<'a>) -> ModalResult<Expr<'a>> {
-    any.verify_map(|t| match t {
-        Token::Word(word) => Some(interpolate(word)),
-        _ => None,
+pub(super) fn parse_literal<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<Expr<'a>>> {
+    let start = input.current_span_start();
+    let word = any
+        .verify_map(|t| match t {
+            Token::Word(word) => Some(word),
+            _ => None,
+        })
+        .parse_next(input)?;
+    let end = input.previous_span_end();
+
+    Ok(Spanned {
+        inner: interpolate(word, start),
+        span: start..end,
     })
-    .parse_next(input)
 }
 
 /// Parses one `case` pattern alternative: a single [`Token::Word`], taken verbatim as
@@ -255,10 +272,60 @@ pub(super) fn parse_literal<'a>(input: &mut ParserStream<'a>) -> ModalResult<Exp
 /// braces when later rendered back out via [`Expr`]'s `Display`-based `Debug` (see
 /// `crate::types`'s `impl Debug for Expr`); keeping the raw word preserves them.
 #[must_use = "parses a pattern word; discarding ignores syntax structures"]
-pub(super) fn parse_pattern_word<'a>(input: &mut ParserStream<'a>) -> ModalResult<Expr<'a>> {
+pub(super) fn parse_pattern_word<'a>(
+    input: &mut ParserStream<'a>,
+) -> ModalResult<Spanned<Expr<'a>>> {
     any.verify_map(|t| match t {
         Token::Word(word) => Some(Expr::Literal(word)),
         _ => None,
     })
+    .with_span()
+    .map(Spanned::from)
     .parse_next(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::stream::TokenStream;
+
+    use core::assert_matches;
+
+    #[derive(Debug, thiserror::Error)]
+    enum TestError {
+        #[error("Test failure: {0}")]
+        Failure(String),
+    }
+
+    mod parse_literal {
+        use super::*;
+
+        use rstest::rstest;
+
+        #[rstest]
+        fn interpolated_parts_carry_their_own_span_not_the_whole_words() -> Result<(), TestError> {
+            let mut stream = TokenStream::new("$x-y");
+            let parsed =
+                super::parse_literal(&mut stream).map_err(|e| TestError::Failure(e.to_string()))?;
+
+            assert_eq!(parsed.span, 0..4);
+
+            let Expr::Interpolated(parts) = parsed.inner else {
+                return Err(TestError::Failure("expected an Interpolated expr".into()));
+            };
+
+            let [var_ref, literal] = parts.as_slice() else {
+                return Err(TestError::Failure("expected exactly two parts".into()));
+            };
+
+            assert_matches!(var_ref.inner, Expr::VarRef("x"));
+            assert_eq!(var_ref.span, 0..2);
+
+            assert_matches!(&literal.inner, Expr::Literal(s) if s.as_ref() == "-y");
+            assert_eq!(literal.span, 2..4);
+
+            Ok(())
+        }
+    }
 }

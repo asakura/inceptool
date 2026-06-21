@@ -1,7 +1,7 @@
 //! The AST and token types shared by [`crate::lexer`], [`crate::parser`], and downstream
 //! analysis — see [`Token`], [`Expr`], and [`Statement`].
 
-use std::{borrow::Cow, fmt};
+use std::{borrow::Cow, fmt, ops::Range};
 
 /// Tracks the current parsing context of the Bash script.
 #[derive(Debug, Clone, Default)]
@@ -97,6 +97,61 @@ pub enum Token<'a> {
     Eof,
 }
 
+/// A wrapper attaching a byte span (start and end offset) to an AST node or token.
+///
+/// If the `miette` feature is enabled, this type implements conversions to
+/// [`miette::SourceSpan`], allowing seamless integration with `miette` diagnostics.
+#[derive(Clone, PartialEq, Eq)]
+pub struct Spanned<T> {
+    /// The inner parsed node.
+    pub inner: T,
+    /// The byte span in the source string.
+    pub span: Range<usize>,
+}
+
+impl<T> From<(T, Range<usize>)> for Spanned<T> {
+    /// Builds a `Spanned` from a `(node, span)` tuple — the shape winnow's `.with_span()`
+    /// combinator produces, so a parser can finish with `.with_span().map(Spanned::from)`.
+    fn from((inner, span): (T, Range<usize>)) -> Self {
+        Self { inner, span }
+    }
+}
+
+/// Delegates `$trait` straight through to a `Spanned<T>`'s `inner`, so a `Spanned` reads exactly
+/// like the node it wraps. In particular, this keeps `{:?}` corpus-test AST snapshots from being
+/// polluted with spans, without [`fmt::Debug`] and [`fmt::Display`] each needing their own
+/// hand-written pass-through.
+macro_rules! transparent_fmt {
+    ($trait:ident) => {
+        impl<T: fmt::$trait> fmt::$trait for Spanned<T> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                fmt::$trait::fmt(&self.inner, f)
+            }
+        }
+    };
+}
+
+transparent_fmt!(Display);
+transparent_fmt!(Debug);
+
+#[cfg(feature = "miette")]
+impl<T> From<Spanned<T>> for miette::SourceSpan {
+    fn from(spanned: Spanned<T>) -> Self {
+        Self::from(spanned.span)
+    }
+}
+
+#[cfg(feature = "miette")]
+impl<T> From<&Spanned<T>> for miette::SourceSpan {
+    /// Delegates to the owned [`From<Spanned<T>>`] impl above via a `start..end` reconstructed
+    /// from copies of `span`'s two `usize` fields, rather than `Range::clone`-ing the whole span
+    /// — cheaper, and `T` need not be `Clone` for it (`Spanned<T>` itself can't be reused here
+    /// without one).
+    fn from(spanned: &Spanned<T>) -> Self {
+        Self::from(spanned.span.start..spanned.span.end)
+    }
+}
+
 /// A parsed word, with any `$NAME`/`${NAME}` references resolved out of the surrounding literal
 /// text — see `parser::word`.
 #[derive(Clone, PartialEq, Eq)]
@@ -106,8 +161,10 @@ pub enum Expr<'a> {
     /// A `$NAME`/`${NAME}` reference, not yet resolved to a value.
     VarRef(&'a str),
     /// A word containing one or more `$NAME`/`${NAME}` references mixed with literal text,
-    /// e.g. `"prefix${x}suffix"` is `[Literal("prefix"), VarRef("x"), Literal("suffix")]`.
-    Interpolated(Vec<Self>),
+    /// e.g. `"prefix${x}suffix"` is `[Literal("prefix"), VarRef("x"), Literal("suffix")]`. Each
+    /// part carries its own byte span (set once in `parser::word::interpolate`), rather than the
+    /// whole word's span being reused for every part.
+    Interpolated(Vec<Spanned<Self>>),
 }
 
 /// One parsed Bash statement, as produced by [`crate::parser::parse_statement`].
@@ -121,18 +178,18 @@ pub enum Statement<'a> {
         name: Cow<'a, str>,
         /// The command's argument expressions, each already split into literal/variable-
         /// reference parts.
-        args: Vec<Expr<'a>>,
+        args: Vec<Spanned<Expr<'a>>>,
     },
     /// A `for NAME in ...; do ...; done` loop.
     ForLoop {
         /// The loop variable's name, as a word — usually a plain literal (`x`), but Bash also
         /// allows e.g. a command substitution here, so this isn't a bare `&str`.
-        variable: Expr<'a>,
+        variable: Spanned<Expr<'a>>,
         /// The expressions iterated over, one loop body run per expression. Defaults to
         /// `["$@"]` when the source omits the `in` clause entirely (`for x; do ...; done`).
-        iterable: Vec<Expr<'a>>,
+        iterable: Vec<Spanned<Expr<'a>>>,
         /// The statement run on each iteration.
-        body: Box<Self>,
+        body: Box<Spanned<Self>>,
     },
     /// An `if ...; then ...; else ...; fi` conditional. `elif` has no field of its own — an
     /// `elif` clause is a nested [`Statement::If`] in `else_branch`, which is exactly the AST
@@ -140,33 +197,33 @@ pub enum Statement<'a> {
     /// both round-trip fine either way).
     If {
         /// The condition; the branch taken depends on its exit status.
-        condition: Box<Self>,
+        condition: Box<Spanned<Self>>,
         /// The statement run when `condition` succeeds.
-        then_branch: Box<Self>,
+        then_branch: Box<Spanned<Self>>,
         /// The statement run when `condition` fails, if an `else`/`elif` clause is present.
-        else_branch: Option<Box<Self>>,
+        else_branch: Option<Box<Spanned<Self>>>,
     },
     /// A `while ...; do ...; done` loop, repeating `body` for as long as `condition`
     /// succeeds.
     While {
         /// The statement re-evaluated before each iteration.
-        condition: Box<Self>,
+        condition: Box<Spanned<Self>>,
         /// The statement run on each iteration.
-        body: Box<Self>,
+        body: Box<Spanned<Self>>,
     },
     /// An `until ...; do ...; done` loop — like [`Statement::While`], but repeats `body` for as
     /// long as `condition` fails.
     Until {
         /// The statement re-evaluated before each iteration.
-        condition: Box<Self>,
+        condition: Box<Spanned<Self>>,
         /// The statement run on each iteration.
-        body: Box<Self>,
+        body: Box<Spanned<Self>>,
     },
     /// A `case <word> in ...; esac` pattern dispatch: `word` is matched against each arm's
     /// patterns in order, and the first match's body (if any) runs.
     Case {
         /// The word matched against each arm's patterns.
-        word: Expr<'a>,
+        word: Spanned<Expr<'a>>,
         /// The arms, tried in source order.
         arms: Vec<CaseArm<'a>>,
     },
@@ -174,23 +231,23 @@ pub enum Statement<'a> {
     /// stderr) feeding the next's stdin.
     Pipeline {
         /// The first command in the pipeline.
-        head: Box<Self>,
+        head: Box<Spanned<Self>>,
         /// Each subsequent stage: the pipe operator that connects it from the previous stage,
         /// paired with the command itself. Always non-empty (a single-command pipeline is never
         /// built — the parser returns the bare command instead).
-        tail: Vec<(PipeOp, Self)>,
+        tail: Vec<(PipeOp, Spanned<Self>)>,
     },
     /// A `(...)` subshell: `body` runs in a forked copy of the shell, so its side effects
     /// (variable assignments, `cd`, ...) don't affect the parent.
     Subshell {
         /// The statement run inside the subshell.
-        body: Box<Self>,
+        body: Box<Spanned<Self>>,
     },
     /// A `{ ...; }` brace group: `body` runs in the current shell, unlike [`Statement::Subshell`]
     /// — used to group commands for a redirect or background job without forking.
     BraceGroup {
         /// The statement run inside the group.
-        body: Box<Self>,
+        body: Box<Spanned<Self>>,
     },
     /// Two pipelines joined by `&&`/`||`: `right` runs only if `left`'s exit status satisfies
     /// `op`. Binds tighter than [`Statement::Sequence`]/[`Statement::Background`] (mirroring
@@ -199,29 +256,29 @@ pub enum Statement<'a> {
     /// `AndOr(AndOr(a, And, b), Or, c)`.
     AndOr {
         /// The left-hand pipeline (or nested `AndOr`), evaluated first.
-        left: Box<Self>,
+        left: Box<Spanned<Self>>,
         /// Which condition on `left`'s exit status gates running `right`.
         op: LogicalOp,
         /// The right-hand pipeline (or nested `AndOr`), evaluated per `op`.
-        right: Box<Self>,
+        right: Box<Spanned<Self>>,
     },
     /// Two statements joined by `;` or a newline: `right` always runs after `left`, regardless of
     /// `left`'s exit status. A lone trailing `;`/newline carries no information and is never
     /// built into this variant — `parser::command::parse_list` returns the bare `left` instead.
     Sequence {
         /// The statement that runs first.
-        left: Box<Self>,
+        left: Box<Spanned<Self>>,
         /// The statement that unconditionally runs after `left`.
-        right: Box<Self>,
+        right: Box<Spanned<Self>>,
     },
     /// `left &` (or `left & right`): `left` runs asynchronously. Unlike a lone trailing `;`,
     /// backgrounding is meaningful even with nothing following — `right` is `None` exactly when
     /// `&` was the list's final token.
     Background {
         /// The statement that runs asynchronously.
-        left: Box<Self>,
+        left: Box<Spanned<Self>>,
         /// The statement that runs after launching `left`, if the list continues.
-        right: Option<Box<Self>>,
+        right: Option<Box<Spanned<Self>>>,
     },
     /// `inner` with one or more [`Redirect`]s attached, in source order. A single wrapper
     /// variant rather than a `redirects` field on every other variant: Bash's own grammar
@@ -231,7 +288,7 @@ pub enum Statement<'a> {
     /// shapes are exactly "some other statement, plus redirects", so one wrapper covers both.
     Redirected {
         /// The statement being redirected.
-        inner: Box<Self>,
+        inner: Box<Spanned<Self>>,
         /// The redirects, in source order. Order matters only for fd-duplication chains, where
         /// each redirect sees the fd table as left by the previous one (`2>&1 1>&2` differs from
         /// `1>&2 2>&1`).
@@ -244,9 +301,9 @@ pub enum Statement<'a> {
 pub struct CaseArm<'a> {
     /// The patterns tried against the `case` word, in order — more than one when alternatives
     /// are joined by `|` (`a|b)`).
-    pub patterns: Vec<Expr<'a>>,
+    pub patterns: Vec<Spanned<Expr<'a>>>,
     /// The statement run when one of `patterns` matches, or `None` for an empty arm (`a) ;;`).
-    pub body: Option<Box<Statement<'a>>>,
+    pub body: Option<Box<Spanned<Statement<'a>>>>,
 }
 
 /// Which exit-status condition on `left` gates running `right` in a [`Statement::AndOr`].
@@ -314,7 +371,7 @@ pub enum RedirectKind {
 pub enum RedirectTarget<'a> {
     /// An ordinary word — a file path for most [`RedirectKind`]s, or, for
     /// [`RedirectKind::HereString`], the literal text fed to stdin.
-    File(Expr<'a>),
+    File(Spanned<Expr<'a>>),
     /// A target file descriptor for [`RedirectKind::DuplicateInput`]/[`RedirectKind::DuplicateOutput`]
     /// (`2>&1`'s `1`).
     Fd(u32),
@@ -612,21 +669,20 @@ impl fmt::Display for Statement<'_> {
             } => {
                 write!(f, "if {condition}; then {then_branch}")?;
 
-                let mut next = else_branch.as_deref();
-
-                while let Some(stmt) = next {
-                    match stmt {
+                let mut current = else_branch.as_ref();
+                while let Some(stmt) = current {
+                    match &stmt.inner {
                         Statement::If {
                             condition: elif_condition,
                             then_branch: elif_then_branch,
                             else_branch: elif_else_branch,
                         } => {
                             write!(f, "; elif {elif_condition}; then {elif_then_branch}")?;
-                            next = elif_else_branch.as_deref();
+                            current = elif_else_branch.as_ref();
                         }
                         other => {
                             write!(f, "; else {other}")?;
-                            next = None;
+                            current = None;
                         }
                     }
                 }
