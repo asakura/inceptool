@@ -3,7 +3,7 @@ use crate::types::Token;
 
 use core::assert_matches;
 use std::borrow::Cow;
-use winnow::stream::{Offset, Stream};
+use winnow::stream::{Offset as _, Stream as _};
 
 #[derive(Debug, thiserror::Error)]
 enum TestError {}

@@ -42,6 +42,11 @@
 //!   the same length would place the next token's start back at the previous token's end,
 //!   underlining the gap between them instead of the token itself.
 
+#![expect(
+    clippy::field_scoped_visibility_modifiers,
+    reason = "fields are shared within the module hierarchy"
+)]
+
 mod traits;
 
 #[cfg(test)]
@@ -88,6 +93,10 @@ pub(crate) const TOKEN_SLICE_CAPACITY: usize = 4;
 /// would silently drop a lex failure discovered that way, since it'd be recorded on the
 /// throwaway clone instead of `self`.
 #[derive(Debug, Clone)]
+#[expect(
+    clippy::field_scoped_visibility_modifiers,
+    reason = "shared within module hierarchy"
+)]
 pub struct TokenStream<'a> {
     pub(crate) lexer: RefCell<LexerStream<'a>>,
     /// Token already lexed by a previous `Stream::peek_token` call, not yet consumed by
@@ -171,7 +180,7 @@ impl<'a> TokenStream<'a> {
     pub(crate) fn logical_remaining_len(&self) -> usize {
         self.lookahead.borrow().as_ref().map_or_else(
             || {
-                use winnow::stream::Stream;
+                use winnow::stream::Stream as _;
                 self.lexer.borrow().eof_offset()
             },
             |lookahead| lookahead.remaining_before,
@@ -186,7 +195,7 @@ impl<'a> TokenStream<'a> {
     /// [`crate::lexer::LexerStream::lex_token_with_start`].
     #[must_use = "looking up the remaining length has no effect unless the caller uses it"]
     pub(crate) fn token_start_remaining_len(&self) -> usize {
-        use winnow::stream::Stream;
+        use winnow::stream::Stream as _;
         drop(self.peek_token());
 
         self.lookahead.borrow().as_ref().map_or_else(
