@@ -1,13 +1,16 @@
 //! Subshells (`(...)`) and brace groups (`{ ...; }`) — [`parse_subshell`], [`parse_brace_group`].
 
-use super::command::parse_list_until;
-use super::{ParserStream, at_keyword, parse_statement};
+use super::{
+    command::parse_list_until,
+    {ParserStream, at_keyword},
+};
 
 use crate::types::{Statement, Token};
 
-use winnow::ModalResult;
-use winnow::Parser as _;
-use winnow::token::any;
+use winnow::{
+    ModalResult, Parser as _, combinator::cut_err, error::StrContext, stream::Stream as _,
+    token::any,
+};
 
 /// The reserved word closing a brace group — see [`parse_brace_group`]'s doc for why it needs
 /// its own keyword guard, unlike [`parse_subshell`].
@@ -15,26 +18,23 @@ const KW_RBRACE: &str = "}";
 
 #[must_use = "parses a subshell; discarding ignores syntax structures"]
 pub(super) fn parse_subshell<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
-    let _: Token<'_> = any
-        .verify(|t| matches!(t, Token::LParen))
+    any.verify(|t| matches!(t, Token::LParen))
+        .void()
         .parse_next(input)?;
 
-    let mut body = Vec::new();
+    cut_err(|rest: &mut ParserStream<'a>| {
+        let body = parse_list_until(rest, |inp| matches!(inp.peek_token(), Some(Token::RParen)))?;
 
-    while let Ok(stmt) = parse_statement(input) {
-        body.push(stmt);
+        any.verify(|t| matches!(t, Token::RParen))
+            .void()
+            .parse_next(rest)?;
 
-        if let Ok(_rparen) = {
-            let res: ModalResult<Token<'_>> =
-                any.verify(|t| matches!(t, Token::RParen)).parse_next(input);
-
-            res
-        } {
-            break;
-        }
-    }
-
-    Ok(Statement::Subshell { body })
+        Ok(Statement::Subshell {
+            body: Box::new(body),
+        })
+    })
+    .context(StrContext::Label("subshell"))
+    .parse_next(input)
 }
 
 /// Parses a brace group.
@@ -48,15 +48,27 @@ pub(super) fn parse_subshell<'a>(input: &mut ParserStream<'a>) -> ModalResult<St
 /// `and_or` too many and handing `}` to `parse_base_command` as a bogus command name.
 #[must_use = "parses a brace group; discarding ignores syntax structures"]
 pub(super) fn parse_brace_group<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
-    let _: Token<'_> = any
-        .verify(|t| matches!(t, Token::LBrace) || matches!(t, Token::Word(w) if w.as_ref() == "{"))
+    any.verify(|t| matches!(t, Token::LBrace) || matches!(t, Token::Word(w) if w.as_ref() == "{"))
+        .void()
         .parse_next(input)?;
 
-    let body = parse_list_until(input, |inp| at_keyword(inp, KW_RBRACE))?;
+    cut_err(|rest: &mut ParserStream<'a>| {
+        let body = parse_list_until(rest, |inp| at_keyword(inp, KW_RBRACE))?;
 
-    let _: Token<'_> = any
-        .verify(|t| matches!(t, Token::RBrace) || matches!(t, Token::Word(w) if w.as_ref() == "}"))
-        .parse_next(input)?;
+        any.verify(|t| {
+            matches!(t, Token::RBrace) || matches!(t, Token::Word(w) if w.as_ref() == "}")
+        })
+        .void()
+        .parse_next(rest)?;
 
-    Ok(Statement::BraceGroup { body: vec![body] })
+        Ok(Statement::BraceGroup {
+            body: Box::new(body),
+        })
+    })
+    .context(StrContext::Label("brace group"))
+    .parse_next(input)
 }
+
+// `parse_subshell`'s rejection of an empty `()` and propagation of a malformed nested compound
+// command's error are covered by the "Syntax errors" group in `corpus/06_compound.tests`,
+// rather than duplicated here.

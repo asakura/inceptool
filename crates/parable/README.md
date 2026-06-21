@@ -39,58 +39,49 @@ We utilize `winnow::stream::Stateful` to thread a mutable context through the to
 
 ```rust
 use std::borrow::Cow;
-use winnow::stream::Stateful;
 
 /// Tracks the current parsing context of the Bash script
 #[derive(Debug, Clone, Default)]
-pub struct LexerState {
+pub struct LexerState<'a> {
     pub in_arithmetic: bool,
-    pub heredoc_delimiter: Option<String>,
-    pub command_position: bool, // True if the next token is expected to be a command/keyword
+    pub heredoc_delimiter: Option<Cow<'a, str>>,
 }
-
-/// The stateful input stream type for the lexer
-pub type LexerStream<'a> = Stateful<&'a str, LexerState>;
 ```
+
+`LexerStream<'a>` (in `lexer.rs`) is a newtype wrapping `Stateful<&'a str, LexerState<'a>>`, not a
+bare type alias — it needs its own inherent methods (`lex_token`, `skip_whitespace`, ...) that a
+plain alias couldn't carry.
 
 ### 3.2. Token Representation
 
-Following `inceptool-rs` `GEMINI.md` rules, strings must utilize `Cow<'a, str>` only when unescaping is required, defaulting to `&'a str` for zero-allocation.
+Bash reserved words (`for`, `if`, `done`, ...) are **not** their own token kind: they lex as
+plain `Word`s, and only the *parser* (via `at_keyword`) decides whether a given `Word` is acting
+as a keyword at that grammar position. This is what makes a command literally named `if`
+(quoted or escaped) distinguishable from the reserved word — the lexer never has to know.
 
 ```rust
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token<'a> {
-    KeywordFor,
-    KeywordIn,
-    Identifier(&'a str),
-    Operator(&'a str),
-    /// Zero-copy by default; allocates only if escape sequences (\n, \") are evaluated
-    StringLiteral(Cow<'a, str>), 
+    Word(Cow<'a, str>),
+    Newline,
+    Semi, Pipe, Amp, LParen, RParen, LBrace, RBrace, Less, Greater,
+    AndAnd, OrOr, SemiSemi, SemiAmp, SemiSemiAmp,
+    LessLess, GreaterGreater, LessAmp, GreaterAmp, LessGreater, GreaterPipe,
+    LessLessMinus, LessLessLess, AmpGreater, AmpGreaterGreater, PipeAmp,
+    AssignmentWord(&'a str),
+    Number(&'a str),
     Eof,
 }
 ```
 
+`Word` is `Cow<'a, str>` rather than `&'a str` because backslash-unescaping (and a handful of
+other lexer transforms) can't always stay zero-copy — but the common case still borrows.
+
 ### 3.3. Contextual Branching
 
-The lexer functions use the `.state` property to dynamically select logic without performance penalties.
-
-```rust
-use winnow::ModalResult;
-use winnow::token::take_while;
-use winnow::combinator::preceded;
-use winnow::Parser;
-
-#[must_use = "constructs the identifier token; failure to use drops the parsed stream state"]
-fn parse_variable<'a>(input: &mut LexerStream<'a>) -> ModalResult<Token<'a>> {
-    let name = if input.state.in_arithmetic {
-        take_while(1.., ('a'..='z', 'A'..='Z', '_')).parse_next(input)?
-    } else {
-        preceded('$', take_while(1.., ('a'..='z', 'A'..='Z', '_'))).parse_next(input)?
-    };
-    
-    Ok(Token::Identifier(name))
-}
-```
+The lexer functions use `LexerState` to dynamically select logic without performance penalties —
+e.g. `$x` resolves differently depending on `in_arithmetic`. See `lexer.rs`'s module doc for the
+specific contextual rules (arithmetic, heredocs) and which of them are implemented today.
 
 ## 4. AST Compilation
 
@@ -98,12 +89,16 @@ The AST compiler does not deal with raw strings or a pre-lexed buffer; it drives
 
 ### 4.1. The TokenStream
 
-`TokenStream<'a>` wraps the lexer's `Stateful<&'a str, LexerState>` and implements `winnow::stream::Stream` by hand, so every `any`/`verify`/`alt` call in the parser triggers exactly one lexer step on demand. Backtracking (`Verify`, `Alt`) falls out for free: `Stream::checkpoint`/`reset` just clone/restore the whole `TokenStream`, since both the underlying `&str` position and the (currently inert) `LexerState` are cheap to clone.
+`TokenStream<'a>` wraps a `LexerStream<'a>` and implements `winnow::stream::Stream` by hand, so
+every `any`/`verify`/`alt` call in the parser triggers exactly one lexer step on demand.
+Backtracking (`Verify`, `Alt`) falls out for free: `Stream::checkpoint`/`reset` just clone/restore
+the whole `TokenStream`.
 
 ```rust
 pub struct TokenStream<'a> {
-    lexer: LexerStream<'a>,
-    lex_failure: Option<LexerStream<'a>>,
+    lexer: RefCell<LexerStream<'a>>,
+    lookahead: RefCell<Option<Lookahead<'a>>>,
+    lex_failure: RefCell<Option<Box<LexerStream<'a>>>>,
 }
 
 impl<'a> Stream for TokenStream<'a> {
@@ -111,14 +106,11 @@ impl<'a> Stream for TokenStream<'a> {
     // ...
 
     fn next_token(&mut self) -> Option<Self::Token> {
-        match next_token(&mut self.lexer) {
-            Ok(Token::Eof) => None,
-            Ok(token) => Some(token),
-            Err(_) => {
-                self.lex_failure = Some(self.lexer.clone());
-                None
-            }
-        }
+        // drains `lookahead` first if `peek_token` already buffered one, otherwise lexes
+    }
+
+    fn peek_token(&self) -> Option<Self::Token> {
+        // lexes one token ahead into `lookahead` on a cache miss, without consuming it
     }
     // ...
 }
@@ -126,14 +118,24 @@ impl<'a> Stream for TokenStream<'a> {
 pub type ParserStream<'a> = TokenStream<'a>;
 ```
 
-`Stream::next_token` returns `Option<Token>`, with no slot for an error, so a genuine lex failure (e.g. an unhandled whitespace byte) is reported to the parser as ordinary end-of-stream. `TokenStream` snapshots the lexer state at the failure point so that `take_lex_error()` can re-lex that single token afterward and recover the real, specific error — rather than letting the parser's generic "ran out of tokens" error mask the actual cause.
+The fields are `RefCell`-wrapped because `Stream::peek_token` takes `&self` yet still needs to
+drive the lexer forward to fill `lookahead` on a cache miss. That cache exists because Bash
+reserved words lex as plain `Word`s (§3.2) — the parser routinely peeks the very same upcoming
+token several times in a row, once per candidate keyword, before anything actually consumes it;
+without it, each of those peeks would re-lex the same bytes from scratch.
+
+`Stream::next_token`/`peek_token` return `Option<Token>`, with no slot for an error, so a genuine
+lex failure is reported to the parser as ordinary end-of-stream. `TokenStream` snapshots the
+lexer state at the failure point so that `take_lex_error()` can re-lex that single token
+afterward and recover the real, specific error — rather than letting the parser's generic "ran
+out of tokens" error mask the actual cause.
 
 ### 4.2. Structural AST Definition
 
 The final AST continues to hold references to the original `&'a str`, ensuring zero memory movement.
 
 ```rust
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Expr<'a> {
     Literal(Cow<'a, str>),
     VarRef(&'a str),
@@ -142,18 +144,23 @@ pub enum Expr<'a> {
     Interpolated(Vec<Self>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Statement<'a> {
     Command {
-        name: &'a str,
+        name: Cow<'a, str>,
         args: Vec<Expr<'a>>,
     },
     ForLoop {
-        variable: &'a str,
+        variable: Expr<'a>,
         iterable: Vec<Expr<'a>>,
-        body: Vec<Statement<'a>>,
-    }
-    // ...If/While/Until/Pipeline/Subshell/BraceGroup/List/Redirected, see `types.rs`
+        /// A single statement, not a list — `command::parse_list_until` already folds a
+        /// `;`/`&`/newline-separated body into nested `Sequence`/`Background` nodes, so there's
+        /// nothing left for a `Vec` to hold beyond that one folded root.
+        body: Box<Self>,
+    },
+    // ...If/While/Until/Case/Pipeline/Subshell/BraceGroup/AndOr/Sequence/Background/Redirected,
+    // see `types.rs`. Subshell/BraceGroup's `body` is `Box<Self>` for the same reason as
+    // ForLoop's above; only `Pipeline::commands` is a genuine `Vec<Self>` (one entry per `|`).
 }
 ```
 
@@ -162,34 +169,24 @@ pub enum Statement<'a> {
 
 ### 4.3. AST Combinators
 
-We use standard combinators over our custom tokens. Since `Token` derives `PartialEq`, `winnow::token::any` combined with `verify` provides ergonomic token extraction.
+We use standard combinators over our custom tokens. Since `Token` derives `PartialEq`,
+`winnow::token::any` combined with `verify`/`verify_map` provides ergonomic token extraction —
+e.g. `consume_keyword` (shared by every compound-command parser) is exactly
+`any.verify(|t| matches!(t, Token::Word(w) if w.as_ref() == keyword)).void()`.
 
-```rust
-use winnow::token::any;
+Once a compound command's leading keyword/token is matched, everything else it parses is wrapped
+in `winnow::combinator::cut_err(...).context(StrContext::Label("..."))`: a `for`/`if`/`case`/`(`/
+`{` can never mean anything *else* once recognized (no other `alt` branch could claim it), so any
+later failure — a missing `then`, an empty body, a dangling `;` — is reported as a real syntax
+error with a descriptive label, rather than recoverable `Backtrack` letting `alt` quietly fall
+through to `parse_base_command` and misparse the keyword as a literal command name. See
+`parser::error::ParseErrorDisplay` for how those labels render.
 
-#[must_use = "parses a loop statement; discarding ignores syntax structures"]
-fn parse_for_loop<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
-    // 1. Match Keyword
-    let _ = any.verify(|t| matches!(t, Token::KeywordFor)).parse_next(input)?;
-    
-    // 2. Extract specific token payload
-    let variable = any.verify_map(|t| match t {
-        Token::Identifier(name) => Some(*name),
-        _ => None,
-    }).parse_next(input)?;
-    
-    // 3. Match Keyword
-    let _ = any.verify(|t| matches!(t, Token::KeywordIn)).parse_next(input)?;
-    
-    // ... parse the block ...
-    
-    Ok(Statement::ForLoop {
-        variable,
-        iterable: vec![],
-        body: vec![],
-    })
-}
-```
+`for`'s own grammar is a good example of why "match the keyword, then handle each clause" isn't
+a fixed template: Bash makes the `;`/newline separator before `do`/`{` *mandatory* when an `in`
+clause was given, but *optional* otherwise (`for x do ...; done` is valid; `for x in a b do
+...; done` is not) — `parse_for_loop` branches on whether it saw `in` to decide which rule
+applies, rather than enforcing one rule unconditionally.
 
 ## 5. Error Handling Compliance
 
@@ -211,6 +208,16 @@ pub enum ParseError<'a> {
 ```
 
 *(Note: `winnow::ModalResult` provides highly optimized built-in error variants that can be seamlessly mapped into our custom `ParseError` at the pipeline boundaries).*
+
+`ParseError` itself is still aspirational — `parse_program` surfaces winnow's own
+`ModalResult`/`ErrMode<ContextError>` directly, and nothing in the crate constructs a
+`ParseError` today. What *is* live is `ParseErrorDisplay`, a thin `Display` wrapper around that
+raw error: it renders the `StrContext::Label`s every compound-command parser attaches via
+`.context(...)` (§4.3) as a breadcrumb from the outermost construct to the innermost one still
+active when parsing failed (e.g. `"if statement: while loop"`), falling back to `"invalid
+syntax"` when nothing ever committed to a construct at all. `build.rs`'s generated corpus tests
+use it for failure messages instead of `{:?}`, which exposes only the `Backtrack`/`Cut`
+plumbing and says nothing about *why* parsing failed.
 
 ## 6. Pipeline Orchestration
 
@@ -285,8 +292,8 @@ propagates through `"prefix-$1-suffix"` without the analysis needing its own cop
 splitting is `apply_statement`'s handling of `NAME=value` assignments: the lexer has no notion
 of assignment words, so `x=$1` arrives as a single opaque `Token::Word` command name rather than
 something `parse_literal` ever interpolates. `apply_statement` calls `interpolation_segments`
-(promoted to `pub(crate)` in `parser.rs` for this purpose) directly on that raw text instead of
-walking an `Expr` that was never built.
+(defined in `parser::word`, re-exported `pub(crate)` from `parser/mod.rs` for this purpose)
+directly on that raw text instead of walking an `Expr` that was never built.
 
 ### 7.2. Rule Engine
 
@@ -308,10 +315,27 @@ style policy — `Finding`'s `Display` impl is the single place that turns a fin
 
 ## 8. Corpus-Driven Testing & Round-Trip Verification
 
-`build.rs` reads every `corpus/*.tests` file (blocks of `=== description`, input, `---`, expected, `---`) and generates, for each file, **two** `rstest` functions rather than one:
+`build.rs` reads every `corpus/*.tests` file (a `#! Suite N: Name` header, then `# === Group ===`
+sections, each holding one or more `=== description` / input / `---` / expected / `---` case
+blocks — parsed by the sibling `inceptool-corpus-parser` crate, not by `build.rs` itself) and
+generates one nested module per suite/group, each holding up to three `rstest` functions:
 
-1. **`{file_stem}`** — parses `input` and checks its `Debug` rendering (the AST's S-expression text form, e.g. `(command (word "echo"))`) against the corpus' `expected` text. This is the original AST-shape regression test.
-2. **`{file_stem}_roundtrip`** — parses `input`, renders the resulting `Vec<Statement>` back to Bash source via `Display`, re-parses that rendered source, and asserts the re-parsed AST's `Debug` rendering matches the original AST's `Debug` rendering.
+1. **`parses`** — for every case whose `expected` is ordinary AST text: parses `input` and checks
+   its `Debug` rendering (the AST's S-expression form, e.g. `(command (word "echo"))`) against
+   `expected`.
+2. **`roundtrips`** — for the same positive cases: parses `input`, renders the resulting
+   `Vec<Statement>` back to Bash source via `Display`, re-parses that rendered source, and
+   asserts the re-parsed AST's `Debug` rendering matches the original AST's.
+3. **`fails_to_parse`** — for every case whose `expected` is the literal sentinel `<error>`
+   (`ERROR_EXPECTED` in `build.rs`): asserts `parse_program(input)` returns `Err`, i.e. this is
+   invalid Bash and must be *rejected*, not silently misparsed into some AST. This is how the
+   corpus expresses negative cases — empty `if`/`while`/`for` bodies, dangling `&&`/`|`,
+   unterminated `(`/`{`/`case`, and similar syntax errors — alongside the positive ones, rather
+   than only ever testing valid input.
+
+A group made entirely of negative cases gets only `fails_to_parse` (no `parses`/`roundtrips` —
+there's no AST to compare or round-trip); a group with both gets all three, each over its own
+case subset.
 
 ```mermaid
 graph LR
@@ -323,9 +347,11 @@ graph LR
     D1 -.assert equal.- D2
 ```
 
-`Debug` and `Display` are deliberately kept separate per `Statement`/`Expr`: `Debug` is the canonical, fully-parenthesized AST dump used to pin down parser output in corpus tests; `Display` is the inverse — it regenerates valid Bash source from the AST. The round-trip test exists to keep these two renderings honest against each other: if `Display` ever drops or misrenders information that `Debug` shows the parser captured, re-parsing the `Display` output will produce a different AST and the `_roundtrip` case fails, even though the original `{file_stem}` case still passes.
+`Debug` and `Display` are deliberately kept separate per `Statement`/`Expr`: `Debug` is the canonical, fully-parenthesized AST dump used to pin down parser output in corpus tests; `Display` is the inverse — it regenerates valid Bash source from the AST. The round-trip test exists to keep these two renderings honest against each other: if `Display` ever drops or misrenders information that `Debug` shows the parser captured, re-parsing the `Display` output will produce a different AST and `roundtrips` fails, even though `parses` still passes for the same case. (This caught a real bug: `CaseArm`'s `Display` used to omit the optional leading `(` before a pattern, which is fine for most patterns but ambiguous when the pattern is the bare word `esac` — `Display` now always emits it.)
 
-Both generated functions share the same parsed `CorpusCase { ident, input, expected }` data (`parse_cases` in `build.rs`); the AST test uses `input` and `expected`, the round-trip test uses only `input`.
+Test failure messages use `ParseErrorDisplay` (§5) rather than `{:?}` on the raw error, so a
+broken corpus case reports *why* parsing failed (or unexpectedly succeeded), not just that it
+did.
 
 *(Redirects (`<`, `>`, `>>`, `>|`, `<>`, `<&`, `>&`, `&>`, `&>>`, `<<<`) are modeled via
 `Statement::Redirected` and round-trip correctly. Remaining gap: heredocs (`<<`, `<<-`) aren't

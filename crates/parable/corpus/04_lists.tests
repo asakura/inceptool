@@ -306,4 +306,41 @@ false || echo fallback
 ---
 
 
+# === Syntax errors ===
+
+# A right-hand operand that fails to parse must fail the whole list, not silently end the
+# chain early and drop everything from the operator onward.
+
+=== malformed right operand of and is a syntax error not a dropped operand
+true && if true; then ; fi
+---
+<error>
+---
+
+
+=== malformed statement after separator is a syntax error not a dropped statement
+echo a; if true; then ; fi
+---
+<error>
+---
+
+
+# `&&`/`||` requires a pipeline on both sides; once the operator is consumed, a missing
+# right-hand side is a syntax error, not silently "no more chain" (which would otherwise
+# return just the left-hand command, discarding the operator).
+
+=== dangling and is a syntax error
+echo a &&
+---
+<error>
+---
+
+
+=== dangling or is a syntax error
+echo a ||
+---
+<error>
+---
+
+
 # eof

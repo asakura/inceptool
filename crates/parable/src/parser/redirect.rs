@@ -7,15 +7,11 @@
 //! for exactly that, but unimplemented) — until it exists, `<<`/`<<-` are left unparsed, same as
 //! before this module existed.
 
-use super::ParserStream;
-use super::word::parse_literal;
+use super::{ParserStream, word::parse_literal};
 
 use crate::types::{Redirect, RedirectKind, RedirectTarget, Token};
 
-use winnow::ModalResult;
-use winnow::Parser as _;
-use winnow::stream::Stream as _;
-use winnow::token::any;
+use winnow::{ModalResult, Parser as _, stream::Stream as _, token::any};
 
 /// Maps a lexed operator token to its [`RedirectKind`], or `None` if `token` isn't a supported
 /// redirect operator — in particular, `<<`/`<<-` (heredocs) are deliberately excluded; see the

@@ -138,4 +138,24 @@ cat baz | head -n 1
 ---
 
 
+# === Syntax errors ===
+
+# `|`/`|&` requires a command on both sides; once the operator is consumed, a missing
+# right-hand side is a syntax error, not silently "no more pipeline" (which would otherwise
+# return just the left-hand command, discarding the operator).
+
+=== dangling pipe is a syntax error
+echo a |
+---
+<error>
+---
+
+
+=== dangling pipe amp is a syntax error
+echo a |&
+---
+<error>
+---
+
+
 # eof

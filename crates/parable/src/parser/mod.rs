@@ -6,12 +6,12 @@
 //!
 //! ## Core Design
 //!
-//! Bash's grammar is split across four sibling modules: `word` turns a lexed `Word` token into
+//! Bash's grammar is split across five sibling modules: `word` turns a lexed `Word` token into
 //! an `Expr` (resolving `$NAME`/`${NAME}` references); `command` covers simple commands,
 //! pipelines, and command lists; `control_flow` covers `for`/`if`/`while`/`until`; `grouping`
-//! covers subshells and brace groups. `parse_command` is the dispatch point that ties them
-//! together — adding a new compound command (e.g. `case`, a function definition) means adding
-//! its own sibling module and one more arm to this `alt`.
+//! covers subshells and brace groups; `case` covers `case`/`in`/`esac`. `parse_command` is the
+//! dispatch point that ties them together — adding a new compound command (e.g. a function
+//! definition) means adding its own sibling module and one more arm to this `alt`.
 //!
 //! Bash reserved words (`done`, `fi`, `then`, ...) lex as plain [`Token::Word`]s rather than
 //! their own token kind (see [`crate::lexer`]'s module doc) — `at_keyword` is how every
@@ -41,17 +41,8 @@
 //!    base-command parser — order matters only in that a compound command must be recognized by
 //!    its leading keyword/punctuation before a plain command parser would otherwise swallow it
 //!    as a command name.
-//!
-//! ## Edge Cases
-//!
-//! - **`until`'s body doesn't skip separators between statements** (`control_flow`): every other
-//!   compound command's body loop calls `skip_optional_separator` after each statement;
-//!   `parse_until` doesn't, and parses its condition/body with [`parse_statement`] rather than
-//!   `parse_command` like its siblings. This predates this module's file split and is left as-is
-//!   — fixing it is a parser-behavior change, not a structural one.
-//! - **`elif` is not yet supported**: `control_flow`'s `if` parser only recognizes a single
-//!   `else`; chained `elif` parses as a syntax error today.
 
+mod case;
 mod command;
 mod control_flow;
 mod grouping;
@@ -60,14 +51,12 @@ mod word;
 
 pub(crate) use word::{Segment, interpolation_segments};
 
-use crate::stream::TokenStream;
-use crate::types::{Statement, Token};
+use crate::{
+    stream::TokenStream,
+    types::{Statement, Token},
+};
 
-use winnow::ModalResult;
-use winnow::Parser as _;
-use winnow::combinator::alt;
-use winnow::stream::Stream as _;
-use winnow::token::any;
+use winnow::{ModalResult, Parser as _, combinator::alt, stream::Stream as _, token::any};
 
 /// The token-level stream every parser function in this module tree consumes.
 pub type ParserStream<'a> = TokenStream<'a>;
@@ -83,17 +72,31 @@ fn at_keyword(input: &ParserStream<'_>, keyword: &str) -> bool {
     matches!(input.peek_token(), Some(Token::Word(w)) if w.as_ref() == keyword)
 }
 
-/// Consumes a `;` or newline between two commands in a compound-statement body, if present.
-///
-/// Bash requires this separator before a closing keyword (`done`/`fi`/...), but a body's last
-/// statement may also be followed directly by EOF or, in this lexer's case, nothing at all —
-/// so the separator is optional here rather than required.
-fn skip_optional_separator(input: &mut ParserStream<'_>) {
-    let result: ModalResult<Token<'_>> = any
-        .verify(|t: &Token<'_>| matches!(t, Token::Semi) || matches!(t, Token::Newline))
-        .parse_next(input);
+/// Consumes the next token if it's the reserved word `keyword`, failing otherwise. Shared by
+/// every sibling module that recognizes a leading keyword (`for`/`if`/`while`/`until`/`case`),
+/// rather than each keeping its own byte-for-byte copy.
+fn consume_keyword(input: &mut ParserStream<'_>, keyword: &'static str) -> ModalResult<()> {
+    any.verify(|t: &Token<'_>| matches!(t, Token::Word(w) if w.as_ref() == keyword))
+        .void()
+        .parse_next(input)
+}
 
-    drop(result);
+/// Consumes every immediately-following newline, if any. Blank lines carry no meaning beyond
+/// the `;`/newline separator a command list already tracks, so runs of them (between
+/// `in`/`do`/`then` and the next real token, around `case`'s `;;`, ...) are simply skipped
+/// rather than folded into the AST. Shared by every sibling module with such a gap, rather than
+/// each keeping its own copy.
+fn skip_newlines(input: &mut ParserStream<'_>) {
+    loop {
+        let result: ModalResult<()> = any
+            .verify(|t: &Token<'_>| matches!(t, Token::Newline))
+            .void()
+            .parse_next(input);
+
+        if result.is_err() {
+            break;
+        }
+    }
 }
 
 #[must_use = "parses a compound command or base command; discarding ignores syntax structures"]
@@ -103,6 +106,7 @@ fn parse_command<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>>
         control_flow::parse_if,
         control_flow::parse_while,
         control_flow::parse_until,
+        case::parse_case,
         grouping::parse_subshell,
         grouping::parse_brace_group,
         command::parse_base_command,

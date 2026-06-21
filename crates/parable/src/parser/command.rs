@@ -1,17 +1,20 @@
 //! Simple commands, pipelines, and command lists — [`parse_base_command`], [`parse_pipeline`],
 //! [`parse_and_or`], [`parse_list`].
 
-use super::redirect::parse_redirect;
-use super::word::parse_literal;
-use super::{ParserStream, parse_command};
+use super::{
+    redirect::parse_redirect,
+    word::parse_literal,
+    {ParserStream, parse_command, skip_newlines},
+};
 
 use crate::types::{LogicalOp, Statement, Token};
 
-use winnow::ModalResult;
-use winnow::Parser as _;
-use winnow::combinator::alt;
-use winnow::error::{ContextError, ErrMode};
-use winnow::token::any;
+use winnow::{
+    ModalResult, Parser as _,
+    combinator::{alt, opt},
+    error::{ContextError, ErrMode},
+    token::any,
+};
 
 /// Parses a simple command: a name, its arguments, and any redirects — interleaved with the
 /// arguments in any order (`cat < in.txt -n` and `cat -n < in.txt` parse the same way), plus any
@@ -28,7 +31,7 @@ pub(super) fn parse_base_command<'a>(input: &mut ParserStream<'a>) -> ModalResul
 
     let name = any
         .verify_map(|t| match t {
-            Token::Word(word) => Some(word.clone()),
+            Token::Word(word) => Some(word),
             _ => None,
         })
         .parse_next(input)?;
@@ -108,9 +111,12 @@ fn parse_and_or<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> 
             break;
         };
 
-        let Ok(right) = parse_pipeline(input) else {
-            break;
-        };
+        // Unlike the operator check above, a missing right-hand pipeline here isn't "no more
+        // chain" — `&&`/`||` was already consumed, so Bash requires an operand to follow. Letting
+        // this `?` propagate (rather than swallowing the error and silently ending the chain)
+        // matters once it's a `Cut` error from a malformed compound command: see
+        // `parser::control_flow`'s empty-body tests for what silently swallowing it used to do.
+        let right = parse_pipeline(input)?;
 
         current = Statement::AndOr {
             left: Box::new(current),
@@ -143,6 +149,8 @@ pub(super) fn parse_list_until<'a, F>(
 where
     F: Fn(&ParserStream<'a>) -> bool,
 {
+    skip_newlines(input);
+
     let mut current = parse_and_or(input)?;
 
     loop {
@@ -156,10 +164,17 @@ where
             break;
         };
 
+        skip_newlines(input);
+
+        // A backtrack here genuinely means "no further item" (the next token isn't anything
+        // `parse_and_or` can start, e.g. the `stop` delimiter `at_keyword` didn't recognize, or
+        // end of input) — `opt` swallows exactly that. A `Cut` error (a malformed compound
+        // command that's already committed past its leading keyword) is not "no further item"
+        // and must propagate, which is why this isn't the unconditional `.ok()` it used to be.
         let next = if stop(input) {
             None
         } else {
-            parse_and_or(input).ok()
+            opt(parse_and_or).parse_next(input)?
         };
 
         current = match (sep, next) {

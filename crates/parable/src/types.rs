@@ -125,39 +125,50 @@ pub enum Statement<'a> {
     },
     /// A `for NAME in ...; do ...; done` loop.
     ForLoop {
-        /// The loop variable's name.
-        variable: &'a str,
-        /// The expressions iterated over, one loop body run per expression.
+        /// The loop variable's name, as a word — usually a plain literal (`x`), but Bash also
+        /// allows e.g. a command substitution here, so this isn't a bare `&str`.
+        variable: Expr<'a>,
+        /// The expressions iterated over, one loop body run per expression. Defaults to
+        /// `["$@"]` when the source omits the `in` clause entirely (`for x; do ...; done`).
         iterable: Vec<Expr<'a>>,
-        /// The statements run on each iteration.
-        body: Vec<Self>,
+        /// The statement run on each iteration.
+        body: Box<Self>,
     },
-    /// An `if ...; then ...; else ...; fi` conditional. `elif` is not yet supported — see
-    /// [`crate::parser`]'s module doc.
+    /// An `if ...; then ...; else ...; fi` conditional. `elif` has no field of its own — an
+    /// `elif` clause is a nested [`Statement::If`] in `else_branch`, which is exactly the AST
+    /// shape Bash's own `else if ...; fi` produces, so the two forms are indistinguishable (and
+    /// both round-trip fine either way).
     If {
-        /// The condition's statements; the branch taken depends on the last one's exit status.
-        condition: Vec<Self>,
-        /// The statements run when `condition`'s last statement succeeds.
-        then_branch: Vec<Self>,
-        /// The statements run when `condition`'s last statement fails, if an `else` clause is
-        /// present.
-        else_branch: Option<Vec<Self>>,
+        /// The condition; the branch taken depends on its exit status.
+        condition: Box<Self>,
+        /// The statement run when `condition` succeeds.
+        then_branch: Box<Self>,
+        /// The statement run when `condition` fails, if an `else`/`elif` clause is present.
+        else_branch: Option<Box<Self>>,
     },
-    /// A `while ...; do ...; done` loop, repeating `body` for as long as `condition`'s last
-    /// statement succeeds.
+    /// A `while ...; do ...; done` loop, repeating `body` for as long as `condition`
+    /// succeeds.
     While {
-        /// The statements re-evaluated before each iteration.
-        condition: Vec<Self>,
-        /// The statements run on each iteration.
-        body: Vec<Self>,
+        /// The statement re-evaluated before each iteration.
+        condition: Box<Self>,
+        /// The statement run on each iteration.
+        body: Box<Self>,
     },
     /// An `until ...; do ...; done` loop — like [`Statement::While`], but repeats `body` for as
-    /// long as `condition`'s last statement fails.
+    /// long as `condition` fails.
     Until {
-        /// The statements re-evaluated before each iteration.
-        condition: Vec<Self>,
-        /// The statements run on each iteration.
-        body: Vec<Self>,
+        /// The statement re-evaluated before each iteration.
+        condition: Box<Self>,
+        /// The statement run on each iteration.
+        body: Box<Self>,
+    },
+    /// A `case <word> in ...; esac` pattern dispatch: `word` is matched against each arm's
+    /// patterns in order, and the first match's body (if any) runs.
+    Case {
+        /// The word matched against each arm's patterns.
+        word: Expr<'a>,
+        /// The arms, tried in source order.
+        arms: Vec<CaseArm<'a>>,
     },
     /// Two or more commands connected by `|`/`|&`, each command's stdout (and, for `|&`,
     /// stderr) feeding the next's stdin.
@@ -168,14 +179,14 @@ pub enum Statement<'a> {
     /// A `(...)` subshell: `body` runs in a forked copy of the shell, so its side effects
     /// (variable assignments, `cd`, ...) don't affect the parent.
     Subshell {
-        /// The statements run inside the subshell.
-        body: Vec<Self>,
+        /// The statement run inside the subshell.
+        body: Box<Self>,
     },
     /// A `{ ...; }` brace group: `body` runs in the current shell, unlike [`Statement::Subshell`]
     /// — used to group commands for a redirect or background job without forking.
     BraceGroup {
-        /// The statements run inside the group.
-        body: Vec<Self>,
+        /// The statement run inside the group.
+        body: Box<Self>,
     },
     /// Two pipelines joined by `&&`/`||`: `right` runs only if `left`'s exit status satisfies
     /// `op`. Binds tighter than [`Statement::Sequence`]/[`Statement::Background`] (mirroring
@@ -222,6 +233,16 @@ pub enum Statement<'a> {
         /// `1>&2 2>&1`).
         redirects: Vec<Redirect<'a>>,
     },
+}
+
+/// One `pattern) commands ;;` arm of a [`Statement::Case`].
+#[derive(Clone, PartialEq, Eq)]
+pub struct CaseArm<'a> {
+    /// The patterns tried against the `case` word, in order — more than one when alternatives
+    /// are joined by `|` (`a|b)`).
+    pub patterns: Vec<Expr<'a>>,
+    /// The statement run when one of `patterns` matches, or `None` for an empty arm (`a) ;;`).
+    pub body: Option<Box<Statement<'a>>>,
 }
 
 /// Which exit-status condition on `left` gates running `right` in a [`Statement::AndOr`].
@@ -289,28 +310,22 @@ pub enum RedirectTarget<'a> {
 }
 
 impl fmt::Debug for Expr<'_> {
+    /// Renders every variant as one flat `(word "...")` node, reconstructing the original source
+    /// text via [`Display`](fmt::Display) rather than exposing `VarRef`/`Interpolated` as their
+    /// own debug shapes — downstream taint analysis (`taint.rs`) matches on the `Expr` enum
+    /// directly and never on this rendering, so collapsing it here only affects how the AST is
+    /// dumped for corpus-test comparison, where a `$NAME` reference is expected to read back as
+    /// plain word text rather than a decomposed node.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Expr::Literal(s) => write!(f, "(word {s:?})"),
-            Expr::VarRef(v) => write!(f, "(var_ref {v:?})"),
-            Expr::Interpolated(parts) => {
-                write!(f, "(interp")?;
+        use fmt::Write as _;
 
-                for part in parts {
-                    write!(f, " {part:?}")?;
-                }
-
-                write!(f, ")")
-            }
-        }
+        let mut text = String::new();
+        write!(text, "{self}")?;
+        write!(f, "(word {text:?})")
     }
 }
 
 impl fmt::Debug for Statement<'_> {
-    #[expect(
-        clippy::too_many_lines,
-        reason = "AST pretty-printer enumerates every Statement variant"
-    )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Statement::Command { name, args } => {
@@ -327,112 +342,37 @@ impl fmt::Debug for Statement<'_> {
                 iterable,
                 body,
             } => {
-                write!(f, "(for {variable} (")?;
+                write!(f, "(for {variable:?} (in")?;
 
-                for (i, iter) in iterable.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "{iter:?}")?;
+                for iter in iterable {
+                    write!(f, " {iter:?}")?;
                 }
 
-                write!(f, ") (")?;
-
-                for (i, stmt) in body.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "{stmt:?}")?;
-                }
-
-                write!(f, "))")
+                write!(f, ") {body:?})")
             }
             Statement::If {
                 condition,
                 then_branch,
                 else_branch,
             } => {
-                write!(f, "(if (")?;
-
-                for (i, stmt) in condition.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "{stmt:?}")?;
-                }
-
-                write!(f, ") (")?;
-
-                for (i, stmt) in then_branch.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "{stmt:?}")?;
-                }
+                write!(f, "(if {condition:?} {then_branch:?}")?;
 
                 if let Some(else_b) = else_branch {
-                    write!(f, ") (")?;
-
-                    for (i, stmt) in else_b.iter().enumerate() {
-                        if i > 0 {
-                            write!(f, " ")?;
-                        }
-
-                        write!(f, "{stmt:?}")?;
-                    }
+                    write!(f, " {else_b:?}")?;
                 }
 
-                write!(f, "))")
+                write!(f, ")")
             }
-            Statement::While { condition, body } => {
-                write!(f, "(while (")?;
+            Statement::While { condition, body } => write!(f, "(while {condition:?} {body:?})"),
+            Statement::Until { condition, body } => write!(f, "(until {condition:?} {body:?})"),
+            Statement::Case { word, arms } => {
+                write!(f, "(case {word:?}")?;
 
-                for (i, stmt) in condition.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "{stmt:?}")?;
+                for arm in arms {
+                    write!(f, " {arm:?}")?;
                 }
 
-                write!(f, ") (")?;
-
-                for (i, stmt) in body.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "{stmt:?}")?;
-                }
-
-                write!(f, "))")
-            }
-            Statement::Until { condition, body } => {
-                write!(f, "(until (")?;
-
-                for (i, stmt) in condition.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "{stmt:?}")?;
-                }
-
-                write!(f, ") (")?;
-
-                for (i, stmt) in body.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "{stmt:?}")?;
-                }
-
-                write!(f, "))")
+                write!(f, ")")
             }
             Statement::Pipeline { commands } => {
                 write!(f, "(pipeline")?;
@@ -443,24 +383,8 @@ impl fmt::Debug for Statement<'_> {
 
                 write!(f, ")")
             }
-            Statement::Subshell { body } => {
-                write!(f, "(subshell")?;
-
-                for stmt in body {
-                    write!(f, " {stmt:?}")?;
-                }
-
-                write!(f, ")")
-            }
-            Statement::BraceGroup { body } => {
-                write!(f, "(brace-group")?;
-
-                for stmt in body {
-                    write!(f, " {stmt:?}")?;
-                }
-
-                write!(f, ")")
-            }
+            Statement::Subshell { body } => write!(f, "(subshell {body:?})"),
+            Statement::BraceGroup { body } => write!(f, "(brace-group {body:?})"),
             Statement::AndOr { left, op, right } => {
                 let tag = match op {
                     LogicalOp::And => "and",
@@ -489,6 +413,29 @@ impl fmt::Debug for Statement<'_> {
                 write!(f, ")")
             }
         }
+    }
+}
+
+impl fmt::Debug for CaseArm<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(pattern (")?;
+
+        for (i, pattern) in self.patterns.iter().enumerate() {
+            if i > 0 {
+                write!(f, " ")?;
+            }
+
+            write!(f, "{pattern:?}")?;
+        }
+
+        write!(f, ") ")?;
+
+        match &self.body {
+            Some(body) => write!(f, "{body:?}")?,
+            None => write!(f, "()")?,
+        }
+
+        write!(f, ")")
     }
 }
 
@@ -616,10 +563,6 @@ impl fmt::Display for Expr<'_> {
 }
 
 impl fmt::Display for Statement<'_> {
-    #[expect(
-        clippy::too_many_lines,
-        reason = "AST pretty-printer enumerates every Statement variant"
-    )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Statement::Command { name, args } => {
@@ -642,102 +585,50 @@ impl fmt::Display for Statement<'_> {
                     write!(f, " {iter}")?;
                 }
 
-                write!(f, "; do ")?;
-
-                for (i, stmt) in body.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "; ")?;
-                    }
-
-                    write!(f, "{stmt}")?;
-                }
-
-                write!(f, "; done")
+                write!(f, "; do {body}; done")
             }
             Statement::If {
                 condition,
                 then_branch,
                 else_branch,
             } => {
-                write!(f, "if ")?;
+                write!(f, "if {condition}; then {then_branch}")?;
 
-                for (i, stmt) in condition.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "; ")?;
-                    }
+                let mut next = else_branch.as_deref();
 
-                    write!(f, "{stmt}")?;
-                }
-
-                write!(f, "; then ")?;
-
-                for (i, stmt) in then_branch.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "; ")?;
-                    }
-
-                    write!(f, "{stmt}")?;
-                }
-
-                if let Some(else_b) = else_branch {
-                    write!(f, "; else ")?;
-
-                    for (i, stmt) in else_b.iter().enumerate() {
-                        if i > 0 {
-                            write!(f, "; ")?;
+                while let Some(stmt) = next {
+                    match stmt {
+                        Statement::If {
+                            condition: elif_condition,
+                            then_branch: elif_then_branch,
+                            else_branch: elif_else_branch,
+                        } => {
+                            write!(f, "; elif {elif_condition}; then {elif_then_branch}")?;
+                            next = elif_else_branch.as_deref();
                         }
-
-                        write!(f, "{stmt}")?;
+                        other => {
+                            write!(f, "; else {other}")?;
+                            next = None;
+                        }
                     }
                 }
 
                 write!(f, "; fi")
             }
             Statement::While { condition, body } => {
-                write!(f, "while ")?;
-
-                for (i, stmt) in condition.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "; ")?;
-                    }
-
-                    write!(f, "{stmt}")?;
-                }
-
-                write!(f, "; do ")?;
-
-                for (i, stmt) in body.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "; ")?;
-                    }
-
-                    write!(f, "{stmt}")?;
-                }
-
-                write!(f, "; done")
+                write!(f, "while {condition}; do {body}; done")
             }
             Statement::Until { condition, body } => {
-                write!(f, "until ")?;
+                write!(f, "until {condition}; do {body}; done")
+            }
+            Statement::Case { word, arms } => {
+                write!(f, "case {word} in ")?;
 
-                for (i, stmt) in condition.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "; ")?;
-                    }
-
-                    write!(f, "{stmt}")?;
+                for arm in arms {
+                    write!(f, "{arm} ")?;
                 }
 
-                write!(f, "; do ")?;
-
-                for (i, stmt) in body.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "; ")?;
-                    }
-
-                    write!(f, "{stmt}")?;
-                }
-
-                write!(f, "; done")
+                write!(f, "esac")
             }
             Statement::Pipeline { commands } => {
                 for (i, cmd) in commands.iter().enumerate() {
@@ -750,32 +641,8 @@ impl fmt::Display for Statement<'_> {
 
                 Ok(())
             }
-            Statement::Subshell { body } => {
-                write!(f, "(")?;
-
-                for (i, stmt) in body.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "; ")?;
-                    }
-
-                    write!(f, "{stmt}")?;
-                }
-
-                write!(f, ")")
-            }
-            Statement::BraceGroup { body } => {
-                write!(f, "{{ ")?;
-
-                for (i, stmt) in body.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "; ")?;
-                    }
-
-                    write!(f, "{stmt}")?;
-                }
-
-                write!(f, "; }}")
-            }
+            Statement::Subshell { body } => write!(f, "({body})"),
+            Statement::BraceGroup { body } => write!(f, "{{ {body}; }}"),
             Statement::AndOr { left, op, right } => write!(f, "{left} {op} {right}"),
             Statement::Sequence { left, right } => write!(f, "{left}; {right}"),
             Statement::Background { left, right } => {
@@ -796,6 +663,34 @@ impl fmt::Display for Statement<'_> {
 
                 Ok(())
             }
+        }
+    }
+}
+
+impl fmt::Display for CaseArm<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Always emits the leading `(`, even though the parser accepts it as optional: omitting
+        // it would be ambiguous when the first pattern is itself the bare word `esac` (the
+        // closing keyword is only recognized at the position a new arm's pattern would
+        // otherwise start) — re-parsing `esac) ...` there hits the closing-`esac` rule instead
+        // of this pattern. Always printing `(` sidesteps needing to special-case that one
+        // pattern value; it's valid Bash for every arm, not just that one.
+        write!(f, "(")?;
+
+        for (i, pattern) in self.patterns.iter().enumerate() {
+            if i > 0 {
+                write!(f, "|")?;
+            }
+
+            write!(f, "{pattern}")?;
+        }
+
+        write!(f, ") ")?;
+
+        if let Some(body) = &self.body {
+            write!(f, "{body};;")
+        } else {
+            write!(f, ";;")
         }
     }
 }

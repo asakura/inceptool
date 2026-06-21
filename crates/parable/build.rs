@@ -12,20 +12,31 @@
 //! script is responsible only for filesystem discovery, code generation
 //! via the `quote` crate, and writing the output file.
 //!
+//! A case's `expected` block is ordinary AST text, with one reserved value:
+//! [`ERROR_EXPECTED`] (`<error>`) marks the case as negative — the input must
+//! fail to parse, rather than produce that literal AST. This is how the
+//! corpus expresses "this is invalid Bash, and must be rejected" rather than
+//! "this is invalid Bash, but the parser doesn't notice and produces some AST
+//! anyway" (a silent-misparse bug, not a passing test).
+//!
 //! ## Flow
 //!
 //! 1. Iterate over `.tests` files in `corpus/`.
 //! 2. Parse each file into a [`TestSuite`].
 //! 3. Validate that suite numbers are unique.
-//! 4. Generate distinct Rust test functions for each test group.
+//! 4. Partition each group's cases into positive (expect a specific AST) and
+//!    negative ([`ERROR_EXPECTED`]) cases, and generate Rust test functions
+//!    for whichever of the two are present.
 //! 5. Write all generated functions to a single file in `OUT_DIR`.
 //!
 //! ## Edge Cases
 //!
 //! - Missing `corpus/` directory: emits an empty test file and exits.
 //! - Duplicate suite numbers across files: errors out.
+//! - A group made entirely of negative cases gets only a `fails_to_parse` fn
+//!   (no `parses`/`roundtrips`, since there's no AST to compare or round-trip).
 
-use inceptool_corpus_parser::{CorpusParseError, TestGroup, TestSuite, to_ident_fragment};
+use inceptool_corpus_parser::{CorpusCase, CorpusParseError, TestSuite, to_ident_fragment};
 
 use quote::{format_ident, quote};
 
@@ -38,6 +49,10 @@ const CORPUS_DIR: &str = "corpus";
 
 /// Name of the generated test file written to `OUT_DIR`.
 const GENERATED_FILE_NAME: &str = "generated_tests.rs";
+
+/// Reserved `expected` value marking a case as negative: `input` must fail to parse, rather
+/// than produce this text as its rendered AST.
+const ERROR_EXPECTED: &str = "<error>";
 
 /// Errors that can occur during the build script execution.
 #[derive(thiserror::Error)]
@@ -74,10 +89,11 @@ impl fmt::Debug for BuildError {
     }
 }
 
-/// Generates a test function for parsing assertions for a single test group.
+/// Generates a test function for parsing assertions over `cases` — the positive subset of a
+/// group's cases (see [`ERROR_EXPECTED`]).
 #[must_use = "returns the generated test function token stream"]
-fn generate_test_fn(group: &TestGroup<'_>) -> proc_macro2::TokenStream {
-    let case_tokens = group.cases.iter().map(|c| {
+fn generate_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStream {
+    let case_tokens = cases.iter().map(|c| {
         let ident = format_ident!("{}", to_ident_fragment(&c.name));
         let input = &c.input;
         let expected = &c.expected;
@@ -89,8 +105,11 @@ fn generate_test_fn(group: &TestGroup<'_>) -> proc_macro2::TokenStream {
         #[rstest::rstest]
         #(#case_tokens)*
         fn parses(#[case] input: &str, #[case] expected: &str) -> Result<(), TestError> {
-            let actual = inceptool_parable::render_program_ast(input)
-                .map_err(|e| TestError::Failure(format!("Parse error: {e:?}")))?;
+            let actual = inceptool_parable::render_program_ast(input).map_err(|e| {
+                TestError::Failure(format!(
+                    "Parse error: {}", inceptool_parable::ParseErrorDisplay(&e)
+                ))
+            })?;
 
             if actual != expected {
                 if expected.is_empty() {
@@ -107,10 +126,11 @@ fn generate_test_fn(group: &TestGroup<'_>) -> proc_macro2::TokenStream {
     }
 }
 
-/// Generates a test function for round-trip assertions for a single test group.
+/// Generates a test function for round-trip assertions over `cases` — the positive subset of a
+/// group's cases (see [`ERROR_EXPECTED`]).
 #[must_use = "returns the generated roundtrip test function token stream"]
-fn generate_roundtrip_test_fn(group: &TestGroup<'_>) -> proc_macro2::TokenStream {
-    let case_tokens = group.cases.iter().map(|c| {
+fn generate_roundtrip_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStream {
+    let case_tokens = cases.iter().map(|c| {
         let ident = format_ident!("{}", to_ident_fragment(&c.name));
         let input = &c.input;
 
@@ -121,8 +141,11 @@ fn generate_roundtrip_test_fn(group: &TestGroup<'_>) -> proc_macro2::TokenStream
         #[rstest::rstest]
         #(#case_tokens)*
         fn roundtrips(#[case] input: &str) -> Result<(), TestError> {
-            let parsed = inceptool_parable::parse_program(input)
-                .map_err(|e| TestError::Failure(format!("Parse error: {e:?}")))?;
+            let parsed = inceptool_parable::parse_program(input).map_err(|e| {
+                TestError::Failure(format!(
+                    "Parse error: {}", inceptool_parable::ParseErrorDisplay(&e)
+                ))
+            })?;
 
             let rendered = parsed
                 .iter()
@@ -132,7 +155,8 @@ fn generate_roundtrip_test_fn(group: &TestGroup<'_>) -> proc_macro2::TokenStream
 
             let reparsed = inceptool_parable::parse_program(&rendered).map_err(|e| {
                 TestError::Failure(format!(
-                    "Re-parse error on rendered bash:\n{rendered}\nError: {e:?}"
+                    "Re-parse error on rendered bash:\n{rendered}\nError: {}",
+                    inceptool_parable::ParseErrorDisplay(&e)
                 ))
             })?;
 
@@ -142,6 +166,34 @@ fn generate_roundtrip_test_fn(group: &TestGroup<'_>) -> proc_macro2::TokenStream
             if ast_before != ast_after {
                 return Err(TestError::Failure(format!(
                     "\nRound-trip AST mismatch!\nOriginal input:\n{input}\nRendered bash:\n{rendered}\nOriginal AST:\n{ast_before}\nReparsed AST:\n{ast_after}\n"
+                )));
+            }
+
+            Ok(())
+        }
+    }
+}
+
+/// Generates a test function asserting that every case in `cases` — the negative subset of a
+/// group's cases (see [`ERROR_EXPECTED`]) — fails to parse.
+#[must_use = "returns the generated negative-case test function token stream"]
+fn generate_error_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStream {
+    let case_tokens = cases.iter().map(|c| {
+        let ident = format_ident!("{}", to_ident_fragment(&c.name));
+        let input = &c.input;
+
+        quote! { #[case::#ident(#input)] }
+    });
+
+    quote! {
+        #[rstest::rstest]
+        #(#case_tokens)*
+        fn fails_to_parse(#[case] input: &str) -> Result<(), TestError> {
+            if let Ok(parsed) = inceptool_parable::parse_program(input) {
+                let ast = parsed.iter().map(|s| format!("{s:?}")).collect::<Vec<_>>().join("\n");
+
+                return Err(TestError::Failure(format!(
+                    "expected a syntax error, but it parsed successfully as:\n{ast}"
                 )));
             }
 
@@ -190,16 +242,29 @@ fn main() -> Result<(), BuildError> {
 
             for group in &suite.groups {
                 let group_name_clean = format_ident!("{}", to_ident_fragment(&group.name));
-                let parse_fn = generate_test_fn(group);
-                let roundtrip_fn = generate_roundtrip_test_fn(group);
+
+                let (negative_cases, positive_cases): (Vec<_>, Vec<_>) = group
+                    .cases
+                    .iter()
+                    .cloned()
+                    .partition(|c| c.expected.as_ref() == ERROR_EXPECTED);
+
+                let mut group_fns = Vec::new();
+
+                if !positive_cases.is_empty() {
+                    group_fns.push(generate_test_fn(&positive_cases));
+                    group_fns.push(generate_roundtrip_test_fn(&positive_cases));
+                }
+
+                if !negative_cases.is_empty() {
+                    group_fns.push(generate_error_test_fn(&negative_cases));
+                }
 
                 group_modules.push(quote! {
                     mod #group_name_clean {
                         use super::*;
 
-                        #parse_fn
-
-                        #roundtrip_fn
+                        #(#group_fns)*
                     }
                 });
             }

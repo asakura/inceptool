@@ -48,7 +48,7 @@ pub mod stream;
 pub mod taint;
 pub mod types;
 
-pub use error::ParseError;
+pub use error::{ParseError, ParseErrorDisplay};
 pub use stream::TokenStream;
 pub use types::{
     Expr, LexerState, LogicalOp, Redirect, RedirectKind, RedirectTarget, Statement, Token,

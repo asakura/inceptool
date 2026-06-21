@@ -273,3 +273,33 @@ echo foo | { cat; }
 ---
 
 
+# === Syntax errors ===
+
+=== empty subshell is a syntax error
+()
+---
+<error>
+---
+
+
+=== malformed compound command inside a subshell is a syntax error not a garbage parse
+(if true; then ; fi)
+---
+<error>
+---
+
+
+=== unterminated subshell is a syntax error
+(echo a
+---
+<error>
+---
+
+
+=== unterminated brace group is a syntax error
+{ echo a;
+---
+<error>
+---
+
+

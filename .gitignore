@@ -6,3 +6,6 @@
 .direnv/
 /*.patch
 /.pre-commit-config.yaml
+/crates/parable/back
+/crates/parable/ISSUES
+/crates/parable/corpus/*.notests

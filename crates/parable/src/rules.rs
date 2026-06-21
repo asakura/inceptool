@@ -1,10 +1,8 @@
 //! Security-rule scanning over a parsed script — see [`Engine`] and [`Rule`].
 
-use crate::taint::Environment;
-use crate::types::Statement;
+use crate::{taint::Environment, types::Statement};
 
-use std::borrow::Cow;
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 /// How seriously a [`Finding`] should be treated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -129,26 +127,33 @@ impl<'r> Engine<'r> {
 
         match stmt {
             Statement::Command { .. } => {}
-            Statement::ForLoop { body, .. } => self.visit_all(body, env, findings),
+            Statement::ForLoop { body, .. } => self.visit(body, env, findings),
             Statement::If {
                 condition,
                 then_branch,
                 else_branch,
             } => {
-                self.visit_all(condition, env, findings);
-                self.visit_all(then_branch, env, findings);
+                self.visit(condition, env, findings);
+                self.visit(then_branch, env, findings);
 
                 if let Some(else_b) = else_branch {
-                    self.visit_all(else_b, env, findings);
+                    self.visit(else_b, env, findings);
                 }
             }
             Statement::While { condition, body } | Statement::Until { condition, body } => {
-                self.visit_all(condition, env, findings);
-                self.visit_all(body, env, findings);
+                self.visit(condition, env, findings);
+                self.visit(body, env, findings);
+            }
+            Statement::Case { arms, .. } => {
+                for arm in arms {
+                    if let Some(body) = &arm.body {
+                        self.visit(body, env, findings);
+                    }
+                }
             }
             Statement::Pipeline { commands } => self.visit_all(commands, env, findings),
             Statement::Subshell { body } | Statement::BraceGroup { body } => {
-                self.visit_all(body, env, findings);
+                self.visit(body, env, findings);
             }
             Statement::AndOr { left, right, .. } | Statement::Sequence { left, right } => {
                 self.visit(left, env, findings);
@@ -288,14 +293,14 @@ mod tests {
         #[rstest]
         fn finds_taint_inside_nested_if_body() -> Result<(), TestError> {
             let statements = vec![Statement::If {
-                condition: vec![Statement::Command {
+                condition: Box::new(Statement::Command {
                     name: "true".into(),
                     args: vec![],
-                }],
-                then_branch: vec![Statement::Command {
+                }),
+                then_branch: Box::new(Statement::Command {
                     name: "eval".into(),
                     args: vec![Expr::VarRef("1")],
-                }],
+                }),
                 else_branch: None,
             }];
 

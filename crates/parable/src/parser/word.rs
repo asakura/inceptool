@@ -5,9 +5,7 @@ use super::ParserStream;
 
 use crate::types::{Expr, Token};
 
-use winnow::ModalResult;
-use winnow::Parser as _;
-use winnow::token::any;
+use winnow::{ModalResult, Parser as _, token::any};
 
 use std::borrow::Cow;
 
@@ -244,6 +242,22 @@ fn interpolate(word: Cow<'_, str>) -> Expr<'_> {
 pub(super) fn parse_literal<'a>(input: &mut ParserStream<'a>) -> ModalResult<Expr<'a>> {
     any.verify_map(|t| match t {
         Token::Word(word) => Some(interpolate(word)),
+        _ => None,
+    })
+    .parse_next(input)
+}
+
+/// Parses one `case` pattern alternative: a single [`Token::Word`], taken verbatim as
+/// [`Expr::Literal`] with no [`interpolate`] call.
+///
+/// Unlike [`parse_literal`], a pattern is glob text, not a value that gets resolved — running it
+/// through `interpolate` would decompose a bare `${var}` into [`Expr::VarRef`], which loses the
+/// braces when later rendered back out via [`Expr`]'s `Display`-based `Debug` (see
+/// `crate::types`'s `impl Debug for Expr`); keeping the raw word preserves them.
+#[must_use = "parses a pattern word; discarding ignores syntax structures"]
+pub(super) fn parse_pattern_word<'a>(input: &mut ParserStream<'a>) -> ModalResult<Expr<'a>> {
+    any.verify_map(|t| match t {
+        Token::Word(word) => Some(Expr::Literal(word)),
         _ => None,
     })
     .parse_next(input)
