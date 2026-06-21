@@ -18,11 +18,16 @@
 //! compound-command parser recognizes one at the position the grammar expects it, without the
 //! lexer needing to know grammar position itself.
 //!
-//! `redirect` is a cross-cutting sibling rather than another `alt` arm in [`parse_command`]:
+//! `redirect` is a cross-cutting sibling rather than another `alt` arm in `parse_command`:
 //! every compound command (and `command::parse_base_command`'s own simple command) can have
 //! redirects trailing it, so `parse_command` consumes them itself after the `alt` succeeds,
-//! wrapping the result in [`crate::types::Statement::Redirected`] rather than each compound
-//! parser doing so independently.
+//! wrapping the result in [`Statement::Redirected`] rather than each compound
+//! parser doing so independently. [`attach_redirects`] is the single place that decides whether
+//! to extend an already-`Redirected` statement or wrap a fresh one, shared by [`parse_command`]
+//! and `command::parse_base_command`'s own redirect handling, so the two can't silently diverge
+//! on what e.g. `cmd <a >b` and `if ...; fi <a >b` each produce. [`spanned`] is the shared
+//! `start..input.previous_span_end()` constructor every sibling module's `Spanned` nodes go
+//! through, instead of each repeating that arithmetic by hand.
 //!
 //! `command::parse_list` and `command::parse_and_or` mirror POSIX's two-level `list`/`and_or`
 //! split: `&&`/`||` (`and_or`) bind tighter than `;`/`&`/newline (`list`), so a `&&`/`||` chain
@@ -53,7 +58,7 @@ pub(crate) use word::{Segment, interpolation_segments};
 
 use crate::{
     stream::TokenStream,
-    types::{Statement, Token},
+    types::{Redirect, Spanned, Statement, Token},
 };
 
 use winnow::{ModalResult, Parser as _, combinator::alt, stream::Stream as _, token::any};
@@ -99,8 +104,61 @@ fn skip_newlines(input: &mut ParserStream<'_>) {
     }
 }
 
+/// Builds a [`Spanned`] from `inner` and the span `start..input.previous_span_end()`. Shared by
+/// every parser function in this module tree that wraps a freshly-built node in its own span,
+/// rather than each repeating the `start_offset..input.previous_span_end()` arithmetic.
+#[must_use = "constructs the Spanned wrapper; discarding it loses the parsed node"]
+fn spanned<T>(start: usize, input: &ParserStream<'_>, inner: T) -> Spanned<T> {
+    Spanned {
+        inner,
+        span: start..input.previous_span_end(),
+    }
+}
+
+/// Attaches `trailing` redirects to `stmt`, run from `start`: extends `stmt`'s own redirect list
+/// if it's already a [`Statement::Redirected`], otherwise wraps it in a fresh one. Returns `stmt`
+/// unchanged (span included) when `trailing` is empty.
+///
+/// Shared by [`parse_command`] (redirects trailing a compound command, or any a base command
+/// didn't already consume) and `command::parse_base_command` (a simple command's own
+/// interleaved/trailing redirects) so this merge-or-wrap rule lives in exactly one place —
+/// independent copies could otherwise silently diverge on what `cmd <a >b` and
+/// `if ...; fi <a >b` each produce.
+#[must_use = "attaches the redirects; discarding the result drops them"]
+fn attach_redirects<'a>(
+    stmt: Spanned<Statement<'a>>,
+    trailing: Vec<Redirect<'a>>,
+    start: usize,
+    input: &ParserStream<'a>,
+) -> Spanned<Statement<'a>> {
+    if trailing.is_empty() {
+        return stmt;
+    }
+
+    let inner_span = stmt.span;
+    let inner = match stmt.inner {
+        Statement::Redirected {
+            inner,
+            mut redirects,
+        } => {
+            redirects.extend(trailing);
+            Statement::Redirected { inner, redirects }
+        }
+        other => Statement::Redirected {
+            inner: Box::new(Spanned {
+                inner: other,
+                span: inner_span,
+            }),
+            redirects: trailing,
+        },
+    };
+
+    spanned(start, input, inner)
+}
+
 #[must_use = "parses a compound command or base command; discarding ignores syntax structures"]
-fn parse_command<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
+fn parse_command<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<Statement<'a>>> {
+    let start_offset = input.current_span_start();
     let stmt = alt((
         control_flow::parse_for_loop,
         control_flow::parse_if,
@@ -119,23 +177,7 @@ fn parse_command<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>>
         trailing.push(r);
     }
 
-    if trailing.is_empty() {
-        return Ok(stmt);
-    }
-
-    match stmt {
-        Statement::Redirected {
-            inner,
-            mut redirects,
-        } => {
-            redirects.extend(trailing);
-            Ok(Statement::Redirected { inner, redirects })
-        }
-        other => Ok(Statement::Redirected {
-            inner: Box::new(other),
-            redirects: trailing,
-        }),
-    }
+    Ok(attach_redirects(stmt, trailing, start_offset, input))
 }
 
 /// Parses the statement.
@@ -143,6 +185,41 @@ fn parse_command<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>>
 /// # Errors
 /// Returns an error if the statement cannot be parsed.
 #[must_use = "parses a statement; discarding ignores syntax structures"]
-pub fn parse_statement<'a>(input: &mut ParserStream<'a>) -> ModalResult<Statement<'a>> {
+pub fn parse_statement<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<Statement<'a>>> {
     command::parse_list(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug, thiserror::Error)]
+    enum TestError {
+        #[error("Test failure: {0}")]
+        Failure(String),
+    }
+
+    mod parse_statement {
+        use super::*;
+
+        use rstest::rstest;
+
+        #[rstest]
+        fn trailing_redirect_after_a_compound_command_excludes_it_from_the_inner_span()
+        -> Result<(), TestError> {
+            let mut stream = TokenStream::new("if true; then echo a; fi >file");
+            let parsed =
+                parse_statement(&mut stream).map_err(|e| TestError::Failure(e.to_string()))?;
+
+            assert_eq!(parsed.span, 0..30);
+
+            let Statement::Redirected { inner: bare, .. } = parsed.inner else {
+                return Err(TestError::Failure("expected a Redirected statement".into()));
+            };
+
+            assert_eq!(bare.span, 0..24);
+
+            Ok(())
+        }
+    }
 }
