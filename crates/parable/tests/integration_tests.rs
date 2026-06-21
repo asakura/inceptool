@@ -1,4 +1,12 @@
 //! Integration tests for the parable parser.
+// Corpus cases embed Bash parameter-expansion syntax (e.g. `${NAME:-default}`) as string
+// literals in generated `#[case]` attributes; clippy misreads `:-` / `:+` inside those literals
+// as format-string argument placeholders.
+#![expect(
+    clippy::literal_string_with_formatting_args,
+    reason = "generated #[case] attributes contain Bash parameter-expansion syntax that \
+              resembles format arguments but is not"
+)]
 
 use std::{fmt, io::Error as IoError};
 
