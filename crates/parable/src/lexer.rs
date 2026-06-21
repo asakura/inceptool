@@ -445,6 +445,29 @@ impl<'a> LexerStream<'a> {
         take_while(0.., (' ', '\t')).void().parse_next(self)
     }
 
+    /// Lexes the next token, returning it together with [`Stream::eof_offset`] measured right
+    /// after its leading whitespace was skipped but before the token itself was consumed — the
+    /// position [`crate::stream::TokenStream`] needs to report a token's true *start*, as
+    /// opposed to the position right after the *previous* token (which still includes this
+    /// token's upcoming whitespace).
+    ///
+    /// # Errors
+    /// Returns an error if the token cannot be parsed.
+    #[must_use = "lexes the next token; failure to use leaves stream state unchanged"]
+    pub(crate) fn lex_token_with_start(&mut self) -> ModalResult<(usize, Token<'a>)> {
+        self.skip_whitespace()?;
+
+        let start = self.eof_offset();
+
+        if self.as_ref().is_empty() {
+            return Ok((start, Token::Eof));
+        }
+
+        let token = alt((Self::parse_operator, Self::parse_word)).parse_next(self)?;
+
+        Ok((start, token))
+    }
+
     /// Lexes the next token from the stream.
     ///
     /// Named `lex_token` rather than `next_token` to avoid colliding with this type's own
@@ -455,12 +478,6 @@ impl<'a> LexerStream<'a> {
     /// Returns an error if the token cannot be parsed.
     #[must_use = "lexes the next token; failure to use leaves stream state unchanged"]
     pub fn lex_token(&mut self) -> ModalResult<Token<'a>> {
-        self.skip_whitespace()?;
-
-        if self.as_ref().is_empty() {
-            return Ok(Token::Eof);
-        }
-
-        alt((Self::parse_operator, Self::parse_word)).parse_next(self)
+        self.lex_token_with_start().map(|(_, token)| token)
     }
 }

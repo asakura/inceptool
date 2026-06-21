@@ -35,13 +35,19 @@
 //! - [`Stream::checkpoint`]/[`Stream::reset`] clone/restore the whole struct, including any
 //!   buffered lookahead, so checkpointing right after a peek and resetting later correctly
 //!   replays that same peek rather than losing it.
+//! - [`Location::current_token_start`] and [`Location::previous_token_end`] diff against
+//!   different lengths, not the same one: whitespace before a token is skipped lazily inside
+//!   [`LexerStream::lex_token_with_start`], so "end of the previous token" and "start of the
+//!   next one" are different positions whenever whitespace separates them. Reporting both from
+//!   the same length would place the next token's start back at the previous token's end,
+//!   underlining the gap between them instead of the token itself.
 
 use crate::lexer::LexerStream;
 use crate::types::Token;
 
 use smallvec::SmallVec;
 use winnow::error::{ContextError, ErrMode};
-use winnow::stream::{Needed, Offset, Stream, StreamIsPartial};
+use winnow::stream::{Location, Needed, Offset, Stream, StreamIsPartial};
 
 use std::cell::RefCell;
 use std::fmt;
@@ -96,6 +102,8 @@ pub struct TokenStream<'a> {
     /// and surface the real lex error afterward via [`TokenStream::take_lex_error`], instead of
     /// the generic syntax error the parser would otherwise produce.
     lex_failure: RefCell<Option<Box<LexerStream<'a>>>>,
+    /// The original input length in bytes, used to compute absolute byte offsets.
+    original_len: usize,
 }
 
 /// A token lexed ahead of the parser's logical position, cached by [`Stream::peek_token`].
@@ -110,6 +118,15 @@ pub struct TokenStream<'a> {
 #[derive(Debug, Clone)]
 struct Lookahead<'a> {
     token: Token<'a>,
+    /// `lexer`'s remaining-input length measured right after this token's leading whitespace
+    /// was skipped but before the token itself was lexed — i.e. this token's own start position.
+    /// [`Location::current_token_start`] reports from this length.
+    token_start_remaining: usize,
+    /// `lexer`'s remaining-input length measured before [`LexerStream::lex_token_with_start`]
+    /// was called at all, i.e. the end of the *previous* token, before this one's leading
+    /// whitespace. [`Offset::offset_from`] and [`Location::previous_token_end`] both report from
+    /// this length, never from `token_start_remaining`, so a peek alone is never mistaken for
+    /// consumed progress.
     remaining_before: usize,
 }
 
@@ -129,6 +146,7 @@ impl<'a> TokenStream<'a> {
             lexer: RefCell::new(LexerStream::new(input)),
             lookahead: RefCell::new(None),
             lex_failure: RefCell::new(None),
+            original_len: input.len(),
         }
     }
 
@@ -151,6 +169,22 @@ impl<'a> TokenStream<'a> {
         self.lookahead.borrow().as_ref().map_or_else(
             || self.lexer.borrow().eof_offset(),
             |lookahead| lookahead.remaining_before,
+        )
+    }
+
+    /// The lexer's logical remaining-input length at the next token's *start*, i.e. right after
+    /// its leading whitespace but before the token itself — the length
+    /// [`Location::current_token_start`] must diff against, as opposed to
+    /// [`TokenStream::logical_remaining_len`]'s *end-of-previous-token* length. Forces a peek if
+    /// none is buffered yet, since whitespace is only skipped lazily inside
+    /// [`LexerStream::lex_token_with_start`].
+    #[must_use = "looking up the remaining length has no effect unless the caller uses it"]
+    fn token_start_remaining_len(&self) -> usize {
+        drop(self.peek_token());
+
+        self.lookahead.borrow().as_ref().map_or_else(
+            || self.lexer.borrow().eof_offset(),
+            |lookahead| lookahead.token_start_remaining,
         )
     }
 }
@@ -207,13 +241,14 @@ impl<'a> Stream for TokenStream<'a> {
         }
 
         let remaining_before = self.lexer.borrow().eof_offset();
-        let lexed = self.lexer.borrow_mut().lex_token();
+        let lexed = self.lexer.borrow_mut().lex_token_with_start();
 
         match lexed {
-            Ok(Token::Eof) => None,
-            Ok(token) => {
+            Ok((_, Token::Eof)) => None,
+            Ok((token_start_remaining, token)) => {
                 *self.lookahead.borrow_mut() = Some(Lookahead {
                     token: token.clone(),
+                    token_start_remaining,
                     remaining_before,
                 });
                 Some(token)
@@ -276,6 +311,31 @@ impl Offset for TokenStream<'_> {
         start
             .logical_remaining_len()
             .saturating_sub(self.logical_remaining_len())
+    }
+}
+
+impl Location for TokenStream<'_> {
+    fn previous_token_end(&self) -> usize {
+        self.original_len
+            .saturating_sub(self.logical_remaining_len())
+    }
+    fn current_token_start(&self) -> usize {
+        self.original_len
+            .saturating_sub(self.token_start_remaining_len())
+    }
+}
+
+impl TokenStream<'_> {
+    /// Returns the start byte offset of the next token in the stream.
+    #[must_use = "fetching the current span start has no effect unless the caller uses the offset"]
+    pub fn current_span_start(&self) -> usize {
+        Location::current_token_start(self)
+    }
+
+    /// Returns the end byte offset of the previously consumed token.
+    #[must_use = "fetching the previous span end has no effect unless the caller uses the offset"]
+    pub fn previous_span_end(&self) -> usize {
+        Location::previous_token_end(self)
     }
 }
 
@@ -403,6 +463,25 @@ mod tests {
             drop(stream.peek_token());
 
             assert_eq!(stream.eof_offset(), before);
+
+            Ok(())
+        }
+    }
+
+    mod location {
+        use super::*;
+
+        use rstest::rstest;
+
+        #[rstest]
+        fn current_token_start_skips_whitespace_the_previous_token_end_does_not()
+        -> Result<(), TestError> {
+            let mut stream = TokenStream::new("foo   bar");
+
+            drop(stream.next_token());
+
+            assert_eq!(stream.previous_span_end(), 3);
+            assert_eq!(stream.current_span_start(), 6);
 
             Ok(())
         }
