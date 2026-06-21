@@ -13,9 +13,10 @@ The root module orchestrates parsing and exports the public API.
   `RedirectKind`, `RedirectTarget`, `Spanned`, `SpecialParam`, `Statement`,
   `Token`, `TokenStream`, `ParseError`, `ParseErrorDisplay`.
 
-## AST & Types ([`types.rs`](src/types.rs))
+## AST & Types ([`types/`](src/types/))
 
-Contains the core Abstract Syntax Tree representations.
+Contains the core Abstract Syntax Tree representations, split across several
+submodules but re-exported from `types/mod.rs`.
 
 - **`enum Token<'a>`**: Raw tokens produced by the lexer (e.g., `Word`, `Pipe`,
   `AndAnd`, `LBrace`). Reserved words (`if`, `done`, `in`, ...) are not their own
