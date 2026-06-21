@@ -841,57 +841,57 @@ for x in a b; { echo $x; }
 
 === empty while body is a syntax error
 while true; do ; done
----
-<error>
+--- <error>
+Parse error: while loop
 ---
 
 
 === empty until body is a syntax error
 until true; do ; done
----
-<error>
+--- <error>
+Parse error: until loop
 ---
 
 
 === empty for body is a syntax error
 for x in 1; do ; done
----
-<error>
+--- <error>
+Parse error: for loop
 ---
 
 
 === for with in clause requires a separator before do
 for x in a b do echo $x; done
----
-<error>
+--- <error>
+Parse error: for loop
 ---
 
 
 === while without do is a syntax error
 while true; echo x; done
----
-<error>
+--- <error>
+Parse error: while loop
 ---
 
 
 === while without done is a syntax error
 while true; do echo x
----
-<error>
+--- <error>
+Parse error: while loop
 ---
 
 
 === until without do is a syntax error
 until true; echo x; done
----
-<error>
+--- <error>
+Parse error: until loop
 ---
 
 
 === for without do or done is a syntax error
 for x in a
----
-<error>
+--- <error>
+Parse error: for loop
 ---
 
 

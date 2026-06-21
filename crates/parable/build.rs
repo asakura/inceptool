@@ -12,21 +12,23 @@
 //! script is responsible only for filesystem discovery, code generation
 //! via the `quote` crate, and writing the output file.
 //!
-//! A case's `expected` block is ordinary AST text, with one reserved value:
-//! [`ERROR_EXPECTED`] (`<error>`) marks the case as negative — the input must
-//! fail to parse, rather than produce that literal AST. This is how the
-//! corpus expresses "this is invalid Bash, and must be rejected" rather than
-//! "this is invalid Bash, but the parser doesn't notice and produces some AST
-//! anyway" (a silent-misparse bug, not a passing test).
+//! A case marks itself negative structurally, via the `--- <error>` separator
+//! the corpus-parser crate recognizes (`CaseExpectation::FailsToParse`):
+//! the input must fail to parse, and the section that follows is the exact
+//! error message it must produce, rather than an AST it must render. This is
+//! how the corpus expresses "this is invalid Bash, and must be rejected"
+//! rather than "this is invalid Bash, but the parser doesn't notice and
+//! produces some AST anyway" (a silent-misparse bug, not a passing test).
 //!
 //! ## Flow
 //!
 //! 1. Iterate over `.tests` files in `corpus/`.
 //! 2. Parse each file into a [`TestSuite`].
 //! 3. Validate that suite numbers are unique.
-//! 4. Partition each group's cases into positive (expect a specific AST) and
-//!    negative ([`ERROR_EXPECTED`]) cases, and generate Rust test functions
-//!    for whichever of the two are present.
+//! 4. Partition each group's cases by [`CaseExpectation`] into positive
+//!    (expect a specific AST) and negative (expect a specific error message)
+//!    cases, and generate Rust test functions for whichever of the two are
+//!    present.
 //! 5. Write all generated functions to a single file in `OUT_DIR`.
 //!
 //! ## Edge Cases
@@ -36,7 +38,9 @@
 //! - A group made entirely of negative cases gets only a `fails_to_parse` fn
 //!   (no `parses`/`roundtrips`, since there's no AST to compare or round-trip).
 
-use inceptool_corpus_parser::{CorpusCase, CorpusParseError, TestSuite, to_ident_fragment};
+use inceptool_corpus_parser::{
+    CaseExpectation, CorpusCase, CorpusParseError, TestSuite, to_ident_fragment,
+};
 
 use quote::{format_ident, quote};
 
@@ -49,10 +53,6 @@ const CORPUS_DIR: &str = "corpus";
 
 /// Name of the generated test file written to `OUT_DIR`.
 const GENERATED_FILE_NAME: &str = "generated_tests.rs";
-
-/// Reserved `expected` value marking a case as negative: `input` must fail to parse, rather
-/// than produce this text as its rendered AST.
-const ERROR_EXPECTED: &str = "<error>";
 
 /// Errors that can occur during the build script execution.
 #[derive(thiserror::Error)]
@@ -89,8 +89,8 @@ impl fmt::Debug for BuildError {
     }
 }
 
-/// Generates a test function for parsing assertions over `cases` — the positive subset of a
-/// group's cases (see [`ERROR_EXPECTED`]).
+/// Generates a test function for parsing assertions over `cases` — the subset of a group's
+/// cases with [`CaseExpectation::Parses`].
 #[must_use = "returns the generated test function token stream"]
 fn generate_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStream {
     let case_tokens = cases.iter().map(|c| {
@@ -126,8 +126,8 @@ fn generate_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStream {
     }
 }
 
-/// Generates a test function for round-trip assertions over `cases` — the positive subset of a
-/// group's cases (see [`ERROR_EXPECTED`]).
+/// Generates a test function for round-trip assertions over `cases` — the subset of a group's
+/// cases with [`CaseExpectation::Parses`].
 #[must_use = "returns the generated roundtrip test function token stream"]
 fn generate_roundtrip_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStream {
     let case_tokens = cases.iter().map(|c| {
@@ -174,30 +174,49 @@ fn generate_roundtrip_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStr
     }
 }
 
-/// Generates a test function asserting that every case in `cases` — the negative subset of a
-/// group's cases (see [`ERROR_EXPECTED`]) — fails to parse.
+/// Generates a test function asserting that every case in `cases` — the subset of a group's
+/// cases with [`CaseExpectation::FailsToParse`] — fails to parse with the exact error message
+/// recorded as its `expected` text.
 #[must_use = "returns the generated negative-case test function token stream"]
 fn generate_error_test_fn(cases: &[CorpusCase<'_>]) -> proc_macro2::TokenStream {
     let case_tokens = cases.iter().map(|c| {
         let ident = format_ident!("{}", to_ident_fragment(&c.name));
         let input = &c.input;
+        let expected_message = &c.expected;
 
-        quote! { #[case::#ident(#input)] }
+        quote! { #[case::#ident(#input, #expected_message)] }
     });
 
     quote! {
         #[rstest::rstest]
         #(#case_tokens)*
-        fn fails_to_parse(#[case] input: &str) -> Result<(), TestError> {
-            if let Ok(parsed) = inceptool_parable::parse_program(input) {
-                let ast = parsed.iter().map(|s| format!("{s:?}")).collect::<Vec<_>>().join("\n");
+        fn fails_to_parse(
+            #[case] input: &str,
+            #[case] expected_message: &str,
+        ) -> Result<(), TestError> {
+            let parse_result = inceptool_parable::parse_program(input);
 
-                return Err(TestError::Failure(format!(
-                    "expected a syntax error, but it parsed successfully as:\n{ast}"
-                )));
+            match parse_result {
+                Ok(parsed) => {
+                    let ast = parsed.iter().map(|s| format!("{s:?}")).collect::<Vec<_>>().join("\n");
+
+                    Err(TestError::Failure(format!(
+                        "expected a syntax error, but it parsed successfully as:\n{ast}"
+                    )))
+                }
+                Err(e) => {
+                    let actual_message =
+                        format!("Parse error: {}", inceptool_parable::ParseErrorDisplay(&e));
+
+                    if actual_message != expected_message {
+                        return Err(TestError::Failure(format!(
+                            "error message mismatch!\nExpected:\n{expected_message}\nActual:\n{actual_message}\n"
+                        )));
+                    }
+
+                    Ok(())
+                }
             }
-
-            Ok(())
         }
     }
 }
@@ -247,7 +266,7 @@ fn main() -> Result<(), BuildError> {
                     .cases
                     .iter()
                     .cloned()
-                    .partition(|c| c.expected.as_ref() == ERROR_EXPECTED);
+                    .partition(|c| c.expectation == CaseExpectation::FailsToParse);
 
                 let mut group_fns = Vec::new();
 

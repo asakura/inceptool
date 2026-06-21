@@ -28,6 +28,8 @@
 //! - Comments that violate the `# ` prefix rule: [`CorpusParseError`].
 //! - A case's input/expected text may contain a literal `---`/`===` line by
 //!   escaping it as `\---`/`\===`.
+//! - A case may mark itself negative with `--- <error>` instead of the bare
+//!   `---` separator: see [`CaseExpectation`].
 
 pub mod error;
 pub mod ident;
@@ -36,4 +38,4 @@ pub mod types;
 
 pub use error::{CorpusParseError, CorpusParseErrorKind};
 pub use ident::to_ident_fragment;
-pub use types::{CorpusCase, TestGroup, TestSuite};
+pub use types::{CaseExpectation, CorpusCase, TestGroup, TestSuite};

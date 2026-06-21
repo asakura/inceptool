@@ -1,0 +1,11 @@
+#! Suite 60: Errors
+
+# === Syntax errors ===
+
+=== dangling pipe is a syntax error
+echo a |
+--- <error>
+Parse error: invalid syntax
+---
+
+

@@ -146,15 +146,15 @@ cat baz | head -n 1
 
 === dangling pipe is a syntax error
 echo a |
----
-<error>
+--- <error>
+Parse error: invalid syntax
 ---
 
 
 === dangling pipe amp is a syntax error
 echo a |&
----
-<error>
+--- <error>
+Parse error: invalid syntax
 ---
 
 

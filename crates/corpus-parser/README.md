@@ -25,6 +25,21 @@ as `\---`/`\===`; the parser unescapes it back to `---`/`===` once the real
 section boundaries are found. A leading backslash is otherwise inert in
 Bash, so this convention reads naturally inside Bash snippets.
 
+A case can mark itself negative by using `--- <error>` instead of the bare
+`---` separator after its input:
+
+```text
+=== dangling pipe is a syntax error
+echo a |
+--- <error>
+Parse error: invalid syntax
+---
+```
+
+`CorpusCase::expectation` (`CaseExpectation::FailsToParse` vs. `::Parses`)
+records which separator was used. For a negative case, `expected` holds the
+exact error message `input` must produce, rather than an AST.
+
 The `ident` module exposes `to_ident_fragment`, a Rust-identifier sanitizer.
 Given at least one ASCII-alphanumeric input character it always returns a
 valid identifier fragment (lowercased, non-alphanumeric runs collapsed to

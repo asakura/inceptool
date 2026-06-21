@@ -891,36 +891,36 @@ case $x in a) { echo a; };& b) echo b;; esac
 
 === esac cannot be a bare leading pattern
 case $x in esac) echo a;; esac
----
-<error>
+--- <error>
+Parse error: invalid syntax
 ---
 
 
 === case without in is a syntax error
 case $x a) echo a;; esac
----
-<error>
+--- <error>
+Parse error: case statement
 ---
 
 
 === case without esac is a syntax error
 case $x in a) echo a;;
----
-<error>
+--- <error>
+Parse error: case statement
 ---
 
 
 === case arm without closing paren is a syntax error
 case $x in a echo a;; esac
----
-<error>
+--- <error>
+Parse error: case statement
 ---
 
 
 === case arm with dangling pipe is a syntax error
 case $x in a|) echo a;; esac
----
-<error>
+--- <error>
+Parse error: case statement
 ---
 
 

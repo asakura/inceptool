@@ -2,6 +2,15 @@
 
 use std::borrow::Cow;
 
+/// What a [`CorpusCase`]'s `expected` text represents.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CaseExpectation {
+    /// `input` must parse; `expected` is the rendered AST it must produce.
+    Parses,
+    /// `input` must fail to parse; `expected` is the exact error message it must produce.
+    FailsToParse,
+}
+
 /// One test case block from a corpus `.tests` file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CorpusCase<'a> {
@@ -12,11 +21,14 @@ pub struct CorpusCase<'a> {
     /// A literal `---` or `===` line in the source `.tests` file is written
     /// escaped (`\---`/`\===`) and already unescaped here.
     pub input: Cow<'a, str>,
-    /// Expected output text for the test case.
+    /// Expected output text for the test case: a rendered AST or an error message,
+    /// depending on [`Self::expectation`].
     ///
     /// A literal `---` or `===` line in the source `.tests` file is written
     /// escaped (`\---`/`\===`) and already unescaped here.
     pub expected: Cow<'a, str>,
+    /// Whether `input` is expected to parse successfully or fail.
+    pub expectation: CaseExpectation,
 }
 
 impl CorpusCase<'_> {
@@ -27,6 +39,7 @@ impl CorpusCase<'_> {
             name: Cow::Owned(self.name.into_owned()),
             input: Cow::Owned(self.input.into_owned()),
             expected: Cow::Owned(self.expected.into_owned()),
+            expectation: self.expectation,
         }
     }
 }

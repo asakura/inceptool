@@ -588,36 +588,36 @@ if cat <<< "test"; then echo yes; fi
 
 === empty then body is a syntax error
 if true; then ; fi
----
-<error>
+--- <error>
+Parse error: if statement
 ---
 
 
 === empty else body is a syntax error
 if true; then echo x; else ; fi
----
-<error>
+--- <error>
+Parse error: if statement
 ---
 
 
 === if without then is a syntax error
 if true; echo x; fi
----
-<error>
+--- <error>
+Parse error: if statement
 ---
 
 
 === if without fi is a syntax error
 if true; then echo x
----
-<error>
+--- <error>
+Parse error: if statement
 ---
 
 
 === elif without then is a syntax error
 if a; then b; elif c; d; fi
----
-<error>
+--- <error>
+Parse error: if statement
 ---
 
 

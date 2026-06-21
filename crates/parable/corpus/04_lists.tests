@@ -313,15 +313,15 @@ false || echo fallback
 
 === malformed right operand of and is a syntax error not a dropped operand
 true && if true; then ; fi
----
-<error>
+--- <error>
+Parse error: if statement
 ---
 
 
 === malformed statement after separator is a syntax error not a dropped statement
 echo a; if true; then ; fi
----
-<error>
+--- <error>
+Parse error: if statement
 ---
 
 
@@ -331,15 +331,15 @@ echo a; if true; then ; fi
 
 === dangling and is a syntax error
 echo a &&
----
-<error>
+--- <error>
+Parse error: invalid syntax
 ---
 
 
 === dangling or is a syntax error
 echo a ||
----
-<error>
+--- <error>
+Parse error: invalid syntax
 ---
 
 

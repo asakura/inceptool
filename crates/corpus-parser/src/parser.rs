@@ -26,9 +26,13 @@
 //!   escaping it as `\---`/`\===` (see [`unescape_delimiter_lines`]); like CRLF
 //!   normalization, this falls back to an owned copy only when an escape is
 //!   actually present.
+//! - A case may use `--- <error>` instead of the bare `---` separator
+//!   ([`ERROR_INPUT_SEPARATOR`]) to mark itself negative: `input` must fail to
+//!   parse, and the `expected` section holds the exact error message it must
+//!   produce instead of an AST (see [`crate::types::CaseExpectation`]).
 
 use crate::error::{CorpusParseError, CorpusParseErrorKind};
-use crate::types::{CorpusCase, TestGroup, TestSuite};
+use crate::types::{CaseExpectation, CorpusCase, TestGroup, TestSuite};
 
 use std::borrow::Cow;
 
@@ -46,6 +50,10 @@ const CASE_HEADER_PREFIX: &str = "=== ";
 
 /// Separator between the input section and the expected section.
 const INPUT_SEPARATOR: &str = "\n---\n";
+
+/// Separator marking the case as negative: `input` must fail to parse, and the section
+/// that follows is the exact error message it must produce, rather than an expected AST.
+const ERROR_INPUT_SEPARATOR: &str = "\n--- <error>\n";
 
 /// Terminator after the expected section (with preceding newline).
 const EXPECTED_TERMINATOR: &str = "\n---\n\n\n";
@@ -340,14 +348,36 @@ fn parse_case<'a>(
         )
     })?;
 
-    let (input, after_input) = after_header.split_once(INPUT_SEPARATOR).ok_or_else(|| {
-        CorpusParseError::new(
-            file_stem,
-            CorpusParseErrorKind::MissingInputSeparator {
-                case: case_name.into(),
-            },
-        )
-    })?;
+    // Whichever separator occurs first in `after_header` is this case's own boundary; checking
+    // one pattern unconditionally before the other would let a `--- <error>` belonging to some
+    // later case in the file outrun a nearer bare `---` and swallow everything in between.
+    let error_pos = after_header.find(ERROR_INPUT_SEPARATOR);
+    let bare_pos = after_header.find(INPUT_SEPARATOR);
+
+    let (separator_pos, separator_len, expectation) = match (error_pos, bare_pos) {
+        (Some(error_pos), Some(bare_pos)) if error_pos < bare_pos => (
+            error_pos,
+            ERROR_INPUT_SEPARATOR.len(),
+            CaseExpectation::FailsToParse,
+        ),
+        (Some(error_pos), None) => (
+            error_pos,
+            ERROR_INPUT_SEPARATOR.len(),
+            CaseExpectation::FailsToParse,
+        ),
+        (_, Some(bare_pos)) => (bare_pos, INPUT_SEPARATOR.len(), CaseExpectation::Parses),
+        (None, None) => {
+            return Err(CorpusParseError::new(
+                file_stem,
+                CorpusParseErrorKind::MissingInputSeparator {
+                    case: case_name.into(),
+                },
+            ));
+        }
+    };
+
+    let (input, after_separator) = after_header.split_at(separator_pos);
+    let (_, after_input) = after_separator.split_at(separator_len);
 
     let (expected, after_expected) =
         if let Some(stripped) = after_input.strip_prefix(EMPTY_EXPECTED_PREFIX) {
@@ -367,6 +397,7 @@ fn parse_case<'a>(
         name: Cow::Borrowed(case_name),
         input: unescape_delimiter_lines(input),
         expected: unescape_delimiter_lines(expected),
+        expectation,
     });
 
     Ok(after_expected)
@@ -660,6 +691,43 @@ mod tests {
                 let case = first_case(&suite)?;
 
                 assert_eq!(case.expected.as_ref(), "---");
+
+                Ok(())
+            }
+        }
+
+        mod case_expectation {
+            use super::*;
+
+            const NEGATIVE_CASE: &str = "#! Suite 1: T\n# === G ===\n=== dangling pipe is a syntax error\necho a |\n--- <error>\nParse error: invalid syntax\n---\n\n\n";
+
+            const POSITIVE_CASE: &str = "#! Suite 1: T\n# === G ===\n=== simple command\necho a\n---\n(command (word \"echo\") (word \"a\"))\n---\n\n\n";
+
+            fn first_case<'a>(suite: &'a TestSuite<'a>) -> Result<&'a CorpusCase<'a>, TestError> {
+                suite
+                    .groups
+                    .first()
+                    .and_then(|g| g.cases.first())
+                    .ok_or_else(|| TestError::Failure("no cases found".into()))
+            }
+
+            #[rstest]
+            fn error_marker_yields_fails_to_parse_with_message() -> Result<(), TestError> {
+                let suite = TestSuite::parse("test", NEGATIVE_CASE)?;
+                let case = first_case(&suite)?;
+
+                assert_matches!(case.expectation, CaseExpectation::FailsToParse);
+                assert_eq!(case.expected.as_ref(), "Parse error: invalid syntax");
+
+                Ok(())
+            }
+
+            #[rstest]
+            fn bare_separator_yields_parses() -> Result<(), TestError> {
+                let suite = TestSuite::parse("test", POSITIVE_CASE)?;
+                let case = first_case(&suite)?;
+
+                assert_matches!(case.expectation, CaseExpectation::Parses);
 
                 Ok(())
             }

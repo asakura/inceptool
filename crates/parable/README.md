@@ -326,12 +326,13 @@ generates one nested module per suite/group, each holding up to three `rstest` f
 2. **`roundtrips`** — for the same positive cases: parses `input`, renders the resulting
    `Vec<Statement>` back to Bash source via `Display`, re-parses that rendered source, and
    asserts the re-parsed AST's `Debug` rendering matches the original AST's.
-3. **`fails_to_parse`** — for every case whose `expected` is the literal sentinel `<error>`
-   (`ERROR_EXPECTED` in `build.rs`): asserts `parse_program(input)` returns `Err`, i.e. this is
-   invalid Bash and must be *rejected*, not silently misparsed into some AST. This is how the
-   corpus expresses negative cases — empty `if`/`while`/`for` bodies, dangling `&&`/`|`,
-   unterminated `(`/`{`/`case`, and similar syntax errors — alongside the positive ones, rather
-   than only ever testing valid input.
+3. **`fails_to_parse`** — for every case marked negative via the corpus's `--- <error>` separator
+   (`CaseExpectation::FailsToParse`, from `inceptool-corpus-parser`): asserts `parse_program(input)`
+   returns `Err` *and* that `format!("Parse error: {}", ParseErrorDisplay(&e))` matches the case's
+   `expected` text verbatim. This is how the corpus expresses negative cases — empty
+   `if`/`while`/`for` bodies, dangling `&&`/`|`, unterminated `(`/`{`/`case`, and similar syntax
+   errors — alongside the positive ones, pinning not just *that* parsing must fail but *why*,
+   the same way `parses` pins the exact AST for positive cases.
 
 A group made entirely of negative cases gets only `fails_to_parse` (no `parses`/`roundtrips` —
 there's no AST to compare or round-trip); a group with both gets all three, each over its own

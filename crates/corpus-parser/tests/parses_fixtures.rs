@@ -7,7 +7,7 @@
 )]
 //! End-to-end tests against real and hand-written `.tests` fixtures.
 
-use inceptool_corpus_parser::{CorpusParseErrorKind, TestSuite};
+use inceptool_corpus_parser::{CaseExpectation, CorpusParseErrorKind, TestSuite};
 
 #[cfg(test)]
 mod tests {
@@ -121,6 +121,28 @@ mod tests {
                 case.expected.as_ref(),
                 "(command (word \"cat\") (redirect_heredoc \"EOF\"))"
             );
+
+            Ok(())
+        }
+    }
+
+    mod error_case {
+        use super::*;
+
+        const ERROR_CASE: &str = include_str!("fixtures/error_case/case.tests");
+
+        #[rstest]
+        fn parses_error_case_content() -> Result<(), TestError> {
+            let suite = TestSuite::parse("case", ERROR_CASE)
+                .map_err(|e| TestError::Failure(format!("parse failed: {e}")))?;
+
+            let group = require(suite.groups.first(), "missing group")?;
+            let case = require(group.cases.first(), "missing case")?;
+
+            assert_eq!(case.name.as_ref(), "dangling pipe is a syntax error");
+            assert_eq!(case.input.as_ref(), "echo a |");
+            assert_matches!(case.expectation, CaseExpectation::FailsToParse);
+            assert_eq!(case.expected.as_ref(), "Parse error: invalid syntax");
 
             Ok(())
         }

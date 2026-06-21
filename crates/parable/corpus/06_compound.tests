@@ -277,29 +277,29 @@ echo foo | { cat; }
 
 === empty subshell is a syntax error
 ()
----
-<error>
+--- <error>
+Parse error: subshell
 ---
 
 
 === malformed compound command inside a subshell is a syntax error not a garbage parse
 (if true; then ; fi)
----
-<error>
+--- <error>
+Parse error: subshell: if statement
 ---
 
 
 === unterminated subshell is a syntax error
 (echo a
----
-<error>
+--- <error>
+Parse error: subshell
 ---
 
 
 === unterminated brace group is a syntax error
 { echo a;
----
-<error>
+--- <error>
+Parse error: brace group
 ---
 
 
