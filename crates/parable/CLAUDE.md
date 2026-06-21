@@ -4,14 +4,17 @@
 
 The root module orchestrates parsing and exports the public API.
 
-- **`fn parse_program(input: &str) -> ModalResult<Vec<Spanned<Statement<'_>>>>`**:
+- **`fn parse_program(input: &str) -> Result<Vec<Spanned<Statement<'_>>>, ParseError<'_>>`**:
   Lexes and parses a complete script into a list of spanned top-level statements.
-- **`fn render_program_ast(input: &str) -> ModalResult<String>`**:
+  A lex failure is checked first via `TokenStream::take_lex_error` (it would otherwise
+  surface to the parser as ordinary stream exhaustion); only then is a parse failure
+  translated via `ParseError::from_winnow`.
+- **`fn render_program_ast(input: &str) -> Result<String, ParseError<'_>>`**:
   Thin wrapper around `parse_program` used by the corpus test suite — renders the
   resulting AST in the `{:?}`-debug form corpus fixtures compare against.
 - **Exports**: `Expr`, `LexerState`, `LogicalOp`, `PipeOp`, `Redirect`,
   `RedirectKind`, `RedirectTarget`, `Spanned`, `SpecialParam`, `Statement`,
-  `Token`, `TokenStream`, `ParseError`, `ParseErrorDisplay`.
+  `Token`, `TokenStream`, `ParseError`.
 
 ## AST & Types ([`types/`](src/types/))
 
@@ -44,19 +47,37 @@ submodules but re-exported from `types/mod.rs`.
 
 ## Lexer & Token Stream
 
-### 1. Lexer ([`lexer.rs`](src/lexer.rs))
+### 1. Lexer ([`lexer/`](src/lexer/))
 
-- **`fn LexerStream::lex_token(&mut self) -> ModalResult<Token<'_>>`**:
+Split across sibling files by category (`#[expect(clippy::multiple_inherent_impl, ...)]`
+on `lexer/mod.rs` documents why): `mod.rs` hosts `LexerStream` itself and the
+whitespace-skip/dispatch logic; `operator.rs` and `word.rs` each add one inherent method;
+`traits.rs` forwards every `winnow::stream::Stream`/`Offset`/`StreamIsPartial`/`Compare`
+impl to the wrapped `Stateful`.
+
+- **`fn LexerStream::lex_token(&mut self) -> ModalResult<Token<'_>>`** (`mod.rs`):
   The core tokenizer that yields a single token, skipping leading whitespace
   first (newlines excluded — they're a significant `Token::Newline`).
-- **`fn LexerStream::lex_token_with_start(&mut self) -> ModalResult<(usize, Token<'_>)>`**:
+- **`fn LexerStream::lex_token_with_start(&mut self) -> ModalResult<(usize, Token<'_>)>`** (`mod.rs`):
   Same, but also returns `eof_offset()` measured right after that whitespace
   skip and before the token itself — the position `stream::TokenStream` needs
   to report a token's true _start_, as opposed to the _end of the previous
   token_ (which still includes the next token's upcoming whitespace). `lex_token`
   is a thin wrapper that discards the offset.
+- **`fn LexerStream::parse_operator(&mut self) -> ModalResult<Token<'_>>`** (`operator.rs`):
+  Matches the fixed-punctuation operator set, branches ordered longest-prefix-first
+  (`;;&` before `;;` before `;`) so `alt` can't shadow a longer operator with a shorter
+  prefix of it.
+- **`fn LexerStream::parse_word(&mut self) -> ModalResult<Token<'_>>`** (`word.rs`):
+  Hand-rolled (not winnow combinators) scan for the next word's end, tracking
+  quoting/escaping/nested-expansion depth; a zero-length scan backtracks rather than
+  returning an empty `Token::Word` — the one path that reaches `TokenStream::take_lex_error`.
 
-### 2. Token Stream ([`stream.rs`](src/stream.rs))
+### 2. Token Stream ([`stream/`](src/stream/))
+
+`mod.rs` hosts `TokenStream`/`Lookahead` and their inherent methods; `traits.rs` is the
+`winnow::stream::Stream`/`Offset`/`Location`/`StreamIsPartial` impl (this is where
+`peek_token`/`next_token` actually live).
 
 - **`struct TokenStream<'a>`**: A lazy iterator wrapping the lexer that
   implements `winnow::stream::Stream`/`Location`. It produces tokens on-demand,
@@ -70,6 +91,11 @@ submodules but re-exported from `types/mod.rs`.
     vs. `remaining_before` on the buffered `Lookahead`) precisely because
     whitespace can separate them; conflating the two was a real bug (see git
     history) where a node following whitespace reported the wrong start.
+  - `take_lex_error(&mut self) -> Option<ErrMode<ContextError>>`: re-lexes the
+    snapshot taken when `lex_token` last failed, recovering the real lex error
+    `Stream::next_token`'s `Option` return had nowhere to carry. `#[must_use]`
+    — `lib.rs::parse_program` is the one caller, and now actually reports it via
+    `ParseError::from_lex_error` rather than just using its `Some`-ness as a flag.
 
 ## Parser Submodules (`parser/`)
 
@@ -86,11 +112,20 @@ The parser is split into specialized `winnow` combinator submodules under [`pars
     `Statement::Redirected` or wraps a fresh one — shared by `parse_command`
     and `command::parse_base_command` so the merge rule can't diverge between
     the two.
+  - `enum Expected { Command, Standalone(&'static str) }` + `fn expect_command(expected, parser)`:
+    every call site that needs "a command was missing here" or "this compound
+    construct's body/condition was missing" picks one of these two variants
+    explicitly, rather than `error.rs` guessing the message shape from a bare
+    `&'static str`'s suffix. `Standalone`'s payload is the bare construct name
+    (e.g. `"if body"`) — the `"missing "` phrasing is applied once, in
+    `error.rs`'s `ExpectedMessage::Standalone` `Display` arm, not spelled out
+    at each of the ~9 call sites.
 - **[`command.rs`](src/parser/command.rs)**:
   `parse_base_command` (simple commands — its `Statement::Command` span
   excludes any interleaved/leading/trailing redirect text, even though the
   outer `Redirected` span includes it), `parse_pipeline`, `parse_and_or`,
-  `parse_list`/`parse_list_until`.
+  `parse_list`/`parse_list_until` (the latter now takes `Expected` rather than
+  a bare description string).
 - **[`control_flow.rs`](src/parser/control_flow.rs)**:
   Parses `if/then/elif/else`, `for`, `while`, and `until`. A `for` loop with no
   `in` clause synthesizes an implicit `"$@"` iterable with a zero-width span
@@ -146,9 +181,32 @@ suspicious or insecure patterns.
 
 ## Error Handling ([`error.rs`](src/error.rs))
 
-- **`struct ParseError<'a>`**:
-  The error type returned by the parser when it fails. Retains a reference to
-  the source input for rich reporting.
-- **`struct ParseErrorDisplay<'a>`**:
-  A wrapper used to implement `miette::Diagnostic` or human-readable formatting
-  around a `ParseError`.
+- **`enum ParseError<'a>`**: The error type `parse_program` returns. Two variants:
+  - `Lexer { line, column, expected: Option<Cow<'a, str>> }`: built by
+    `ParseError::from_lex_error` from the `ErrMode<ContextError>` `TokenStream::take_lex_error`
+    recovers. `expected` carries through whatever context winnow attached to that failure
+    (`None` for every lex failure today — they're all context-free `Backtrack`s — but a future
+    one that attaches context isn't silently dropped).
+  - `Syntax { expected: Cow<'a, str>, line, column, found: Option<Token<'a>> }`: built by
+    `ParseError::from_winnow` from a parser-level `ErrMode<ContextError>`.
+- **`fn describe_expected(err: &ErrMode<ContextError>) -> Option<Cow<'static, str>>`**:
+  shared by both `from_lex_error` and `from_winnow`. Collects the first `StrContext::Expected`
+  and `StrContext::Label` winnow attached, then classifies them via `ExpectedMessage` — an
+  exhaustive match on `StrContextValue`'s own variant (`Description("command")` vs. any other
+  `Description` vs. a literal/char `StringLiteral`/`CharLiteral`), not a suffix/equality guess
+  on the rendered text. Returns `None` for `Incomplete` (no `ContextError` to read) or a
+  genuinely context-free failure; callers supply their own fallback (`"incomplete input"` /
+  `"syntax error"`) rather than this picking one on their behalf.
+- **`enum ExpectedMessage`**: the closed set of phrasings — `Standalone` (renders
+  `"missing {name}"`, the one place that prefix is spelled out), `CommandIn`/`Command`
+  (`"{label} should contain at least one command"` / `"expected a command"`), `Item`
+  (`"expected {value} for the {label}"`, for `consume_keyword`'s/`grouping.rs`'s literal
+  keyword/punctuation expectations), `Malformed` (`"malformed {label}"`, label with no
+  `Expected` context at all).
+- **`struct FoundToken<'a>(Option<&'a Token<'a>>)`**: the `Syntax` message's `{}` arg —
+  `` `{token}` `` or `"end of file"`. A small `Display` newtype rather than `Token`'s own
+  `Display` (which renders just the token's text) being backtick-wrapped through a
+  `format!()` helper.
+- Project convention: `format!()` is reserved for `#[error(...)]` strings themselves: every
+  other string this module builds goes through a `Display`-implementing type (`FoundToken`,
+  `ExpectedMessage`) rendered once via `.to_string()`, not scattered `format!()` calls.
