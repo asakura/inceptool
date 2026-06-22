@@ -37,7 +37,7 @@
 //!   replays that same peek rather than losing it.
 //! - [`winnow::stream::Location::current_token_start`] and [`winnow::stream::Location::previous_token_end`] diff against
 //!   different lengths, not the same one: whitespace before a token is skipped lazily inside
-//!   [`crate::lexer::LexerStream::lex_token_with_start`], so "end of the previous token" and "start of the
+//!   `crate::lexer::LexerStream::lex_token_with_start`, so "end of the previous token" and "start of the
 //!   next one" are different positions whenever whitespace separates them. Reporting both from
 //!   the same length would place the next token's start back at the previous token's end,
 //!   underlining the gap between them instead of the token itself.

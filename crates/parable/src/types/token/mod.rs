@@ -5,8 +5,8 @@ mod fmt;
 /// A single lexical token, as produced by [`crate::lexer`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token<'a> {
-    /// A run of word content, not yet classified as a keyword or split into an [`Expr`] — see
-    /// `parser::word`.
+    /// A run of word content, not yet classified as a keyword or split into an
+    /// [`crate::types::Expr`] — see `parser::word`.
     Word(Cow<'a, str>),
     /// A line terminator. Significant as a statement separator, unlike inline whitespace (which
     /// the lexer simply skips without emitting a token).
@@ -17,15 +17,15 @@ pub enum Token<'a> {
     Semi,
     /// `|` — pipeline separator, connecting one command's stdout to the next's stdin.
     Pipe,
-    /// `&` — background-execution suffix; see [`Statement::Background`].
+    /// `&` — background-execution suffix; see [`crate::types::Statement::Background`].
     Amp,
-    /// `(` — opens a [`Statement::Subshell`].
+    /// `(` — opens a [`crate::types::Statement::Subshell`].
     LParen,
-    /// `)` — closes a [`Statement::Subshell`].
+    /// `)` — closes a [`crate::types::Statement::Subshell`].
     RParen,
-    /// `{` — opens a [`Statement::BraceGroup`].
+    /// `{` — opens a [`crate::types::Statement::BraceGroup`].
     LBrace,
-    /// `}` — closes a [`Statement::BraceGroup`].
+    /// `}` — closes a [`crate::types::Statement::BraceGroup`].
     RBrace,
     /// `<` — input redirection (`cmd < file`).
     Less,

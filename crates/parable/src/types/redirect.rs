@@ -3,7 +3,8 @@ use super::{Expr, Spanned};
 use std::borrow::Cow;
 use std::fmt;
 
-/// One I/O redirection attached to a [`Statement`] via [`Statement::Redirected`].
+/// One I/O redirection attached to a [`crate::types::Statement`] via
+/// [`crate::types::Statement::Redirected`].
 #[derive(Clone, PartialEq, Eq)]
 pub struct Redirect<'a> {
     /// The explicit file descriptor the operator targets (`2` in `2>file`), if one was written.
@@ -63,7 +64,7 @@ pub enum RedirectTarget<'a> {
     Close,
     /// [`RedirectKind::Heredoc`]/[`RedirectKind::HeredocStripTabs`]'s delimiter and captured
     /// body. `delimiter` is the word exactly as written (quotes/escapes included, if any) —
-    /// see [`strip_delimiter_quoting`] for the bare identifier actually matched against each
+    /// see `strip_delimiter_quoting` for the bare identifier actually matched against each
     /// candidate end-of-heredoc line.
     Heredoc {
         /// The delimiter word, verbatim.

@@ -4,7 +4,7 @@ use std::ops::Range;
 /// A wrapper attaching a byte span (start and end offset) to an AST node or token.
 ///
 /// If the `miette` feature is enabled, this type implements conversions to
-/// [`miette::SourceSpan`], allowing seamless integration with `miette` diagnostics.
+/// `miette::SourceSpan`, allowing seamless integration with `miette` diagnostics.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Spanned<T> {
     /// The inner parsed node.

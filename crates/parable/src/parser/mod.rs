@@ -22,10 +22,10 @@
 //! every compound command (and `command::parse_base_command`'s own simple command) can have
 //! redirects trailing it, so `parse_command` consumes them itself after the `alt` succeeds,
 //! wrapping the result in [`Statement::Redirected`] rather than each compound
-//! parser doing so independently. [`attach_redirects`] is the single place that decides whether
-//! to extend an already-`Redirected` statement or wrap a fresh one, shared by [`parse_command`]
+//! parser doing so independently. `attach_redirects` is the single place that decides whether
+//! to extend an already-`Redirected` statement or wrap a fresh one, shared by `parse_command`
 //! and `command::parse_base_command`'s own redirect handling, so the two can't silently diverge
-//! on what e.g. `cmd <a >b` and `if ...; fi <a >b` each produce. [`spanned`] is the shared
+//! on what e.g. `cmd <a >b` and `if ...; fi <a >b` each produce. `spanned` is the shared
 //! `start..input.previous_span_end()` constructor every sibling module's `Spanned` nodes go
 //! through, instead of each repeating that arithmetic by hand.
 //!

@@ -54,7 +54,7 @@ impl Expr<'_> {
 
 impl fmt::Debug for Expr<'_> {
     /// Renders every variant as a `(word ...)` node, exposing `VarRef`/`Positional`/
-    /// `SpecialParam`/`Interpolated` as their own structural shapes (see [`Self::fmt_fragment`])
+    /// `SpecialParam`/`Interpolated` as their own structural shapes (see `Self::fmt_fragment`)
     /// rather than collapsing back to reconstructed source text — corpus snapshots pin which
     /// kind of reference a word holds, not just what it reads back as.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
