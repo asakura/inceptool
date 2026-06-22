@@ -140,10 +140,7 @@ cat baz | head -n 1
 
 # === Stderr pipe ===
 
-# `|&` (stderr+stdout pipe) is implemented in the lexer and parse_pipeline but had zero corpus
-# coverage. parse_pipeline treats Token::Pipe and Token::PipeAmp identically — both extend the
-# commands Vec. The AST carries no record of which pipe flavour was used, so `|&` and `|` produce
-# identical (pipeline ...) output.
+
 
 === simple
 cmd1 |& cmd2
