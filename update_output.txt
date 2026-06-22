@@ -1,0 +1,36 @@
+    Updating crates.io index
+     Locking 15 packages to latest Rust 1.96.0 compatible versions
+    Removing anyhow v1.0.102
+      Adding bitflags v1.3.2
+    Updating bytes v1.11.1 -> v1.12.0
+      Adding defmt v1.1.0
+      Adding defmt-macros v1.1.0
+      Adding defmt-parser v1.0.0
+    Removing foldhash v0.1.5
+    Updating getrandom v0.4.2 -> v0.4.3
+    Updating gix-packetline v0.21.4 -> v0.21.5
+    Removing hashbrown v0.15.5
+    Removing id-arena v2.3.0
+    Removing indexmap v2.14.0
+    Updating jiff v0.2.28 -> v0.2.29
+    Updating jiff-static v0.2.28 -> v0.2.29
+    Removing leb128fmt v0.1.0
+    Updating log v0.4.32 -> v0.4.33
+    Removing prettyplease v0.2.37
+      Adding proc-macro-error-attr2 v2.0.0
+      Adding proc-macro-error2 v2.0.1
+    Updating quote v1.0.45 -> v1.0.46
+    Updating syn v2.0.117 -> v2.0.118
+    Removing unicode-xid v0.2.6
+    Removing wasip3 v0.4.0+wasi-0.3.0-rc-2026-01-06
+    Removing wasm-encoder v0.244.0
+    Removing wasm-metadata v0.244.0
+    Removing wasmparser v0.244.0
+    Removing wit-bindgen v0.51.0
+    Removing wit-bindgen-core v0.51.0
+    Removing wit-bindgen-rust v0.51.0
+    Removing wit-bindgen-rust-macro v0.51.0
+    Removing wit-component v0.244.0
+    Removing wit-parser v0.244.0
+    Updating zlib-rs v0.6.3 -> v0.6.4
+note: pass `--verbose` to see 1 unchanged dependencies behind latest
