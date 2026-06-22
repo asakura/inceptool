@@ -551,4 +551,73 @@ cmd <&3 > out.txt
 ---
 
 
+# === Syntax errors ===
+#
+# Once an operator is lexed, a target is mandatory for every redirect kind — a missing one is a
+# real syntax error in both Bash and this parser, not a sign the operator wasn't a redirect.
+
+=== output redirect with no target is a syntax error
+cmd >
+
+--- <error>
+Parse error at line 1, column 6: missing redirect target, but found newline
+---
+
+
+=== input redirect with no target is a syntax error
+cmd <
+
+--- <error>
+Parse error at line 1, column 6: missing redirect target, but found newline
+---
+
+
+=== append redirect with no target is a syntax error
+cmd >>
+
+--- <error>
+Parse error at line 1, column 7: missing redirect target, but found newline
+---
+
+
+=== noclobber override redirect with no target is a syntax error
+cmd >|
+
+--- <error>
+Parse error at line 1, column 7: missing redirect target, but found newline
+---
+
+
+=== input/output redirect with no target is a syntax error
+cmd <>
+
+--- <error>
+Parse error at line 1, column 7: missing redirect target, but found newline
+---
+
+
+=== fd duplication redirect with no target is a syntax error
+cmd 2>&
+
+--- <error>
+Parse error at line 1, column 8: missing redirect target, but found newline
+---
+
+
+=== combined stdout/stderr redirect with no target is a syntax error
+cmd &>
+
+--- <error>
+Parse error at line 1, column 7: missing redirect target, but found newline
+---
+
+
+=== combined append redirect with no target is a syntax error
+cmd &>>
+
+--- <error>
+Parse error at line 1, column 8: missing redirect target, but found newline
+---
+
+
 # eof
