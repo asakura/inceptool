@@ -51,6 +51,11 @@ struct FoundToken<'a>(Option<&'a Token<'a>>);
 impl fmt::Display for FoundToken<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.0 {
+            // Not backtick-wrapped, like `None`'s "end of file": `Token`'s own `Display` renders
+            // this as a literal "\n" (correct for reconstructing source text), but splicing a raw
+            // newline into the middle of a one-line "Parse error at ..." message would break it
+            // across two lines instead of naming the token.
+            Some(Token::Newline) => write!(f, "newline"),
             Some(t) => write!(f, "`{t}`"),
             None => write!(f, "end of file"),
         }

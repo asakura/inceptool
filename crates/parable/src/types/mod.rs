@@ -3,6 +3,7 @@
 
 pub use expr::{Expr, SpecialParam};
 pub use lexer::LexerState;
+pub(crate) use redirect::strip_delimiter_quoting;
 pub use redirect::{Redirect, RedirectKind, RedirectTarget};
 pub use spanned::Spanned;
 pub use statement::{CaseArm, LogicalOp, PipeOp, Statement};

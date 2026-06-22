@@ -11,9 +11,9 @@ use winnow::stream::{Compare, CompareResult, Needed, Offset, Stateful, Stream, S
               is forbidden in this crate"
 )]
 impl<'a> Stream for LexerStream<'a> {
-    type Token = <Stateful<&'a str, LexerState<'a>> as Stream>::Token;
-    type Slice = <Stateful<&'a str, LexerState<'a>> as Stream>::Slice;
-    type IterOffsets = <Stateful<&'a str, LexerState<'a>> as Stream>::IterOffsets;
+    type Token = <Stateful<&'a str, LexerState> as Stream>::Token;
+    type Slice = <Stateful<&'a str, LexerState> as Stream>::Slice;
+    type IterOffsets = <Stateful<&'a str, LexerState> as Stream>::IterOffsets;
     type Checkpoint = Self;
 
     fn iter_offsets(&self) -> Self::IterOffsets {
@@ -76,7 +76,7 @@ impl Offset for LexerStream<'_> {
               (false) are correct as-is"
 )]
 impl<'a> StreamIsPartial for LexerStream<'a> {
-    type PartialState = <Stateful<&'a str, LexerState<'a>> as StreamIsPartial>::PartialState;
+    type PartialState = <Stateful<&'a str, LexerState> as StreamIsPartial>::PartialState;
 
     #[expect(
         clippy::semicolon_if_nothing_returned,
@@ -92,7 +92,7 @@ impl<'a> StreamIsPartial for LexerStream<'a> {
     }
 
     fn is_partial_supported() -> bool {
-        <Stateful<&'a str, LexerState<'a>> as StreamIsPartial>::is_partial_supported()
+        <Stateful<&'a str, LexerState> as StreamIsPartial>::is_partial_supported()
     }
 }
 

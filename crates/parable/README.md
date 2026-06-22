@@ -38,19 +38,19 @@ The Lexer consumes raw strings and yields an array of `Token<'a>`. Because of Ba
 We utilize `winnow::stream::Stateful` to thread a mutable context through the tokenization stream.
 
 ```rust
-use std::borrow::Cow;
-
 /// Tracks the current parsing context of the Bash script
-#[derive(Debug, Clone, Default)]
-pub struct LexerState<'a> {
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LexerState {
     pub in_arithmetic: bool,
-    pub heredoc_delimiter: Option<Cow<'a, str>>,
+    /// Bytes of already-captured heredoc body (see §3.3) the next lexed newline must skip.
+    pub heredoc_skip: usize,
 }
 ```
 
-`LexerStream<'a>` (in `lexer.rs`) is a newtype wrapping `Stateful<&'a str, LexerState<'a>>`, not a
-bare type alias — it needs its own inherent methods (`lex_token`, `skip_whitespace`, ...) that a
-plain alias couldn't carry.
+`LexerState` has no lifetime and is `Copy` — neither field owns anything. `LexerStream<'a>` (in
+`lexer/mod.rs`) is a newtype wrapping `Stateful<&'a str, LexerState>`, not a bare type alias — it
+needs its own inherent methods (`lex_token`, `skip_whitespace`, ...) that a plain alias couldn't
+carry.
 
 ### 3.2. Token Representation
 
@@ -80,8 +80,8 @@ other lexer transforms) can't always stay zero-copy — but the common case stil
 ### 3.3. Contextual Branching
 
 The lexer functions use `LexerState` to dynamically select logic without performance penalties —
-e.g. `$x` resolves differently depending on `in_arithmetic`. See `lexer.rs`'s module doc for the
-specific contextual rules (arithmetic, heredocs) and which of them are implemented today.
+e.g. `$x` resolves differently depending on `in_arithmetic`. See `lexer/mod.rs`'s module doc for
+the specific contextual rules (arithmetic) and `lexer/heredoc.rs` for heredoc body capture.
 
 ## 4. AST Compilation
 
@@ -361,10 +361,9 @@ Test failure messages use `ParseError`'s own `Display` (§5) rather than `{:?}` 
 so a broken corpus case reports *why* parsing failed (or unexpectedly succeeded), not just that
 it did.
 
-*(Redirects (`<`, `>`, `>>`, `>|`, `<>`, `<&`, `>&`, `&>`, `&>>`, `<<<`) are modeled via
-`Statement::Redirected` and round-trip correctly. Remaining gap: heredocs (`<<`, `<<-`) aren't
-parsed at all yet — capturing their body needs the lexer to switch into a line-scanning mode
-keyed off the delimiter word, which doesn't exist yet.)*
+*(Redirects (`<`, `>`, `>>`, `>|`, `<>`, `<&`, `>&`, `&>`, `&>>`, `<<<`, `<<`, `<<-`) are all
+modeled via `Statement::Redirected` and round-trip correctly, including heredocs — see
+`lexer/heredoc.rs` for how their body is captured.)*
 
 ## 9. Summary of Benefits
 

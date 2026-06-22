@@ -2,7 +2,7 @@
 //! [`parse_and_or`], [`parse_list`].
 
 use super::{
-    redirect::parse_redirect,
+    redirect::parse_redirect_opt,
     word::parse_literal,
     {ParserStream, attach_redirects, parse_command, skip_newlines, spanned},
 };
@@ -27,7 +27,7 @@ pub(super) fn parse_base_command<'a>(
     let start_offset = input.current_span_start();
     let mut redirects = Vec::new();
 
-    while let Ok(r) = parse_redirect(input) {
+    while let Some(r) = parse_redirect_opt(input)? {
         redirects.push(r);
     }
 
@@ -43,7 +43,7 @@ pub(super) fn parse_base_command<'a>(
     let mut args = Vec::new();
 
     loop {
-        if let Ok(r) = parse_redirect(input) {
+        if let Some(r) = parse_redirect_opt(input)? {
             redirects.push(r);
             continue;
         }

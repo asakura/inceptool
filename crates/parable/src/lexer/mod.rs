@@ -54,6 +54,7 @@
     reason = "methods are split across files by category"
 )]
 
+pub(crate) mod heredoc;
 mod operator;
 mod traits;
 mod word;
@@ -61,6 +62,8 @@ mod word;
 use crate::types::{LexerState, Token};
 
 use winnow::{ModalResult, Parser as _, combinator::alt, stream::Stateful, token::take_while};
+
+use std::mem;
 
 /// The character-level [`winnow::stream::Stream`] consumed by [`LexerStream::lex_token`].
 ///
@@ -76,10 +79,22 @@ use winnow::{ModalResult, Parser as _, combinator::alt, stream::Stateful, token:
     clippy::field_scoped_visibility_modifiers,
     reason = "shared within module hierarchy"
 )]
-pub struct LexerStream<'a>(pub(crate) Stateful<&'a str, LexerState<'a>>);
+pub struct LexerStream<'a>(pub(crate) Stateful<&'a str, LexerState>);
 
 impl AsRef<str> for LexerStream<'_> {
     fn as_ref(&self) -> &str {
+        self.0.input
+    }
+}
+
+impl<'a> LexerStream<'a> {
+    /// The lexer's current remaining input, carrying its true `'a` lifetime — unlike
+    /// [`AsRef::as_ref`]'s elided signature, which ties the return value's lifetime to `&self`
+    /// rather than to the underlying buffer. [`crate::stream::TokenStream::capture_heredoc`]
+    /// needs the longer lifetime to build a [`std::borrow::Cow`] body that outlives the borrow
+    /// used to read it.
+    #[must_use = "looking up the remaining input has no effect unless the caller uses it"]
+    pub(crate) const fn remaining(&self) -> &'a str {
         self.0.input
     }
 }
@@ -121,6 +136,19 @@ impl<'a> LexerStream<'a> {
         }
 
         let token = alt((Self::parse_operator, Self::parse_word)).parse_next(self)?;
+
+        // A `<<`/`<<-` redirect already captured its body eagerly, the moment its delimiter was
+        // parsed (see `crate::stream::TokenStream::capture_heredoc`), by reading past — without
+        // consuming — whatever lay beyond the *next* unlexed newline. Now that this lexer has
+        // actually reached that exact newline for real, the cursor must jump over the body (and
+        // every other heredoc's body queued on the same line) before normal tokenizing resumes.
+        if matches!(token, Token::Newline) {
+            let skip = mem::take(&mut self.0.state.heredoc_skip);
+
+            if skip > 0 {
+                self.0.input = self.0.input.get(skip..).unwrap_or_default();
+            }
+        }
 
         Ok((start, token))
     }

@@ -239,7 +239,7 @@ fn parse_command<'a>(input: &mut ParserStream<'a>) -> ModalResult<Spanned<Statem
 
     let mut trailing = Vec::new();
 
-    while let Ok(r) = redirect::parse_redirect(input) {
+    while let Some(r) = redirect::parse_redirect_opt(input)? {
         trailing.push(r);
     }
 

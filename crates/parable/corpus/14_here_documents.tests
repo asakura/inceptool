@@ -1,0 +1,614 @@
+#! Suite 14: Here Documents
+
+# === Basic here documents ===
+
+=== simple here document
+cat <<EOF
+hello world
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "hello world\n")))
+---
+
+
+=== here document with multiple lines
+cat <<END
+line one
+line two
+line three
+END
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "END" "line one\nline two\nline three\n")))
+---
+
+
+=== here document empty
+cat <<EOF
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "")))
+---
+
+
+=== here document single line no newline at end
+cat <<EOF
+hello
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "hello\n")))
+---
+
+
+# === Different delimiters ===
+
+=== delimiter with underscore
+cat <<END_OF_DATA
+content
+END_OF_DATA
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "END_OF_DATA" "content\n")))
+---
+
+
+=== delimiter all caps
+cat <<MARKER
+text
+MARKER
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "MARKER" "text\n")))
+---
+
+
+=== delimiter lowercase
+cat <<end
+text
+end
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "end" "text\n")))
+---
+
+
+=== delimiter mixed case
+cat <<EndMarker
+text
+EndMarker
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EndMarker" "text\n")))
+---
+
+
+=== delimiter with numbers
+cat <<EOF123
+text
+EOF123
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF123" "text\n")))
+---
+
+
+# === Tab stripping with <<- ===
+
+=== heredoc strip tabs
+cat <<-EOF
+	indented with tab
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<-" (heredoc "EOF" "indented with tab\n")))
+---
+
+
+=== heredoc strip tabs multiple lines
+cat <<-END
+	line one
+	line two
+END
+---
+(redirected (command (word "cat")) (redirect "<<-" (heredoc "END" "line one\nline two\n")))
+---
+
+
+=== heredoc strip tabs delimiter indented
+cat <<-EOF
+	content
+	EOF
+---
+(redirected (command (word "cat")) (redirect "<<-" (heredoc "EOF" "content\n")))
+---
+
+
+# === Quoted delimiters (no expansion) ===
+
+=== double quoted delimiter
+cat <<"EOF"
+$variable not expanded
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc ""EOF"" "$variable not expanded\n")))
+---
+
+
+=== single quoted delimiter
+cat <<'EOF'
+$variable not expanded
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "'EOF'" "$variable not expanded\n")))
+---
+
+
+=== escaped delimiter
+cat <<\EOF
+$variable not expanded
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "\EOF" "$variable not expanded\n")))
+---
+
+
+=== partially quoted delimiter
+cat <<E"OF"
+$variable not expanded
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "E"OF"" "$variable not expanded\n")))
+---
+
+
+# === Here documents with expansions ===
+
+=== heredoc with variable
+cat <<EOF
+hello $name
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "hello $name\n")))
+---
+
+
+=== heredoc with command substitution
+cat <<EOF
+today is $(date)
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "today is $(date)\n")))
+---
+
+
+=== heredoc with arithmetic
+cat <<EOF
+result is $((1+2))
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "result is $((1+2))\n")))
+---
+
+
+=== heredoc with braced variable
+cat <<EOF
+value is ${var}
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "value is ${var}\n")))
+---
+
+
+# === Here documents in different positions ===
+
+=== heredoc with other redirects
+cat <<EOF >output.txt
+content
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n")) (redirect ">" (word "output.txt")))
+---
+
+
+=== heredoc with fd number
+cat 0<<EOF
+content
+EOF
+---
+(redirected (command (word "cat")) (redirect (fd 0) "<<" (heredoc "EOF" "content\n")))
+---
+
+
+=== heredoc after args
+cat -n <<EOF
+content
+EOF
+---
+(redirected (command (word "cat") (word "-n")) (redirect "<<" (heredoc "EOF" "content\n")))
+---
+
+
+# === Multiple here documents ===
+
+=== two here documents
+cat <<EOF1 <<EOF2
+first
+EOF1
+second
+EOF2
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF1" "first\n")) (redirect "<<" (heredoc "EOF2" "second\n")))
+---
+
+
+# === Here document in pipelines ===
+
+=== heredoc in pipeline
+cat <<EOF | grep hello
+hello world
+goodbye world
+EOF
+---
+(pipeline (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "hello world\ngoodbye world\n"))) (| (command (word "grep") (word "hello"))))
+---
+
+
+=== heredoc at end of pipeline
+echo start | cat <<EOF
+middle
+EOF
+---
+(pipeline (command (word "echo") (word "start")) (| (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "middle\n")))))
+---
+
+
+# === Here document in lists ===
+
+=== heredoc with semicolon after
+cat <<EOF; echo done
+content
+EOF
+---
+(semi (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n"))) (command (word "echo") (word "done")))
+---
+
+
+=== heredoc with and
+cat <<EOF && echo success
+content
+EOF
+---
+(and (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n"))) (command (word "echo") (word "success")))
+---
+
+
+# === Here strings (<<<) ===
+
+=== simple here string
+cat <<<"hello world"
+---
+(redirected (command (word "cat")) (redirect "<<<" (word "\"hello world\"")))
+---
+
+
+=== here string with variable
+cat <<<"$name"
+---
+(redirected (command (word "cat")) (redirect "<<<" (word (interp "\"" (var "name") "\""))))
+---
+
+
+=== here string unquoted
+cat <<<hello
+---
+(redirected (command (word "cat")) (redirect "<<<" (word "hello")))
+---
+
+
+# === Edge cases ===
+
+=== heredoc delimiter on same line as content start
+cat <<EOF
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "")))
+---
+
+
+=== heredoc with blank lines
+cat <<EOF
+
+blank above and below
+
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "\nblank above and below\n\n")))
+---
+
+
+=== heredoc with special characters in content
+cat <<EOF
+$dollar `backtick` "quotes" 'single'
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "$dollar `backtick` "quotes" 'single'\n")))
+---
+
+
+=== heredoc delimiter not at start of line does not end
+cat <<EOF
+not EOF here
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "not EOF here\n")))
+---
+
+
+# === Additional edge cases from research ===
+
+=== heredoc with append redirect
+cat <<EOF >>output.txt
+content
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n")) (redirect ">>" (word "output.txt")))
+---
+
+
+=== heredoc with stderr redirect
+cat <<EOF 2>&1
+content
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n")) (redirect (fd 2) ">&" (fd 1)))
+---
+
+
+=== heredoc with or operator
+cat <<EOF || echo failed
+content
+EOF
+---
+(or (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n"))) (command (word "echo") (word "failed")))
+---
+
+
+=== heredoc with background operator
+cat <<EOF &
+content
+EOF
+---
+(bg (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n"))))
+---
+
+
+=== heredoc in while loop body
+while true; do cat <<EOF
+hello
+EOF
+done
+---
+(while (command (word "true")) (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "hello\n"))))
+---
+
+
+=== heredoc in for loop body
+for i in 1 2; do cat <<EOF
+line
+EOF
+done
+---
+(for (word "i") (in (word "1") (word "2")) (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "line\n"))))
+---
+
+
+=== heredoc after if then
+if true; then cat <<EOF
+content
+EOF
+fi
+---
+(if (command (word "true")) (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n"))))
+---
+
+
+=== heredoc with escaped dollar in content
+cat <<EOF
+price is \$100
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "price is \$100\n")))
+---
+
+
+=== heredoc with backslash at end of line
+cat <<EOF
+line continues\
+next part
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "line continuesnext part\n")))
+---
+
+
+=== heredoc with only whitespace content
+cat <<EOF
+
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "\n")))
+---
+
+
+=== heredoc strip tabs preserves spaces
+cat <<-EOF
+	tab then spaces
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<-" (heredoc "EOF" "tab then spaces\n")))
+---
+
+
+=== heredoc delimiter with hyphen
+cat <<END-MARKER
+content
+END-MARKER
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "END-MARKER" "content\n")))
+---
+
+
+=== herestring after file redirect
+cat <input.txt <<<"extra"
+---
+(redirected (command (word "cat")) (redirect "<" (word "input.txt")) (redirect "<<<" (word "\"extra\"")))
+---
+
+
+=== heredoc then herestring same command
+cat <<EOF <<<"suffix"
+prefix
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "prefix\n")) (redirect "<<<" (word "\"suffix\"")))
+---
+
+
+=== multiple commands after heredoc
+cat <<EOF; echo one; echo two
+content
+EOF
+---
+(semi (semi (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n"))) (command (word "echo") (word "one"))) (command (word "echo") (word "two")))
+---
+
+
+=== heredoc in subshell
+(cat <<EOF)
+content
+EOF
+---
+(subshell (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n"))))
+---
+
+
+=== heredoc in brace group
+{ cat <<EOF; }
+content
+EOF
+---
+(brace-group (redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n"))))
+---
+
+
+=== heredoc with double backslash at end of line
+cat <<EOF
+test\\
+next
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "test\\\nnext\n")))
+---
+
+
+# === Unterminated and non-matching terminator edge cases ===
+#
+# Bash itself only *warns* (`here-document at line N delimited by end-of-file`) about these —
+# they're not syntax errors (`bash -n` exits 0 for every one below) — so the parser must accept
+# them, capturing whatever's read up to the real end of input as the body.
+
+=== heredoc with no terminator line at all
+cat <<EOF
+hello
+
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "hello\n")))
+---
+
+
+=== heredoc terminator with trailing whitespace does not match
+cat <<EOF
+content
+EOF  
+more
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\nEOF  \nmore\n")))
+---
+
+
+=== heredoc terminator with leading whitespace does not match
+cat <<EOF
+content
+  EOF
+more
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\n  EOF\nmore\n")))
+---
+
+
+=== heredoc strip tabs does not strip leading spaces
+cat <<-EOF
+  content
+  EOF
+more
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<-" (heredoc "EOF" "  content\n  EOF\nmore\n")))
+---
+
+
+=== heredoc terminator match is case sensitive
+cat <<EOF
+content
+eof
+EOF
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF" "content\neof\n")))
+---
+
+
+=== quoted delimiter containing a space
+cat <<"my limit"
+hi
+my limit
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc ""my limit"" "hi\n")))
+---
+
+
+=== other heredoc's delimiter inside this heredoc's body does not end it
+cat <<EOF1 <<EOF2
+first
+EOF2
+second
+EOF1
+---
+(redirected (command (word "cat")) (redirect "<<" (heredoc "EOF1" "first\nEOF2\nsecond\n")) (redirect "<<" (heredoc "EOF2" "")))
+---
+
+
+# === Syntax errors ===
+#
+# Once `<<`/`<<-` is lexed, a delimiter word is mandatory — unlike the lenient unterminated-body
+# handling above, a *missing* delimiter is a real syntax error in both Bash and this parser.
+
+=== heredoc operator with no delimiter is a syntax error
+cat <<
+echo after
+--- <error>
+Parse error at line 1, column 7: missing heredoc delimiter, but found newline
+---
+
+
+=== heredoc strip-tabs operator with no delimiter is a syntax error
+cat <<-
+echo after
+--- <error>
+Parse error at line 1, column 8: missing heredoc delimiter, but found newline
+---
+
+
+=== heredoc operator followed by another operator is a syntax error
+cat <<;
+echo after
+--- <error>
+Parse error at line 1, column 7: missing heredoc delimiter, but found `;`
+---
+
+
+# eof

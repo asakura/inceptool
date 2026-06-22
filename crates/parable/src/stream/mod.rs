@@ -53,11 +53,13 @@ mod traits;
 mod tests;
 
 use crate::lexer::LexerStream;
+use crate::lexer::heredoc;
 use crate::types::Token;
 
 use winnow::error::{ContextError, ErrMode};
 use winnow::stream::Location;
 
+use std::borrow::Cow;
 use std::cell::RefCell;
 
 /// Inline capacity of [`winnow::stream::Stream::Slice`]'s backing storage.
@@ -80,11 +82,11 @@ pub(crate) const TOKEN_SLICE_CAPACITY: usize = 4;
 /// rather than pre-draining the input into a `Vec<Token>` ahead of parsing.
 ///
 /// `Clone` (required by `Stream::peek_token`/`Stream::checkpoint`, which can't mutate the
-/// caller's position) is an allocation-free copy of `(&str, LexerState)` in the common case:
-/// `LexerState`'s only potentially-owned field, `heredoc_delimiter`, is `Cow::Borrowed` unless
-/// the delimiter needed backslash-unquoting. `lex_failure` is boxed rather than inlined so this
-/// clone stays one lexer-state-sized copy instead of two: inlined, the field would double
-/// `TokenStream`'s size on every clone just to carry a snapshot that's `None` almost always.
+/// caller's position) is an allocation-free copy of `(&str, LexerState)`: `LexerState` is itself
+/// `Copy` (a `bool` and a `usize`, nothing owned), so cloning never allocates. `lex_failure` is
+/// boxed rather than inlined so this clone stays one lexer-state-sized copy instead of two:
+/// inlined, the field would double `TokenStream`'s size on every clone just to carry a snapshot
+/// that's `None` almost always.
 ///
 /// `lexer` and `lex_failure` are wrapped in [`RefCell`] because `Stream::peek_token` takes
 /// `&self`, yet still needs to drive the lexer forward to fill `lookahead` on a cache miss (and,
@@ -214,5 +216,34 @@ impl<'a> TokenStream<'a> {
     #[must_use = "fetching the previous span end has no effect unless the caller uses the offset"]
     pub fn previous_span_end(&self) -> usize {
         Location::previous_token_end(self)
+    }
+
+    /// Captures a heredoc's body, immediately, off the lexer's raw remaining input — see
+    /// [`crate::lexer::heredoc`] for the capture algorithm and why it can run eagerly rather than
+    /// waiting for the line's terminating newline to actually be lexed.
+    ///
+    /// Must be called right after consuming the heredoc's delimiter token, with no intervening
+    /// peek: it reads [`LexerStream::remaining`] directly, which is only the parser's true
+    /// logical position when no token has been lexed ahead of it into [`TokenStream::lookahead`].
+    /// Every redirect-parsing combinator between the delimiter and this call consumes via
+    /// `Stream::next_token` (which drains any such lookahead first), so that invariant holds in
+    /// practice — see `parser::redirect`.
+    #[must_use = "capturing a heredoc body has no effect unless the caller uses it"]
+    pub(crate) fn capture_heredoc(
+        &self,
+        delimiter: &str,
+        strip_tabs: bool,
+        splice: bool,
+    ) -> Cow<'a, str> {
+        let mut lexer = self.lexer.borrow_mut();
+        let text = lexer.remaining();
+        let already_claimed = lexer.0.state.heredoc_skip;
+
+        let (body, consumed) =
+            heredoc::capture(text, already_claimed, delimiter, strip_tabs, splice);
+
+        lexer.0.state.heredoc_skip = already_claimed.saturating_add(consumed);
+
+        body
     }
 }

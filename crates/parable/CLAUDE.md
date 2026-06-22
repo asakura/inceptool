@@ -42,8 +42,9 @@ submodules but re-exported from `types/mod.rs`.
   - `LogicalOp`: `&&` vs `||`.
   - `PipeOp`: `|` vs `|&`.
   - `CaseArm`: Patterns and body for a `case` block.
-  - `Redirect`, `RedirectKind`, `RedirectTarget`:
-    Shell redirections (`>`, `<&`, etc.).
+  - `Redirect`, `RedirectKind`, `RedirectTarget`: Shell redirections (`>`, `<&`, etc.), including
+    `Heredoc`/`HeredocStripTabs` (`<<`/`<<-`) — see `types/redirect.rs` for `strip_delimiter_quoting`
+    and `types/statement/fmt.rs` for how `Display` defers heredoc bodies until the line ends.
 
 ## Lexer & Token Stream
 
@@ -53,7 +54,7 @@ Split across sibling files by category (`#[expect(clippy::multiple_inherent_impl
 on `lexer/mod.rs` documents why): `mod.rs` hosts `LexerStream` itself and the
 whitespace-skip/dispatch logic; `operator.rs` and `word.rs` each add one inherent method;
 `traits.rs` forwards every `winnow::stream::Stream`/`Offset`/`StreamIsPartial`/`Compare`
-impl to the wrapped `Stateful`.
+impl to the wrapped `Stateful`; `heredoc.rs` holds the heredoc body-capture free function.
 
 - **`fn LexerStream::lex_token(&mut self) -> ModalResult<Token<'_>>`** (`mod.rs`):
   The core tokenizer that yields a single token, skipping leading whitespace
@@ -63,7 +64,8 @@ impl to the wrapped `Stateful`.
   skip and before the token itself — the position `stream::TokenStream` needs
   to report a token's true _start_, as opposed to the _end of the previous
   token_ (which still includes the next token's upcoming whitespace). `lex_token`
-  is a thin wrapper that discards the offset.
+  is a thin wrapper that discards the offset. On a lexed `Token::Newline`, also skips
+  `LexerState::heredoc_skip` bytes — the already-captured body of any `<<`/`<<-` on that line.
 - **`fn LexerStream::parse_operator(&mut self) -> ModalResult<Token<'_>>`** (`operator.rs`):
   Matches the fixed-punctuation operator set, branches ordered longest-prefix-first
   (`;;&` before `;;` before `;`) so `alt` can't shadow a longer operator with a shorter
@@ -72,6 +74,11 @@ impl to the wrapped `Stateful`.
   Hand-rolled (not winnow combinators) scan for the next word's end, tracking
   quoting/escaping/nested-expansion depth; a zero-length scan backtracks rather than
   returning an empty `Token::Word` — the one path that reaches `TokenStream::take_lex_error`.
+- **`fn LexerStream::remaining(&self) -> &'a str`** (`mod.rs`, `pub(crate)`): Remaining input at
+  the lexer's true `'a` lifetime; used by `TokenStream::capture_heredoc`.
+- **`fn heredoc::capture(...) -> (Cow<'_, str>, usize)`** (`heredoc.rs`, `pub(crate)`): Reads a
+  heredoc's body off raw, not-yet-lexed source text the moment its delimiter is parsed — see the
+  module doc for the line-splicing/tab-stripping/multi-heredoc-per-line rules.
 
 ### 2. Token Stream ([`stream/`](src/stream/))
 
@@ -96,6 +103,9 @@ impl to the wrapped `Stateful`.
     `Stream::next_token`'s `Option` return had nowhere to carry. `#[must_use]`
     — `lib.rs::parse_program` is the one caller, and now actually reports it via
     `ParseError::from_lex_error` rather than just using its `Some`-ness as a flag.
+  - `capture_heredoc(&self, delimiter, strip_tabs, splice) -> Cow<'a, str>`: delegates to
+    `lexer::heredoc::capture`; must be called right after consuming the delimiter token, no
+    intervening peek.
 
 ## Parser Submodules (`parser/`)
 
@@ -137,7 +147,9 @@ The parser is split into specialized `winnow` combinator submodules under [`pars
 - **[`grouping.rs`](src/parser/grouping.rs)**:
   Parses subshells `(...)` and brace groups `{ ...; }`.
 - **[`redirect.rs`](src/parser/redirect.rs)**:
-  Handles file descriptor redirection operators (`>`, `<&`, etc.).
+  Handles file descriptor redirection operators (`>`, `<&`, `<<`/`<<-`, etc.); `<<`/`<<-` capture
+  their body via `TokenStream::capture_heredoc` once the delimiter is parsed. `parse_redirect_opt`
+  is the entry point every collection loop calls, not `parse_redirect` directly.
 - **[`word.rs`](src/parser/word.rs)**:
   Parses expressions, string literals, interpolations (`${VAR}`), and handles
   variable expansion structures. `interpolation_segments` returns each
@@ -204,7 +216,8 @@ suspicious or insecure patterns.
   keyword/punctuation expectations), `Malformed` (`"malformed {label}"`, label with no
   `Expected` context at all).
 - **`struct FoundToken<'a>(Option<&'a Token<'a>>)`**: the `Syntax` message's `{}` arg —
-  `` `{token}` `` or `"end of file"`. A small `Display` newtype rather than `Token`'s own
+  `` `{token}` `` or `"end of file"` (`Token::Newline` renders as bare `"newline"` instead, so it
+  can't break the one-line message). A small `Display` newtype rather than `Token`'s own
   `Display` (which renders just the token's text) being backtick-wrapped through a
   `format!()` helper.
 - Project convention: `format!()` is reserved for `#[error(...)]` strings themselves: every
