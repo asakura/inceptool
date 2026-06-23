@@ -1,6 +1,6 @@
 [package]
 name = "inceptool"
-version = "0.3.0"
+version = "0.3.1"
 edition.workspace = true
 authors.workspace = true
 description = "An extensible LLM agent hook architecture"
@@ -49,12 +49,12 @@ gix = { version = "0.84", default-features = false, features = [
   "blob-diff",
 ] }
 glob = { version = "0.3", default-features = false }
-inceptool_corpus-parser = { version = "0.1", package = "inceptool-corpus-parser", path = "crates/corpus-parser" }
+inceptool_corpus-parser = { version = "0.2", package = "inceptool-corpus-parser", path = "crates/corpus-parser" }
 inceptool_driver-claude = { version = "0.9", package = "inceptool-driver-claude", path = "crates/driver-claude" }
 inceptool_driver-gemini = { version = "0.9", package = "inceptool-driver-gemini", path = "crates/driver-gemini" }
 inceptool_engine = { version = "0.1", package = "inceptool-engine", path = "crates/engine" }
 inceptool_parsers = { version = "0.1", package = "inceptool-parsers", path = "crates/parsers" }
-inceptool_protocol = { version = "0.1", package = "inceptool-protocol", path = "crates/protocol" }
+inceptool_protocol = { version = "0.2", package = "inceptool-protocol", path = "crates/protocol" }
 inceptool_risk-data = { version = "0.1", package = "inceptool-risk-data", path = "crates/risk-data" }
 inceptool_stages = { version = "0.3", package = "inceptool-stages", path = "crates/stages" }
 indoc = { version = "2.0", default-features = false }
