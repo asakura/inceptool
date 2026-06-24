@@ -101,6 +101,9 @@ pub struct PreToolUseOutput {
     /// Additional context injected into the prompt.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_context: Option<Cow<'static, str>>,
+    /// A message shown to the user in the transcript, never seen by the agent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_message: Option<String>,
     /// Indicates whether to halt the process entirely.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub halt: Option<bool>,
@@ -724,14 +727,15 @@ impl HookOutputEvent {
 
     /// Returns the system message associated with the hook output, if any.
     ///
-    /// Only [`HookOutputEvent::SessionStart`], [`HookOutputEvent::SessionEnd`],
-    /// [`HookOutputEvent::Notification`], [`HookOutputEvent::PreCompact`],
-    /// [`HookOutputEvent::InstructionsLoaded`], and
-    /// [`HookOutputEvent::PostCompact`] carry a `system_message` field; all
-    /// other variants return `None`.
+    /// Only [`HookOutputEvent::PreToolUse`], [`HookOutputEvent::SessionStart`],
+    /// [`HookOutputEvent::SessionEnd`], [`HookOutputEvent::Notification`],
+    /// [`HookOutputEvent::PreCompact`], [`HookOutputEvent::InstructionsLoaded`],
+    /// and [`HookOutputEvent::PostCompact`] carry a `system_message` field;
+    /// all other variants return `None`.
     #[must_use = "discards the system message meant to be surfaced to the user"]
     pub fn system_message(&self) -> Option<&str> {
         match self {
+            Self::PreToolUse(o) => o.system_message.as_deref(),
             Self::SessionStart(o) => o.system_message.as_deref(),
             Self::SessionEnd(o) => o.system_message.as_deref(),
             Self::Notification(o) => o.system_message.as_deref(),
@@ -1088,7 +1092,8 @@ mod tests {
     #[case::returns_message_string_when_pre_compact_event_has_system_message(HookOutputEvent::PreCompact(PreCompactOutput { system_message: Some("msg".into()), ..Default::default() }), Some("msg"))]
     #[case::returns_message_string_when_instructions_loaded_event_has_system_message(HookOutputEvent::InstructionsLoaded(InstructionsLoadedOutput { system_message: Some("msg".into()) }), Some("msg"))]
     #[case::returns_message_string_when_post_compact_event_has_system_message(HookOutputEvent::PostCompact(PostCompactOutput { system_message: Some("msg".into()) }), Some("msg"))]
-    #[case::returns_none_when_pre_tool_use_event_does_not_support_system_message(
+    #[case::returns_message_string_when_pre_tool_use_event_has_system_message(HookOutputEvent::PreToolUse(PreToolUseOutput { system_message: Some("msg".into()), ..Default::default() }), Some("msg"))]
+    #[case::returns_none_when_pre_tool_use_event_omits_system_message(
         HookOutputEvent::PreToolUse(PreToolUseOutput::default()),
         None
     )]
