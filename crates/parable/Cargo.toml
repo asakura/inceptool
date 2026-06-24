@@ -10,7 +10,10 @@ keywords = ["parser", "bash"]
 categories = ["parsing"]
 
 [dependencies]
+inceptool_risk-data.workspace = true
 miette = { workspace = true, optional = true }
+phf = { workspace = true }
+regex = { workspace = true, features = ["std"] }
 smallvec.workspace = true
 thiserror.workspace = true
 winnow.workspace = true
@@ -23,6 +26,7 @@ rstest.workspace = true
 
 [build-dependencies]
 inceptool_corpus-parser.workspace = true
+inceptool_risk-data.workspace = true
 proc-macro2.workspace = true
 quote.workspace = true
 thiserror.workspace = true
