@@ -1362,9 +1362,12 @@ name = "inceptool-parable"
 version = "0.1.0"
 dependencies = [
  "inceptool-corpus-parser",
+ "inceptool-risk-data",
  "miette",
+ "phf",
  "proc-macro2",
  "quote",
+ "regex",
  "rstest",
  "smallvec",
  "thiserror",
@@ -1752,6 +1755,16 @@ checksum = "89815c69d36021a140146f26659a81d6c2afa33d216d736dd4be5381a7362220"
 dependencies = [
  "pest",
  "sha2",
+]
+
+[[package]]
+name = "phf"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "010378780309880b08997fae13be7834dba947d36393bd372f2b1556deb2a2f6"
+dependencies = [
+ "phf_shared",
+ "serde",
 ]
 
 [[package]]
