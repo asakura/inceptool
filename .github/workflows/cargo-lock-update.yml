@@ -19,7 +19,7 @@ jobs:
 
       - uses: cachix/cachix-action@v17
         with:
-          name: dps
+          name: inceptool
 
       - name: Run cargo update and check what changed
         id: cargo_update
