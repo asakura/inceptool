@@ -1,6 +1,6 @@
 [package]
 name = "inceptool-risk-data"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 authors.workspace = true
 description = "Recursively scans, validates, and code-generates the phf command-risk lookup table inceptool-parable's build script reads"
