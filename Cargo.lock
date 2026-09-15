@@ -1363,7 +1363,7 @@ checksum = "ae293c039020f9ec10710af98d29ce6aa2051486638b49c9a6409f3b4a9e98ad"
 
 [[package]]
 name = "inceptool"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -1389,7 +1389,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-corpus-parser"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "rstest",
  "thiserror",
@@ -1397,7 +1397,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-driver-claude"
-version = "0.9.3"
+version = "0.9.4"
 dependencies = [
  "inceptool-protocol",
  "rstest",
@@ -1408,7 +1408,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-driver-gemini"
-version = "0.9.3"
+version = "0.9.4"
 dependencies = [
  "inceptool-protocol",
  "rstest",
@@ -1419,7 +1419,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-engine"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "inceptool-protocol",
  "rstest",
@@ -1430,7 +1430,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-parable"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "inceptool-corpus-parser",
  "inceptool-risk-data",
@@ -1447,7 +1447,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-parsers"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "fancy-regex",
  "rstest",
@@ -1459,7 +1459,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-protocol"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "rstest",
  "serde",
@@ -1472,7 +1472,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-risk-data"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "phf_codegen",
  "proc-macro2",
@@ -1488,7 +1488,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-stages"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "gix",
  "glob",
