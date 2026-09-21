@@ -43,9 +43,8 @@ fancy-regex = { version = "0.19", default-features = false, features = [
   "perf",
   "unicode",
 ] }
-gix = { version = "0.85", default-features = false, features = [
+gix = { version = "0.87", default-features = false, features = [
   "sha1",
-  "zlib-rs",
   "blob-diff",
 ] }
 glob = { version = "0.3", default-features = false }
