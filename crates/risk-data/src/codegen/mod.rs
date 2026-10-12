@@ -59,8 +59,8 @@ use proc_macro2::TokenStream;
 mod tests {
     use super::*;
 
-    use core::assert_matches;
     use crate::error::RiskDataError;
+    use core::assert_matches;
     use rstest::rstest;
 
     use std::os::unix::fs::symlink;
@@ -152,8 +152,8 @@ mod tests {
                 "#,
             )?;
 
-            let rendered = generate_command_table(dir.path())?.to_string();
-            assert!(rendered.contains("\"eval\""));
+            let rendered = generate_command_table(dir.path())?;
+            assert!(rendered.to_string().contains("\"eval\""));
             Ok(())
         }
 
