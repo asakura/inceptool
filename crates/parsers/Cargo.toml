@@ -1,6 +1,6 @@
 [package]
 name = "inceptool-parsers"
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 authors.workspace = true
 description = "Zero-copy parsers for external file formats consumed by Inceptool stages"
