@@ -1,4 +1,5 @@
-use super::{CaseArm, LogicalOp, PipeOp, Redirect, Spanned, Statement};
+use super::{CaseArm, LogicalOp, PipeOp, Statement};
+use crate::types::{Redirect, Spanned};
 
 use std::fmt;
 
