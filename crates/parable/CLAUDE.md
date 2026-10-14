@@ -51,8 +51,8 @@ submodules but re-exported from `types/mod.rs`.
 ### 1. Lexer ([`lexer/`](src/lexer/))
 
 Split across sibling files by category (`#[expect(clippy::multiple_inherent_impl, ...)]`
-on `lexer/mod.rs` documents why): `mod.rs` hosts `LexerStream` itself and the
-whitespace-skip/dispatch logic; `operator.rs` and `word.rs` each add one inherent method;
+on `lexer/mod.rs` documents why): `stream.rs` hosts `LexerStream` itself and the
+whitespace-skip/dispatch logic (`mod.rs` is only docs + re-exports); `operator.rs` and `word.rs` each add one inherent method;
 `traits.rs` forwards every `winnow::stream::Stream`/`Offset`/`StreamIsPartial`/`Compare`
 impl to the wrapped `Stateful`; `heredoc.rs` holds the heredoc body-capture free function.
 
@@ -82,7 +82,7 @@ impl to the wrapped `Stateful`; `heredoc.rs` holds the heredoc body-capture free
 
 ### 2. Token Stream ([`stream/`](src/stream/))
 
-`mod.rs` hosts `TokenStream`/`Lookahead` and their inherent methods; `traits.rs` is the
+`token_stream.rs` hosts `TokenStream`/`Lookahead` and their inherent methods (`mod.rs` is docs + re-exports); `traits.rs` is the
 `winnow::stream::Stream`/`Offset`/`Location`/`StreamIsPartial` impl (this is where
 `peek_token`/`next_token` actually live).
 
@@ -109,11 +109,12 @@ impl to the wrapped `Stateful`; `heredoc.rs` holds the heredoc body-capture free
 
 ## Parser Submodules (`parser/`)
 
-The parser is split into specialized `winnow` combinator submodules under [`parser/mod.rs`](src/parser/mod.rs).
+The parser is split into specialized `winnow` combinator submodules under [`parser/mod.rs`](src/parser/mod.rs), which holds only docs, `mod` decls, and re-exports
+(`definition_in_module_root` forbids definitions there).
 
-- **`mod.rs`**:
-  `parse_statement`, `parse_command` (the compound/base-command dispatch
-  point). Also hosts two helpers shared across every sibling module:
+- **`statement.rs`**: `parse_statement`, `parse_command` (the compound/base-command dispatch point).
+- **`helpers.rs`** (`ParserStream`, shared across every sibling module) and **`expected.rs`**
+  (`Expected`, `expect_command`):
   - `spanned(start, input, inner) -> Spanned<T>`: builds
     `Spanned { inner, span: start..input.previous_span_end() }`,
     replacing the hand-rolled version of that arithmetic at every call site.
