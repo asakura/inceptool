@@ -179,6 +179,10 @@ impl fmt::Display for RedirectKind {
 }
 
 impl fmt::Display for Redirect<'_> {
+    #[expect(
+        clippy::rest_pattern_accessible_field,
+        reason = "a heredoc's body is rendered separately, after the line ends"
+    )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(fd) = self.fd {
             write!(f, "{fd}")?;
