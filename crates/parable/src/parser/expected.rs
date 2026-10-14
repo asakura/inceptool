@@ -5,7 +5,7 @@ use winnow::{
     stream::Stream as _,
 };
 
-/// What [`expect_command`]/[`command::parse_list_until`] failed to find — a closed,
+/// What [`expect_command`]/[`parse_list_until`](super::command::parse_list_until) failed to find — a closed,
 /// compiler-checked choice every call site makes explicitly, read back by
 /// [`crate::error::ParseError::from_winnow`] to decide how to phrase the failure. Replaces
 /// message shape being guessed downstream from a bare `desc` string's shape (an `== "command"`
@@ -17,7 +17,7 @@ pub enum Expected {
     Command,
     /// A bare construct name (e.g. `"if body"`); rendered downstream as `"missing {name}"`,
     /// ignoring any enclosing label. The "missing " phrasing lives once in
-    /// [`crate::error::ExpectedMessage`], not duplicated at every call site.
+    /// `crate::error::ExpectedMessage`, not duplicated at every call site.
     Standalone(&'static str),
 }
 

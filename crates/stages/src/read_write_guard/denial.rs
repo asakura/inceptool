@@ -43,7 +43,7 @@ impl fmt::Display for WriteDenialReason<'_> {
 /// Dispatches a guarded-file access: returns the [`Decision::Deny`] response
 /// for `rule`'s policy and the current tool kind, or `None` if `rule.access`
 /// allows this operation to pass through untouched. `display_name` is what
-/// [`RuleSet::get`] returned alongside the rule — the basename for
+/// [`RuleSet::get`](super::RuleSet::get) returned alongside the rule — the basename for
 /// exact/basename-glob matches, the full path for path-glob matches.
 #[expect(
     clippy::rest_pattern_accessible_field,

@@ -1,7 +1,7 @@
 //! # Parser Architecture
 //!
-//! Builds a [`Statement`] AST from the [`Token`] stream [`crate::lexer`] produces, using winnow
-//! combinators driven directly off [`ParserStream`] (a [`TokenStream`] alias) rather than a
+//! Builds a [`Statement`](crate::types::Statement) AST from the [`Token`](crate::types::Token) stream [`crate::lexer`] produces, using winnow
+//! combinators driven directly off [`ParserStream`] (a [`TokenStream`](crate::stream::TokenStream) alias) rather than a
 //! hand-rolled recursive-descent loop.
 //!
 //! ## Core Design
@@ -13,7 +13,7 @@
 //! dispatch point that ties them together — adding a new compound command (e.g. a function
 //! definition) means adding its own sibling module and one more arm to this `alt`.
 //!
-//! Bash reserved words (`done`, `fi`, `then`, ...) lex as plain [`Token::Word`]s rather than
+//! Bash reserved words (`done`, `fi`, `then`, ...) lex as plain [`Token::Word`](crate::types::Token::Word)s rather than
 //! their own token kind (see [`crate::lexer`]'s module doc) — `at_keyword` is how every
 //! compound-command parser recognizes one at the position the grammar expects it, without the
 //! lexer needing to know grammar position itself.
@@ -21,7 +21,7 @@
 //! `redirect` is a cross-cutting sibling rather than another `alt` arm in `parse_command`:
 //! every compound command (and `command::parse_base_command`'s own simple command) can have
 //! redirects trailing it, so `parse_command` consumes them itself after the `alt` succeeds,
-//! wrapping the result in [`Statement::Redirected`] rather than each compound
+//! wrapping the result in [`Statement::Redirected`](crate::types::Statement::Redirected) rather than each compound
 //! parser doing so independently. `attach_redirects` is the single place that decides whether
 //! to extend an already-`Redirected` statement or wrap a fresh one, shared by `parse_command`
 //! and `command::parse_base_command`'s own redirect handling, so the two can't silently diverge

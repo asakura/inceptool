@@ -1,7 +1,7 @@
 //! Validates the embedded `src/config/base.toml` is well-formed TOML at
 //! compile time, so a syntax error in it fails the build rather than
 //! surfacing only as a runtime `ConfigError::EmbeddedConfig` on every hook
-//! invocation (see `src/config/raw_config.rs`'s `parse_base_config`).
+//! invocation (see `src/config/raw_config/document.rs`'s `parse_base_config`).
 
 use std::error::Error;
 use std::fs;

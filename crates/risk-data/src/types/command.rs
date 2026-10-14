@@ -91,7 +91,7 @@ pub enum CommandKind {
 }
 
 /// One subcommand's own baseline rating and flag/combo/operand rules (`push` on `git`, `run` on
-/// `docker`) — see [`Command::subcommand`].
+/// `docker`) — see [`Command::subcommands`].
 ///
 /// Its flag/combo/operand fields are an independent namespace from the parent [`Command`]'s
 /// global scope: the same literal spelling can mean something different globally vs. inside one

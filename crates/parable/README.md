@@ -48,7 +48,7 @@ pub struct LexerState {
 ```
 
 `LexerState` has no lifetime and is `Copy` — neither field owns anything. `LexerStream<'a>` (in
-`lexer/mod.rs`) is a newtype wrapping `Stateful<&'a str, LexerState>`, not a bare type alias — it
+`lexer/stream.rs`) is a newtype wrapping `Stateful<&'a str, LexerState>`, not a bare type alias — it
 needs its own inherent methods (`lex_token`, `skip_whitespace`, ...) that a plain alias couldn't
 carry.
 

@@ -25,7 +25,7 @@ impl Renderer for ValueRule {
 
 impl Renderer for Flag {
     /// One `[[command.flag]]`'s `::inceptool_risk_data::FlagEntry` struct-literal tokens —
-    /// pairing this with each of its spellings is [`super::render_ruleset`]'s job, not this
+    /// pairing this with each of its spellings is [`render_ruleset`]'s job, not this
     /// impl's, since a single `Flag` maps to more than one `flags` slice entry.
     fn render(self) -> TokenStream {
         let flag_entry = crate_path("FlagEntry");

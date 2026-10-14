@@ -72,7 +72,7 @@ pub(super) fn spanned<T>(start: usize, input: &ParserStream<'_>, inner: T) -> Sp
 /// if it's already a [`Statement::Redirected`], otherwise wraps it in a fresh one. Returns `stmt`
 /// unchanged (span included) when `trailing` is empty.
 ///
-/// Shared by [`parse_command`] (redirects trailing a compound command, or any a base command
+/// Shared by [`parse_command`](super::statement::parse_command) (redirects trailing a compound command, or any a base command
 /// didn't already consume) and `command::parse_base_command` (a simple command's own
 /// interleaved/trailing redirects) so this merge-or-wrap rule lives in exactly one place —
 /// independent copies could otherwise silently diverge on what `cmd <a >b` and

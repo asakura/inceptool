@@ -1,13 +1,13 @@
-//! The TOML-facing mirror of [`Config`]: every type in this module and its
+//! The TOML-facing mirror of [`Config`](crate::config::Config): every type in this module and its
 //! submodules ([`access`], [`raw_hook_config`], [`read_write_guard_raw_config`],
 //! [`rule`]) exists only to describe what a user may write in
 //! `inceptool.toml` (or the embedded base config) and to convert that,
 //! field by field, into the stage-facing types the rest of the binary uses
-//! ([`Config`], [`inceptool_stages::read_write_guard::Rule`],
+//! ([`Config`](crate::config::Config), [`inceptool_stages::read_write_guard::Rule`],
 //! [`inceptool_stages::read_write_guard::Access`]).
 //!
 //! That conversion boundary is deliberate, not incidental:
-//! [`Rule`] and
+//! [`Rule`](inceptool_stages::read_write_guard::Rule) and
 //! [`Access`](inceptool_stages::read_write_guard::Access) are policy types
 //! owned by the `inceptool-stages` crate, used by
 //! [`ReadWriteGuardStage`](inceptool_stages::ReadWriteGuardStage) to decide
@@ -17,13 +17,13 @@
 //! So instead, [`rule::RawRule`]/[`access::RawAccess`] mirror the TOML
 //! shape exactly (with `deny_unknown_fields` living *there*, where it's
 //! actually about catching user typos) and convert via [`From`] into
-//! [`Rule`]/[`Access`](inceptool_stages::read_write_guard::Access).
+//! [`Rule`](inceptool_stages::read_write_guard::Rule)/[`Access`](inceptool_stages::read_write_guard::Access).
 //! [`RawConfig`] itself follows the same pattern one level up, converting
-//! into [`Config`] via [`TryFrom`].
+//! into [`Config`](crate::config::Config) via [`TryFrom`].
 //!
 //! [`RawConfig`] only ever describes a single layer (the embedded base
 //! config, or one `inceptool.toml`): it has no merge logic of its own.
-//! Combining layers is [`Config::merge`]'s job, once each layer has already
+//! Combining layers is [`Config::merge`](crate::config::Config::merge)'s job, once each layer has already
 //! been resolved into the stage-facing shape — see that method's doc for
 //! why multi-layer merging belongs there rather than here.
 

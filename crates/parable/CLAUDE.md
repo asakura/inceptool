@@ -56,10 +56,10 @@ whitespace-skip/dispatch logic (`mod.rs` is only docs + re-exports); `operator.r
 `traits.rs` forwards every `winnow::stream::Stream`/`Offset`/`StreamIsPartial`/`Compare`
 impl to the wrapped `Stateful`; `heredoc.rs` holds the heredoc body-capture free function.
 
-- **`fn LexerStream::lex_token(&mut self) -> ModalResult<Token<'_>>`** (`mod.rs`):
+- **`fn LexerStream::lex_token(&mut self) -> ModalResult<Token<'_>>`** (`stream.rs`):
   The core tokenizer that yields a single token, skipping leading whitespace
   first (newlines excluded — they're a significant `Token::Newline`).
-- **`fn LexerStream::lex_token_with_start(&mut self) -> ModalResult<(usize, Token<'_>)>`** (`mod.rs`):
+- **`fn LexerStream::lex_token_with_start(&mut self) -> ModalResult<(usize, Token<'_>)>`** (`stream.rs`):
   Same, but also returns `eof_offset()` measured right after that whitespace
   skip and before the token itself — the position `stream::TokenStream` needs
   to report a token's true _start_, as opposed to the _end of the previous
@@ -74,7 +74,7 @@ impl to the wrapped `Stateful`; `heredoc.rs` holds the heredoc body-capture free
   Hand-rolled (not winnow combinators) scan for the next word's end, tracking
   quoting/escaping/nested-expansion depth; a zero-length scan backtracks rather than
   returning an empty `Token::Word` — the one path that reaches `TokenStream::take_lex_error`.
-- **`fn LexerStream::remaining(&self) -> &'a str`** (`mod.rs`, `pub(crate)`): Remaining input at
+- **`fn LexerStream::remaining(&self) -> &'a str`** (`stream.rs`, `pub(crate)`): Remaining input at
   the lexer's true `'a` lifetime; used by `TokenStream::capture_heredoc`.
 - **`fn heredoc::capture(...) -> (Cow<'_, str>, usize)`** (`heredoc.rs`, `pub(crate)`): Reads a
   heredoc's body off raw, not-yet-lexed source text the moment its delimiter is parsed — see the
