@@ -43,7 +43,7 @@ fancy-regex = { version = "0.19", default-features = false, features = [
   "perf",
   "unicode",
 ] }
-gix = { version = "0.88", default-features = false, features = [
+gix = { version = "0.89", default-features = false, features = [
   "sha1",
   "blob-diff",
 ] }
@@ -77,7 +77,7 @@ serde = { version = "1.0", default-features = false, features = [
   "derive",
   "std",
 ] }
-serde-saphyr = { version = "1.0", default-features = false, features = [
+serde-saphyr = { version = "2.0", default-features = false, features = [
   "deserialize",
 ] }
 serde_json = { version = "1.0", default-features = false, features = [
