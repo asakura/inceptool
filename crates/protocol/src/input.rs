@@ -1039,7 +1039,7 @@ mod tests {
     #[rstest]
     fn message_display_input_deserialization_defaults_to_empty() -> Result<(), TestError> {
         let input: MessageDisplayInput<'_> = serde_json::from_str("{}")?;
-        assert!(input.lines.is_empty());
+        assert_eq!(input.lines, Vec::<Cow<'_, str>>::new());
         Ok(())
     }
 
