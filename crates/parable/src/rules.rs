@@ -284,7 +284,7 @@ mod tests {
             let mut engine = Engine::new();
             engine.register(&rule);
 
-            assert!(engine.run(&statements).is_empty());
+            assert_eq!(engine.run(&statements), Vec::new());
             Ok(())
         }
 
@@ -335,7 +335,7 @@ mod tests {
             let mut engine = Engine::new();
             engine.register(&rule);
 
-            assert!(engine.run(&statements).is_empty());
+            assert_eq!(engine.run(&statements), Vec::new());
             Ok(())
         }
 
