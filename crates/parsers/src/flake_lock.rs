@@ -127,7 +127,7 @@ impl FlakeLock<'_> {
 
             entries.push(DiffEntry {
                 name: name.as_ref().to_owned(),
-                label: locked.map(LockedRef::label).unwrap_or_default(),
+                label: locked.map_or_default(LockedRef::label),
                 cur_rev: cur_rev.to_owned(),
                 old_rev: old_rev.to_owned(),
                 changed,
