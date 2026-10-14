@@ -121,6 +121,10 @@ impl<'r> Engine<'r> {
         }
     }
 
+    #[expect(
+        clippy::rest_pattern_accessible_field,
+        reason = "arms match on the variant's identifying fields; the rest are irrelevant to traversal"
+    )]
     fn visit<'a>(
         &self,
         stmt: &Spanned<Statement<'a>>,
