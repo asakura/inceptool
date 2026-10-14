@@ -47,6 +47,13 @@
                   assert_eq!/assert_matches! for assertions"
     )
 )]
+#![cfg_attr(
+    test,
+    expect(
+        clippy::rest_pattern_accessible_field,
+        reason = "assert_matches! on error variants only checks the variant, not every field"
+    )
+)]
 
 pub mod codegen;
 pub mod entry;

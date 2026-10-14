@@ -3,6 +3,10 @@
     expect(
         clippy::panic_in_result_fn,
         reason = "rstest cases return Result for ?-based setup but use assert_matches! for assertions"
+    ),
+    expect(
+        clippy::rest_pattern_accessible_field,
+        reason = "assert_matches! checks the variant only; its fields are irrelevant to the test"
     )
 )]
 //! # Corpus Parser Architecture

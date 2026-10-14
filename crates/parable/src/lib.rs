@@ -1,3 +1,10 @@
+#![cfg_attr(
+    test,
+    expect(
+        clippy::rest_pattern_accessible_field,
+        reason = "assert_matches! checks the variant only; its fields are irrelevant to the test"
+    )
+)]
 //! # Parable Architecture
 //!
 //! A zero-copy, context-aware Bash parser: [`parse_program`] turns a `&str` script into a tree
