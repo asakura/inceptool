@@ -76,6 +76,7 @@
 
             rustfmt.enable = true;
             taplo.enable = true;
+            gitleaks.enable = true;
             nixfmt.enable = true;
             shfmt.enable = true;
             shellcheck.enable = true;
