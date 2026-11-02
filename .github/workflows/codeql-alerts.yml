@@ -1,0 +1,41 @@
+name: CodeQL alerts
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # weekly, Monday 08:00 UTC, after the CodeQL scan
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Code scanning alerts only show up in the Security tab. An open issue
+  # triggers a GitHub notification email and tracks the backlog; one issue is
+  # reused (and refreshed) until it is closed.
+  open-issue:
+    if: github.repository_owner == 'asakura'
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: read
+      issues: write
+    steps:
+      - name: open or refresh issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: Open CodeQL alerts
+        run: |
+          # shellcheck disable=SC2016
+          alerts=$(gh api --paginate "repos/${GH_REPO}/code-scanning/alerts?state=open&per_page=100" \
+            --jq '.[] | "- [\(.rule.security_severity_level // .rule.severity)] `\(.rule.id)` at `\(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line)` ([alert #\(.number)](\(.html_url)))"')
+          if [ -z "${alerts}" ]; then
+            echo "No open alerts."
+            exit 0
+          fi
+          body=$(printf 'Open code scanning alerts on the default branch:\n\n%s\n\nTriage in the Security tab: dismiss false positives with a reason, or fix the finding.' "${alerts}")
+          existing=$(gh issue list --state open --search "\"${TITLE}\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "${existing}" ]; then
+            gh issue edit "${existing}" --body "${body}"
+          else
+            gh issue create --title "${TITLE}" --body "${body}"
+          fi
