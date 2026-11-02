@@ -219,3 +219,5 @@ nix build .#inceptool-aarch64-linux-musl
   (`inceptool-corpus-parser`) — parses the `.tests` corpus file format
   `inceptool-parable`'s `build.rs` reads to generate its test suite; a
   build-time dependency, not part of the runtime hook-processing pipeline.
+
+All code in this repository is AI-generated; human-directed and reviewed.
