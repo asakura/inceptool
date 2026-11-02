@@ -4,11 +4,14 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     crane.url = "github:ipetkov/crane";
+
     git-hooks = {
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -57,17 +60,20 @@
         gitHooksCheck = git-hooks.lib.${system}.run {
           src = ./.;
           package = pkgs.prek;
+
           hooks = {
             cargo-check = {
               enable = true;
               entry = "env ${cargoHookEnv} ${rustToolchain}/bin/cargo check";
               pass_filenames = false;
             };
+
             clippy = {
               enable = true;
               entry = "env ${cargoHookEnv} ${rustToolchain}/bin/cargo clippy --";
               pass_filenames = false;
             };
+
             rustfmt.enable = true;
             taplo.enable = true;
             nixfmt.enable = true;
@@ -95,6 +101,7 @@
           let
             targetEnvVar = pkgs.lib.toUpper (builtins.replaceStrings [ "-" ] [ "_" ] targetTriple);
             crossCC = "${crossPkgs.stdenv.cc.targetPrefix}cc";
+
             muslArgs = commonArgs // {
               pname = "inceptool";
               doCheck = false;
@@ -104,6 +111,7 @@
               RUSTFLAGS = "-C target-feature=+crt-static";
               depsBuildBuild = [ crossPkgs.stdenv.cc ];
             };
+
             muslCargoArtifacts = craneLib.buildDepsOnly muslArgs;
           in
           craneLib.buildPackage (muslArgs // { cargoArtifacts = muslCargoArtifacts; });
@@ -120,6 +128,7 @@
 
         checks = {
           fmt = craneLib.cargoFmt { inherit src; };
+
           clippy = craneLib.cargoClippy (
             commonArgs
             // {
@@ -127,20 +136,24 @@
               cargoClippyExtraArgs = "--workspace --all-targets -- -D warnings";
             }
           );
+
           git-hooks = gitHooksCheck;
         };
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [ inceptool ];
           RUSTFLAGS = "";
+
           shellHook = ''
             ${gitHooksCheck.shellHook}
           '';
+
           packages = with pkgs; [
             rustToolchain
             git
             cargo-deny
-            cargo-llvm-cov
+            # Upstream test suite SIGSEGVs in the sandbox with the current toolchain.
+            (cargo-llvm-cov.overrideAttrs { doCheck = false; })
             cargo-nextest
             git-cliff
             nixfmt
@@ -151,6 +164,12 @@
         };
 
         formatter = pkgs.nixfmt-tree;
+
+        nixpkgs.config.allowUnfreePredicate =
+          pkg:
+          builtins.elem (nixpkgs.lib.getName pkg) [
+            "rtk"
+          ];
       }
     );
 }
