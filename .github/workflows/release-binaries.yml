@@ -1,8 +1,22 @@
 name: Release Binaries
 
+# Not triggered by `release: published`: release-plz creates the release with
+# GITHUB_TOKEN, and events raised by that token never start other workflows.
+# release-plz.yml calls this workflow instead; `workflow_dispatch` allows
+# backfilling assets for an existing tag.
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to attach assets to (e.g. v0.3.3)
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach assets to (e.g. v0.3.3)
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -10,13 +24,12 @@ permissions:
 jobs:
   upload-binaries:
     name: Build & upload (${{ matrix.target }})
-    # No `pull_request` trigger exists for this workflow at all (release
-    # events only); this guard additionally no-ops the job if a fork happens
-    # to publish its own release with this same workflow file. Only the
+    # No `pull_request` trigger exists for this workflow at all; this guard
+    # additionally no-ops the job on forks. Only the
     # `inceptool` binary crate uses a bare `vX.Y.Z` tag (library crates are
     # tagged `<crate>-vX.Y.Z`), so `startsWith(tag, 'v')` selects exactly the
     # CLI release.
-    if: github.repository_owner == 'asakura' && startsWith(github.event.release.tag_name, 'v')
+    if: github.repository_owner == 'asakura' && startsWith(inputs.tag, 'v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -44,7 +57,7 @@ jobs:
       - name: Package archive
         run: |
           set -euo pipefail
-          stage="inceptool-${{ github.event.release.tag_name }}-${{ matrix.target }}"
+          stage="inceptool-${{ inputs.tag }}-${{ matrix.target }}"
           mkdir "$stage"
           cp result/bin/inceptool "$stage/"
           tar czf "$stage.tar.gz" "$stage"
@@ -54,21 +67,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "${{ inputs.tag }}" \
             inceptool-*.tar.gz inceptool-*.tar.gz.sha256 \
             --repo "${{ github.repository }}" \
             --clobber
 
   upload-sbom:
     name: Generate & upload SBOM
-    if: github.repository_owner == 'asakura' && startsWith(github.event.release.tag_name, 'v')
+    if: github.repository_owner == 'asakura' && startsWith(inputs.tag, 'v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ inputs.tag }}
           persist-credentials: false
 
       - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
@@ -86,10 +99,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          sbom="inceptool-${{ github.event.release.tag_name }}.cdx.json"
+          sbom="inceptool-${{ inputs.tag }}.cdx.json"
           cp result/inceptool.cdx.json "$sbom"
           sha256sum "$sbom" > "$sbom.sha256"
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "${{ inputs.tag }}" \
             "$sbom" "$sbom.sha256" \
             --repo "${{ github.repository }}" \
             --clobber
