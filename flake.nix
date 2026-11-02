@@ -103,6 +103,15 @@
           nixfmt.enable = true;
           shfmt.enable = true;
           shellcheck.enable = true;
+          actionlint.enable = true;
+
+          # The built-in `files` only covers workflows; local actions live under
+          # .github/actions/ and need auditing too.
+          zizmor = {
+            enable = true;
+            entry = "${pkgs.zizmor}/bin/zizmor --offline";
+            files = "^\\.github/(workflows|actions)/";
+          };
 
           cargo-deny = {
             enable = true;
@@ -161,18 +170,27 @@
             muslCargoArtifacts = craneLib.buildDepsOnly muslArgs;
           in
           craneLib.buildPackage (muslArgs // { cargoArtifacts = muslCargoArtifacts; });
+
+        muslPackages = pkgs.lib.optionalAttrs (system == "x86_64-linux") {
+          inceptool-x86_64-linux-musl = mkMuslPackage pkgs.pkgsCross.musl64 "x86_64-unknown-linux-musl";
+          inceptool-aarch64-linux-musl = mkMuslPackage pkgs.pkgsCross.aarch64-multiplatform-musl "aarch64-unknown-linux-musl";
+        };
       in
       {
         packages = {
           inherit inceptool inceptool-sbom;
           default = inceptool;
         }
-        // pkgs.lib.optionalAttrs (system == "x86_64-linux") {
-          inceptool-x86_64-linux-musl = mkMuslPackage pkgs.pkgsCross.musl64 "x86_64-unknown-linux-musl";
-          inceptool-aarch64-linux-musl = mkMuslPackage pkgs.pkgsCross.aarch64-multiplatform-musl "aarch64-unknown-linux-musl";
-        };
+        // muslPackages;
 
+        # `nix flake check` builds `checks` but only evaluates `packages`, so the
+        # shipped artifacts that do not run tests are listed here: a musl break
+        # would otherwise first surface in release-assets, after the crates.io
+        # publish. `inceptool` itself is left out on purpose: its build runs the
+        # test suite, which CI runs separately.
         checks = {
+          inherit inceptool-sbom;
+
           fmt = craneLib.cargoFmt { inherit (workspaceArgs) src pname version; };
 
           clippy = craneLib.cargoClippy (
@@ -184,7 +202,8 @@
           );
 
           git-hooks = gitHooksSandboxCheck;
-        };
+        }
+        // muslPackages;
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [ inceptool ];
@@ -205,6 +224,8 @@
             nixfmt
             shfmt
             shellcheck
+            actionlint
+            zizmor
             rtk
           ];
         };
