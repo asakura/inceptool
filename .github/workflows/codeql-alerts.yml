@@ -1,8 +1,15 @@
 name: CodeQL alerts
 
+# Runs after the weekly CodeQL scan finishes, rather than on a cron that
+# assumes the scan was done within an hour. `workflow_run` always executes the
+# workflow file from the default branch.
 on:
-  schedule:
-    - cron: "0 8 * * 1" # weekly, Monday 08:00 UTC, after the CodeQL scan
+  # zizmor: ignore[dangerous-triggers] -- only reads alert metadata through the
+  # API and never checks out or runs code from the triggering run.
+  workflow_run:
+    workflows: [CodeQL]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -13,7 +20,10 @@ jobs:
   # triggers a GitHub notification email and tracks the backlog; one issue is
   # reused (and refreshed) until it is closed.
   open-issue:
-    if: github.repository_owner == 'asakura'
+    if: >-
+      github.repository_owner == 'asakura' &&
+      (github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.event == 'schedule')
     runs-on: ubuntu-latest
     permissions:
       security-events: read
