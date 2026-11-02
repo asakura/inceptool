@@ -35,7 +35,7 @@ jobs:
 
       - name: no stale markers
         run: |
-          if grep -rn --include="*.rs" -E "TODO|FIXME|HACK|XXX" .; then
+          if git grep -nE "TODO|FIXME|HACK|XXX" -- '*.rs'; then
             echo "Stale markers found — resolve before merging" >&2
             exit 1
           fi

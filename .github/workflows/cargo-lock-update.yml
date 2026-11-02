@@ -22,30 +22,10 @@ jobs:
 
       - name: Run cargo update and check what changed
         id: cargo_update
-        run: |
-          # 1. Get the list of all direct dependencies across the workspace
-          # We run this inside the nix dev shell so `cargo` and `jq` are available.
-          DIRECT_DEPS=$(nix develop -c bash -c "cargo metadata --format-version 1 | jq -r '
-            .workspace_members as \$members |
-            .packages[] | select(.id | IN(\$members[])).dependencies[].name
-          ' | sort -u")
-
-          # 2. Run cargo update and capture output to a temporary file
-          UPDATE_LOG="${{ runner.temp }}/update_output.txt"
-          nix develop -c bash -c "cargo update 2>&1" | tee "$UPDATE_LOG"
-
-          # 3. Revert updates for any direct dependency so only transitive dependencies remain updated
-          grep -E '^\s*(Updating|Downgrading)\s+' "$UPDATE_LOG" | while read -r action pkg old_v arrow new_v; do
-            if echo "$DIRECT_DEPS" | grep -qx "$pkg"; then
-              clean_v="${old_v#v}"
-              echo "Reverting direct dependency $pkg back to $clean_v"
-              nix develop -c bash -c "cargo update -p $pkg --precise $clean_v"
-            fi
-          done
+        run: nix develop -c bash .github/scripts/update-cargo-lock.sh
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
-        continue-on-error: true
         with:
           title: "chore(cargo): update transitive dependencies in Cargo.lock"
           commit-message: "chore(cargo): update transitive dependencies in Cargo.lock"
