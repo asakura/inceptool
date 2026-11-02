@@ -1,0 +1,8 @@
+name: inceptool CodeQL config
+
+# Superset of the default suite: adds lower-precision security queries.
+queries:
+  - uses: security-extended
+
+# Known-noisy queries are excluded here, each with the reason it is safe.
+query-filters: []
