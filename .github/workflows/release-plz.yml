@@ -20,6 +20,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
+    outputs:
+      # Tag of the `inceptool` GitHub release created by this run, or empty.
+      tag: ${{ steps.cli-tag.outputs.tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -31,12 +34,36 @@ jobs:
         uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
       - name: Run release-plz
+        id: release
         uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5
         with:
           command: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Extract CLI release tag
+        id: cli-tag
+        env:
+          RELEASES: ${{ steps.release.outputs.releases }}
+        run: |
+          set -euo pipefail
+          tag="$(jq -r '[.[] | select(.package_name == "inceptool") | .tag] | first // ""' <<<"${RELEASES:-[]}")"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  # Builds and attaches binaries + SBOM to the release created above. Called
+  # here (not via `release: published`) because releases created with
+  # GITHUB_TOKEN don't trigger other workflows.
+  release-assets:
+    name: Release assets
+    needs: release-plz-release
+    if: needs.release-plz-release.outputs.tag != ''
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-binaries.yml
+    with:
+      tag: ${{ needs.release-plz-release.outputs.tag }}
+    secrets: inherit
 
   # Opens/updates the "release PR" with version bumps + changelog entries
   # computed from conventional commits since the last release.
