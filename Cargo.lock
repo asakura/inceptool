@@ -1391,7 +1391,7 @@ checksum = "913a7d294ad056474749152107309fdee3ec17d2482d1ab70fdc61a81c64b9a3"
 
 [[package]]
 name = "inceptool"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -1475,7 +1475,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-parsers"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "fancy-regex",
  "rstest",
@@ -1516,7 +1516,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-stages"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "gix",
  "glob",
