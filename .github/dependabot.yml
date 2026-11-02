@@ -1,9 +1,13 @@
 version: 2
 updates:
+  # Direct dependencies only: transitive ones are batched into one weekly PR
+  # by cargo-lock-update.yml (Dependabot cannot split the two by schedule).
   - package-ecosystem: cargo
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
+    cooldown:
+      default-days: 1
 
   - package-ecosystem: github-actions
     directories: ["/", "/.github/actions/*"]
