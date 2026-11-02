@@ -51,7 +51,14 @@
           strictDeps = true;
         };
 
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+        # Workspace-wide derivations (deps cache, fmt, clippy) cover every crate, so
+        # they must not inherit the root crate's name and version from Cargo.toml.
+        workspaceArgs = commonArgs // {
+          pname = "inceptool-workspace";
+          version = "0.0.0";
+        };
+
+        cargoArtifacts = craneLib.buildDepsOnly workspaceArgs;
 
         inceptool = pkgs.callPackage ./package.nix { inherit crane; };
 
@@ -166,10 +173,10 @@
         };
 
         checks = {
-          fmt = craneLib.cargoFmt { inherit src; };
+          fmt = craneLib.cargoFmt { inherit (workspaceArgs) src pname version; };
 
           clippy = craneLib.cargoClippy (
-            commonArgs
+            workspaceArgs
             // {
               inherit cargoArtifacts;
               cargoClippyExtraArgs = "--workspace --all-targets -- -D warnings";
