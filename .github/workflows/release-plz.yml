@@ -1,7 +1,15 @@
 name: Release-plz
 
+# Runs only after CI has completed successfully for a push to main, so nothing
+# is published from a commit that failed its checks. `workflow_run` always
+# executes the workflow file from the default branch.
 on:
-  push:
+  # zizmor: ignore[dangerous-triggers] -- both jobs are gated on a successful
+  # CI run of a push to this repository's main, and only ever check out main,
+  # never the triggering run's code.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 permissions:
@@ -12,10 +20,18 @@ jobs:
   # version was already bumped (i.e. a release-plz PR was merged).
   release-plz-release:
     name: Release-plz release
-    # No `pull_request` trigger exists for this workflow at all (push:main
-    # only); this guard additionally no-ops the job if a fork happens to push
-    # to its own `main` with this same workflow file.
-    if: github.repository_owner == 'asakura'
+    # The `event == 'push'` and `head_repository` checks are mandatory: a PR
+    # opened from a fork's own `main` also matches `branches: [main]`, and
+    # `conclusion == 'success'` alone would let it through. The owner guard
+    # additionally no-ops the job on forks.
+    if: >-
+      github.repository_owner == 'asakura' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    concurrency:
+      group: release-plz-release
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -24,17 +40,36 @@ jobs:
       # Tag of the `inceptool` GitHub release created by this run, or empty.
       tag: ${{ steps.cli-tag.outputs.tag }}
     steps:
+      # Check out the branch, not `head_sha`, so release-plz does not run on a
+      # detached HEAD.
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: main
           fetch-depth: 0
           persist-credentials: false
 
+      # If main has moved on since the CI run that triggered this one, that
+      # newer commit's own CI run will release, with its own checks behind it.
+      - name: Skip if a newer commit exists
+        id: fresh
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ "$(git rev-parse HEAD)" = "$HEAD_SHA" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "main is ahead of $HEAD_SHA; leaving the release to the newer CI run"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Rust toolchain
+        if: steps.fresh.outputs.skip != 'true'
         uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
       - name: Run release-plz
         id: release
+        if: steps.fresh.outputs.skip != 'true'
         uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5
         with:
           command: release
@@ -44,6 +79,7 @@ jobs:
 
       - name: Extract CLI release tag
         id: cli-tag
+        if: steps.fresh.outputs.skip != 'true'
         env:
           RELEASES: ${{ steps.release.outputs.releases }}
         run: |
@@ -65,13 +101,19 @@ jobs:
     uses: ./.github/workflows/release-binaries.yml
     with:
       tag: ${{ needs.release-plz-release.outputs.tag }}
-    secrets: inherit
+    secrets:
+      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
   # Opens/updates the "release PR" with version bumps + changelog entries
   # computed from conventional commits since the last release.
   release-plz-pr:
     name: Release-plz PR
-    if: github.repository_owner == 'asakura'
+    # Same guard as release-plz-release; see the comment there.
+    if: >-
+      github.repository_owner == 'asakura' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: write
