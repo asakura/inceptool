@@ -9,7 +9,8 @@ pr_labels = ["release"]
 # `inceptool` is the only package that gets a git tag / GitHub release - one
 # release per version for the whole project, carrying the source archive
 # (GitHub's automatic zip/tarball) plus the binaries that
-# release-binaries.yml attaches on `release: published`. Library crates still
+# release-binaries.yml attaches (called from release-plz.yml,
+# which runs after CI passes on main). Library crates still
 # get version bumps + CHANGELOG entries and are published to crates.io, but
 # don't get their own tags/releases.
 [[package]]
