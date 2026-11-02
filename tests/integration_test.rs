@@ -200,6 +200,11 @@ fn integration_invalid_hook_fails_fast(inceptool_cmd: Result<TestEnv>) -> Result
     Ok(())
 }
 
+// The mock worktree stage it exercises (`registry::register_mock_stages`) is only
+// compiled under `debug_assertions`, so release-profile test runs (crane's
+// `cargo test --release`) must skip this test. A dedicated test-only cargo feature
+// would let it run in every profile.
+#[cfg(debug_assertions)]
 #[rstest]
 fn integration_worktree_create_special_case(inceptool_cmd: Result<TestEnv>) -> Result<()> {
     let mut inceptool_cmd = inceptool_cmd?;
