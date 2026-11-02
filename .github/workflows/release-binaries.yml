@@ -58,3 +58,38 @@ jobs:
             inceptool-*.tar.gz inceptool-*.tar.gz.sha256 \
             --repo "${{ github.repository }}" \
             --clobber
+
+  upload-sbom:
+    name: Generate & upload SBOM
+    if: github.repository_owner == 'asakura' && startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+
+      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: inceptool
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Build SBOM
+        run: nix build ".#inceptool-sbom" -L
+
+      - name: Upload SBOM
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          sbom="inceptool-${{ github.event.release.tag_name }}.cdx.json"
+          cp result/inceptool.cdx.json "$sbom"
+          sha256sum "$sbom" > "$sbom.sha256"
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "$sbom" "$sbom.sha256" \
+            --repo "${{ github.repository }}" \
+            --clobber
