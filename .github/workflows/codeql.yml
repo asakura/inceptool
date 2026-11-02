@@ -24,25 +24,18 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
 
       # Always run (so `analyze` can stay a required check; a skipped required
-      # workflow would block the merge) but skip the expensive steps when a PR
-      # touches nothing CodeQL can analyse. Pushes and schedules always scan.
+      # workflow would block the merge) but skip the expensive steps when the
+      # change touches nothing CodeQL can analyse. Schedules always scan.
       - name: decide scope
         id: scope
         env:
           EVENT_NAME: ${{ github.event_name }}
-        run: |
-          pattern='\.rs$|(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^\.github/(workflows/codeql\.yml|codeql/)'
-          if [ "${EVENT_NAME}" != "pull_request" ] \
-            || git diff --name-only HEAD^1 HEAD | grep -qE "${pattern}"; then
-            echo "scan=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "scan=false" >> "$GITHUB_OUTPUT"
-            echo "No Rust-relevant changes; skipping analysis." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          BEFORE: ${{ github.event.before }}
+        run: bash .github/scripts/codeql-scope.sh
 
       # The Rust extractor resolves dependency sources, so cache the crate
       # registry/git checkouts instead of re-downloading them every run.
