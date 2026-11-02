@@ -53,8 +53,8 @@ jobs:
           RUSTDOCFLAGS: "-D warnings"
 
       # Runs outside the sandbox (network + .git access) inside the pinned devShell.
-      - name: cargo test --workspace
-        run: nix develop -c cargo test --workspace
+      - name: cargo test --workspace --no-fail-fast
+        run: nix develop -c cargo test --workspace --no-fail-fast
 
-      - name: cargo deny check
-        run: nix develop -c cargo deny check
+      - name: cargo deny --workspace check
+        run: nix develop -c cargo deny --workspace check
