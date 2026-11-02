@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+readme = "README.md"
 description = "Parable zero-copy context-aware Bash parser"
 keywords = ["parser", "bash"]
 categories = ["parsing"]

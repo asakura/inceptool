@@ -38,7 +38,13 @@
         rustToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
         craneLib = (crane.mkLib pkgs).overrideToolchain (_: rustToolchain);
 
-        src = craneLib.cleanCargoSource ./.;
+        # parable's build.rs generates its tests from corpus/*.tests, which the
+        # default cargo-sources filter drops (yielding zero generated tests).
+        src = pkgs.lib.cleanSourceWith {
+          src = ./.;
+          filter = path: type: (craneLib.filterCargoSources path type) || (pkgs.lib.hasSuffix ".tests" path);
+          name = "source";
+        };
 
         commonArgs = {
           inherit src;
@@ -71,38 +77,56 @@
         # absent system binaries.
         cargoHookEnv = "CARGO_ENCODED_RUSTFLAGS='' CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=${pkgs.stdenv.cc}/bin/cc";
 
-        gitHooksCheck = git-hooks.lib.${system}.run {
-          src = ./.;
-          package = pkgs.prek;
+        gitHooks = {
+          cargo-check = {
+            enable = true;
+            entry = "env ${cargoHookEnv} ${rustToolchain}/bin/cargo check";
+            pass_filenames = false;
+          };
 
-          hooks = {
-            cargo-check = {
-              enable = true;
-              entry = "env ${cargoHookEnv} ${rustToolchain}/bin/cargo check";
-              pass_filenames = false;
-            };
+          clippy = {
+            enable = true;
+            entry = "env ${cargoHookEnv} ${rustToolchain}/bin/cargo clippy --";
+            pass_filenames = false;
+          };
 
-            clippy = {
-              enable = true;
-              entry = "env ${cargoHookEnv} ${rustToolchain}/bin/cargo clippy --";
-              pass_filenames = false;
-            };
+          rustfmt.enable = true;
+          taplo.enable = true;
+          gitleaks.enable = true;
+          nixfmt.enable = true;
+          shfmt.enable = true;
+          shellcheck.enable = true;
 
-            rustfmt.enable = true;
-            taplo.enable = true;
-            gitleaks.enable = true;
-            nixfmt.enable = true;
-            shfmt.enable = true;
-            shellcheck.enable = true;
-
-            cargo-deny = {
-              enable = true;
-              entry = "${pkgs.cargo-deny}/bin/cargo-deny check";
-              files = "(Cargo\\.lock|deny\\.toml)$";
-              pass_filenames = false;
-            };
+          cargo-deny = {
+            enable = true;
+            entry = "${pkgs.cargo-deny}/bin/cargo-deny check";
+            files = "(Cargo\\.lock|deny\\.toml)$";
+            pass_filenames = false;
           };
         };
+
+        runGitHooks =
+          hooks:
+          git-hooks.lib.${system}.run {
+            src = ./.;
+            package = pkgs.prek;
+            inherit hooks;
+          };
+
+        # Developer-facing hooks: the full set, installed by the devShell.
+        gitHooksCheck = runGitHooks gitHooks;
+
+        # The Nix sandbox has no network, so hooks that fetch from crates.io or
+        # the advisory DB cannot run there. clippy is covered by `checks.clippy`
+        # (vendored deps); cargo-deny runs as a separate CI step.
+        gitHooksSandboxCheck = runGitHooks (
+          gitHooks
+          // {
+            cargo-check.enable = false;
+            clippy.enable = false;
+            cargo-deny.enable = false;
+          }
+        );
 
         # Static, fully self-contained Linux binaries for release artifacts.
         # The *build* platform stays the normal glibc x86_64-linux toolchain;
@@ -152,7 +176,7 @@
             }
           );
 
-          git-hooks = gitHooksCheck;
+          git-hooks = gitHooksSandboxCheck;
         };
 
         devShells.default = pkgs.mkShell {
