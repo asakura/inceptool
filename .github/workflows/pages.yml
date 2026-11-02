@@ -1,4 +1,4 @@
-name: Coverage
+name: Pages
 
 on:
   push:
@@ -17,6 +17,7 @@ concurrency:
 jobs:
   coverage:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       pages: write
       id-token: write
@@ -25,8 +26,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
-      - uses: ./.github/actions/setup-nix
+      - uses: ./.github/actions/setup-nix # zizmor: ignore[self-repository] -- actionlint rejects `$/` (no ref)
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
@@ -48,11 +51,10 @@ jobs:
           jq -f .github/scripts/coverage-badge.jq coverage-summary.json > target/llvm-cov/html/coverage.json
 
       - name: Generate cargo-deny badge
-        if: always()
         run: |
           set -euo pipefail
           # Run cargo deny, ignoring exit code so we can still generate the badge on failure
-          nix develop -c cargo deny --format json check 2> deny.json || true
+          nix develop -c cargo deny --workspace --format json check 2> deny.json || true
           grep '^{' deny.json | jq -rs -f .github/scripts/deny-badge.jq > target/llvm-cov/html/cargo-deny.json
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6

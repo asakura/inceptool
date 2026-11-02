@@ -15,23 +15,22 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       # Only `push` (merged/reviewed code) gets a push-capable Cachix token.
       # `pull_request` runs may still read from the public cache, but cannot
       # populate it - prevents a malicious PR (via cargo build scripts /
       # proc-macros) from pushing a poisoned store path that later gets
       # trusted by main's CI, release-binaries.yml, or `nix develop`.
-      - uses: ./.github/actions/setup-nix
+      - uses: ./.github/actions/setup-nix # zizmor: ignore[self-repository] -- actionlint rejects `$/` (no ref)
         with:
           cachix-auth-token: ${{ github.event_name == 'push' && secrets.CACHIX_AUTH_TOKEN || '' }}
 
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
-
-      # Run all cargo checks outside the sandbox to share the rust-cache
-      - name: cargo fmt
-        run: nix develop -c cargo fmt --check
 
       - name: no stale markers
         run: |
@@ -40,15 +39,19 @@ jobs:
             exit 1
           fi
 
-      - name: cargo clippy
-        run: nix develop -c cargo clippy --workspace --all-targets -- -D warnings
+      # fmt, clippy, the workflow/shell linters (git-hooks), the SBOM and the
+      # musl release builds. The `inceptool` package is deliberately not a
+      # check: its build runs the tests, which the step below runs already.
+      - name: nix flake check
+        run: nix flake check -L
 
+      # The steps below run outside the sandbox (network + .git access) inside
+      # the pinned devShell, sharing the rust-cache.
       - name: cargo doc
         run: nix develop -c cargo doc --no-deps --workspace
         env:
           RUSTDOCFLAGS: "-D warnings"
 
-      # Runs outside the sandbox (network + .git access) inside the pinned devShell.
       - name: cargo test --workspace --no-fail-fast
         run: nix develop -c cargo test --workspace --no-fail-fast
 

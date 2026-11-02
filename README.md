@@ -183,9 +183,11 @@ No Nix? No problem — install the toolchain pinned in `rust-toolchain.toml` via
 `rustup`, and the same `cargo` commands work, aside from the stages that lean
 on Nix-provided tools.
 
-`nix flake check` runs the same `fmt`/`clippy` checks CI does. If you need the
-static musl binaries used for release artifacts, you can build them locally
-with:
+`nix flake check` is CI's merge gate: it runs `fmt`, `clippy`, the git hooks
+(including the `actionlint` and `zizmor` workflow linters), and builds the SBOM
+and the static musl release binaries. It does not run the tests; CI runs those
+with `cargo test --workspace`. If you need the static musl binaries used for
+release artifacts, you can build them locally with:
 
 ```sh
 nix build .#inceptool-x86_64-linux-musl
