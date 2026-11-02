@@ -131,6 +131,27 @@ Or build it yourself from crates.io:
 cargo install inceptool
 ```
 
+### Verifying a release
+
+Every release asset carries a GitHub build-provenance attestation. With the
+[GitHub CLI](https://cli.github.com):
+
+```sh
+gh attestation verify inceptool-vX.Y.Z-x86_64-unknown-linux-musl.tar.gz \
+  --repo asakura/inceptool \
+  --signer-workflow asakura/inceptool/.github/workflows/release-binaries.yml
+```
+
+Releases also ship a `SHA256SUMS` file signed by the maintainer's YubiKey
+(SSH signature, namespace `inceptool-release`). Check it with the
+[`allowed_signers`](allowed_signers) file from this repository:
+
+```sh
+sha256sum -c SHA256SUMS --ignore-missing
+ssh-keygen -Y verify -f allowed_signers -I inceptool-release \
+  -n inceptool-release -s SHA256SUMS.sig < SHA256SUMS
+```
+
 ### NixOS / Home Manager
 
 If you're on Nix, you can consume the flake directly from your own

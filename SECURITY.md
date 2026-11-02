@@ -4,6 +4,12 @@
 
 Only the latest released version receives security fixes.
 
+## Verifying Releases
+
+Release assets are attested by GitHub Actions and the checksum file is signed
+with a hardware-backed SSH key. See "Verifying a release" in the
+[README](README.md#verifying-a-release).
+
 ## Reporting a Vulnerability
 
 Please do not open a public issue for security problems.
