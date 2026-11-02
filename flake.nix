@@ -49,6 +49,20 @@
 
         inceptool = pkgs.callPackage ./package.nix { inherit crane; };
 
+        # cargo-cyclonedx emits one BOM per workspace member; only the root
+        # `inceptool` one describes the shipped binary, so it alone is installed.
+        inceptool-sbom = craneLib.mkCargoDerivation (
+          commonArgs
+          // {
+            inherit cargoArtifacts;
+            pname = "inceptool-sbom";
+            nativeBuildInputs = [ pkgs.cargo-cyclonedx ];
+            buildPhaseCargoCommand = "cargo cyclonedx --format json --spec-version 1.5 --override-filename inceptool.cdx";
+            installPhaseCommand = "install -Dm444 inceptool.cdx.json $out/inceptool.cdx.json";
+            doInstallCargoArtifacts = false;
+          }
+        );
+
         # Env prefix that prevents ~/.cargo/config.toml from leaking into hook
         # invocations. CARGO_ENCODED_RUSTFLAGS (tier 1 in cargo's 3-tier
         # precedence) beats config-level [target.xxx].rustflags (tier 3),
@@ -119,7 +133,7 @@
       in
       {
         packages = {
-          inherit inceptool;
+          inherit inceptool inceptool-sbom;
           default = inceptool;
         }
         // pkgs.lib.optionalAttrs (system == "x86_64-linux") {
