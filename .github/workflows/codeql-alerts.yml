@@ -19,7 +19,11 @@ jobs:
       security-events: read
       issues: write
     steps:
-      - name: open or refresh issue
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: open, refresh or close issue
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -30,12 +34,9 @@ jobs:
             --jq '.[] | "- [\(.rule.security_severity_level // .rule.severity)] `\(.rule.id)` at `\(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line)` ([alert #\(.number)](\(.html_url)))"')
           if [ -z "${alerts}" ]; then
             echo "No open alerts."
+            BODY="No open code scanning alerts remain." bash .github/scripts/upsert-issue.sh close "${TITLE}"
             exit 0
           fi
-          body=$(printf 'Open code scanning alerts on the default branch:\n\n%s\n\nTriage in the Security tab: dismiss false positives with a reason, or fix the finding.' "${alerts}")
-          existing=$(gh issue list --state open --search "\"${TITLE}\" in:title" --json number --jq '.[0].number // empty')
-          if [ -n "${existing}" ]; then
-            gh issue edit "${existing}" --body "${body}"
-          else
-            gh issue create --title "${TITLE}" --body "${body}"
-          fi
+          BODY=$(printf 'Open code scanning alerts on the default branch:\n\n%s\n\nTriage in the Security tab: dismiss false positives with a reason, or fix the finding.' "${alerts}")
+          export BODY
+          bash .github/scripts/upsert-issue.sh replace "${TITLE}"
