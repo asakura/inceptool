@@ -44,7 +44,7 @@ jobs:
       # Check out the branch, not `head_sha`, so release-plz does not run on a
       # detached HEAD.
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0
@@ -71,7 +71,7 @@ jobs:
       - name: Run release-plz
         id: release
         if: steps.fresh.outputs.skip != 'true'
-        uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5
+        uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
         with:
           command: release
         env:
@@ -125,7 +125,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -134,7 +134,7 @@ jobs:
         uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
       - name: Run release-plz
-        uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5
+        uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
         with:
           command: release-pr
         env:
