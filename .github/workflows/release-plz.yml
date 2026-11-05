@@ -103,8 +103,6 @@ jobs:
     uses: ./.github/workflows/release-binaries.yml # zizmor: ignore[self-repository] -- actionlint rejects `$/` (no ref)
     with:
       tag: ${{ needs.release-plz-release.outputs.tag }}
-    secrets:
-      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
   # Opens/updates the "release PR" with version bumps + changelog entries
   # computed from conventional commits since the last release.

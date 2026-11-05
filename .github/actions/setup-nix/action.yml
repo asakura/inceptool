@@ -1,19 +1,8 @@
 name: Set up Nix
-description: Install Nix and configure the inceptool Cachix cache
-inputs:
-  cachix-auth-token:
-    description: Push-capable token. Leave empty for read-only cache access.
-    required: false
-    default: ""
+description: Install Nix
 runs:
   using: composite
   steps:
     - uses: asakura/actions/.github/actions/setup-nix@32fd43107b80ca9d29152b5d32d4bb61e8723527 # v1.0.0
       with:
         github-token: ${{ github.token }}
-
-    # pin-comment: no vX.Y.Z tag upstream
-    - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-      with:
-        name: inceptool
-        authToken: ${{ inputs.cachix-auth-token }}
