@@ -1391,7 +1391,7 @@ checksum = "913a7d294ad056474749152107309fdee3ec17d2482d1ab70fdc61a81c64b9a3"
 
 [[package]]
 name = "inceptool"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -1458,7 +1458,7 @@ dependencies = [
 
 [[package]]
 name = "inceptool-parable"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "inceptool-corpus-parser",
  "inceptool-risk-data",
