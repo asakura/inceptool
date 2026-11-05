@@ -12,9 +12,6 @@ on:
         description: Release tag to attach assets to (e.g. v0.3.3)
         required: true
         type: string
-    secrets:
-      CACHIX_AUTH_TOKEN:
-        required: true
   workflow_dispatch:
     inputs:
       tag:
@@ -56,8 +53,6 @@ jobs:
           persist-credentials: false
 
       - uses: ./.github/actions/setup-nix # zizmor: ignore[self-repository] -- actionlint rejects `$/` (no ref)
-        with:
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Build static binary
         env:
@@ -107,8 +102,6 @@ jobs:
           persist-credentials: false
 
       - uses: ./.github/actions/setup-nix # zizmor: ignore[self-repository] -- actionlint rejects `$/` (no ref)
-        with:
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Build SBOM
         run: nix build ".#inceptool-sbom" -L
