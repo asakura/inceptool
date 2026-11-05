@@ -66,7 +66,8 @@ jobs:
 
       - name: Install Rust toolchain
         if: steps.fresh.outputs.skip != 'true'
-        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable # pin-comment: no vX.Y.Z tag upstream
+        # pin-comment: no vX.Y.Z tag upstream
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
       - name: Run release-plz
         id: release
@@ -131,7 +132,8 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable # pin-comment: no vX.Y.Z tag upstream
+        # pin-comment: no vX.Y.Z tag upstream
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
       - name: Run release-plz
         uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
