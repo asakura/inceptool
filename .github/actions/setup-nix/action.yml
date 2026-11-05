@@ -12,7 +12,7 @@ runs:
       with:
         github-token: ${{ github.token }}
 
-    - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+    - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17 # pin-comment: no vX.Y.Z tag upstream
       with:
         name: inceptool
         authToken: ${{ inputs.cachix-auth-token }}
