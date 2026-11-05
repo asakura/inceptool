@@ -27,6 +27,7 @@ jobs:
       - uses: ./.github/actions/setup-nix # zizmor: ignore[self-repository] -- actionlint rejects `$/` (no ref)
 
       - name: Update flake.lock
+        # pin-comment: no vX.Y.Z tag upstream
         uses: DeterminateSystems/update-flake-lock@da03c0f078bc4b2c37ee4f7e072d34bf8f188bb3 # v29
         with:
           pr-title: "chore(flake): update flake.lock"
