@@ -217,8 +217,10 @@ fn is_positional_param(name: &str) -> bool {
 mod tests {
     use super::*;
 
-    #[derive(Debug, thiserror::Error)]
-    enum TestError {}
+    use core::convert::Infallible;
+
+    /// Tests in this module have no fallible setup; `Infallible` keeps the `Result` signature uniform.
+    type TestError = Infallible;
 
     mod split_assignment {
         use super::*;
