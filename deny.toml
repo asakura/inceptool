@@ -21,7 +21,17 @@ yanked = "warn"
 maximum-db-staleness = "P30D"
 unused-ignored-advisory = "warn"
 
-ignore = []
+ignore = [
+  { id = "RUSTSEC-2026-0574", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
+  { id = "RUSTSEC-2026-0575", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
+  { id = "RUSTSEC-2026-0576", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
+  { id = "RUSTSEC-2026-0577", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
+  { id = "RUSTSEC-2026-0578", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
+  { id = "RUSTSEC-2026-0579", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
+  { id = "RUSTSEC-2026-0580", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
+  { id = "RUSTSEC-2026-0581", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
+  { id = "RUSTSEC-2026-0582", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
+]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
