@@ -232,8 +232,10 @@ mod tests {
 
     use crate::types::Expr;
 
-    #[derive(Debug, thiserror::Error)]
-    enum TestError {}
+    use core::convert::Infallible;
+
+    /// Tests in this module have no fallible setup; `Infallible` keeps the `Result` signature uniform.
+    type TestError = Infallible;
 
     mod tainted_dangerous_command {
         use super::*;

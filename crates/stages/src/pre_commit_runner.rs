@@ -771,9 +771,8 @@ mod tests {
                     make_output(0, "", ""),
                 ));
 
-                let ctx = PreCommitReport::new("src/foo.rs", outcome)
-                    .map(|r| r.to_string())
-                    .unwrap_or_default();
+                let ctx =
+                    PreCommitReport::new("src/foo.rs", outcome).map_or_default(|r| r.to_string());
 
                 assert_eq!(ctx.matches("```diff").count(), 1);
 

@@ -2,11 +2,12 @@ use super::TokenStream;
 use crate::types::Token;
 
 use core::assert_matches;
+use core::convert::Infallible;
 use std::borrow::Cow;
 use winnow::stream::{Offset as _, Stream as _};
 
-#[derive(Debug, thiserror::Error)]
-enum TestError {}
+/// Tests in this module have no fallible setup; `Infallible` keeps the `Result` signature uniform.
+type TestError = Infallible;
 
 mod peek_token {
     use super::*;
