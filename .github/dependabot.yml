@@ -13,3 +13,7 @@ updates:
     directories: ["/", "/.github/actions/*"]
     schedule:
       interval: weekly
+    groups:
+      # init/analyze must run the same version or analyze aborts.
+      codeql-action:
+        patterns: ["github/codeql-action*"]
