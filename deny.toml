@@ -21,18 +21,6 @@ yanked = "warn"
 maximum-db-staleness = "P30D"
 unused-ignored-advisory = "warn"
 
-ignore = [
-  { id = "RUSTSEC-2026-0574", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
-  { id = "RUSTSEC-2026-0575", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
-  { id = "RUSTSEC-2026-0576", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
-  { id = "RUSTSEC-2026-0577", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
-  { id = "RUSTSEC-2026-0578", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
-  { id = "RUSTSEC-2026-0579", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
-  { id = "RUSTSEC-2026-0580", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
-  { id = "RUSTSEC-2026-0581", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
-  { id = "RUSTSEC-2026-0582", reason = "heapless 0.8 via faster-hex 0.10 (gix-hash 0.28); only used when faster-hex alloc is off, gix-hash enables it — drop once gix >= 0.91" },
-]
-
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 allow = [
@@ -66,8 +54,18 @@ external-default-features = "allow"
 
 # - `unicode-width` v0.1 is pulled directly by `miette`, while v0.2 is pulled by `textwrap` (also via `miette`) and `annotate-snippets`
 # - `hashbrown` v0.17 and v0.16 are pulled in by different `gix` ecosystem crates
-# - `syn` v2 is pulled by `gix-macros`, `rstest_macros`, `strum_macros` and `tracing-attributes`, while v3 is pulled by `serde_derive`, `clap_derive`, `thiserror-impl` and others
-skip = [{ crate = "unicode-width" }, { crate = "hashbrown" }, { crate = "syn" }]
+# - `syn` v2 is pulled by `strum_macros` and `tracing-attributes`, while v3 is pulled by `serde_derive`, `clap_derive`, `thiserror-impl`, `gix-macros`, `rstest_macros` and others
+# - `parking_lot` v0.13 (+ `lock_api` v0.5, `parking_lot_core` v0.10) is pulled by `gix-hashtable`, `gix-odb` and `gix-tempfile`, while v0.12 (+ `lock_api` v0.4, `parking_lot_core` v0.9) is pulled by `prodash` (via `gix-utils`) and `dashmap` (via `gix-tempfile`)
+# - `object` v0.40 is pulled by `backtrace` (via `miette`), while v0.39 is pulled by `ar_archive_writer` (build-dep of `psm`, via `pest` → `insta`)
+skip = [
+  { crate = "unicode-width" },
+  { crate = "hashbrown" },
+  { crate = "syn" },
+  { crate = "parking_lot" },
+  { crate = "parking_lot_core" },
+  { crate = "lock_api" },
+  { crate = "object" },
+]
 
 # https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
 [sources]
